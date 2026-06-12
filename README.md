@@ -2,74 +2,68 @@
 
 # `na`
 
-### 無から、生まれる庭 — *a generative ambient garden, born from nothing*
-
-触れると流れ、待てば咲く。<br>
-依存パッケージはゼロ。ひとつの HTML ファイルだけで動く、瞑想的なインタラクティブ作品です。
+### 無から生まれた、小さな作品集 — *small works, born from nothing*
 
 [![gitleaks](https://github.com/sm06224/na/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/gitleaks.yml)
+[![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
+
+**無 → 庭 → 生**
 
 </div>
 
 ---
 
-## これは何
+`README.md` に「na」とだけ書かれた空のリポジトリから始まりました。
+そこを出発点に、*無から何かを生み出す* というテーマで作品を増やしています。
+すべて **依存パッケージはゼロ**。クローンしてブラウザで開けば動きます。
 
-`na` は、空っぽのキャンバスに **流れ場（flow field）** を描き、その流れに沿って
-無数の光の粒を走らせる生成的アートです。マウスやタッチに反応して流れが渦を巻き、
-クリック（または長押し）で **花が咲き**、放っておいても庭はひとりでに花をつけます。
-季節がめぐると、色と環境音がゆっくり移ろっていきます。
+## 作品
 
-> もともと「gitleaks スキャンだけしてくれれば、あとは自由に」という依頼から生まれました。
-> 空のリポジトリ（`README.md` に「na」とだけ）を出発点に、*無から庭をつくる* という
-> テーマで一本の作品に仕立てています。
+### 🌸 [庭 `garden`](./works/garden/) — *a generative ambient garden*
+触れると流れ、待てば咲く。自前のノイズで作る流れ場を光の粒が走る、瞑想的なジェネラティブアート。
+Web Audio によるペンタトニックの環境音つき。**1 ファイル**で完結。
 
-## 遊び方
-
-| 操作 | はたらき |
-| --- | --- |
-| 画面に**触れる / マウスを動かす** | 流れが乱れ、粒が渦を巻く |
-| **クリック / タップ** | その場所に花が咲く |
-| **長押し / ドラッグ** | 花が連続して咲く |
-| `♪` ボタン（または `S` キー） | 環境音（ペンタトニックのドローン＋チャイム）の on/off |
-| `❀` ボタン（または `Space` キー） | 季節をめぐらせる（spring → summer → autumn → winter） |
-| `~` ボタン（または `C` キー） | 霧で画面を流してリセット |
-| `⤓` ボタン | いまの一枚を PNG として保存 |
-
-## 動かす
-
-クローンして `index.html` をブラウザで開くだけです。ビルドもサーバも不要。
+### 🌍 [生 `sei`](./works/genesis/) — *a world that evolves without you*
+あなたの意思が介在しない人工生命の世界。**神経回路の脳**を持つ生き物たちが食べ、増え、
+写し間違い（変異し）、**種に分かれ、滅びていく**。学習はせず、進化だけが賢さを選び取る。
+個体をクリックすると遺伝子と**脳の発火がライブで**見え、世界は JSON に保存・復元できる。
+シミュレーションコアは DOM 非依存で、**Node でヘッドレス・テスト**される（16 tests）。
 
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
-open index.html        # macOS（Linux なら xdg-open、Windows なら start）
+open index.html                       # 作品集トップ（macOS / Linux: xdg-open / Win: start）
+# 直接ひらくなら:
+open works/garden/index.html
+open works/genesis/index.html
 ```
 
-GitHub Pages にも対応しています。リポジトリの **Settings → Pages → Source** を
-`GitHub Actions` にすると、`main` への push ごとに自動公開されます
-（`.github/workflows/pages.yml`）。
+## このリポジトリの作り
 
-## 技術メモ
+```
+na/
+├─ index.html               作品集のランディング
+├─ works/
+│  ├─ garden/index.html     🌸 庭（1 ファイル）
+│  └─ genesis/              🌍 生（人工生命）
+│     ├─ index.html · style.css
+│     ├─ js/                rng · genome · brain · world · render · …
+│     └─ tests/             Node 標準ランナーでのユニットテスト
+├─ .github/workflows/
+│  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
+│  ├─ test.yml              genesis のコアをヘッドレス検証
+│  └─ pages.yml             GitHub Pages へ自動公開
+├─ .gitleaks.toml
+└─ LICENSE (MIT)
+```
 
-- **ゼロ依存・1ファイル** — `index.html` に HTML / CSS / JS をすべて内包
-- **流れ場** — 自前実装の 2D 勾配ノイズ（決定的シード）から角度を生成
-- **描画** — Canvas 2D。`globalCompositeOperation = 'lighter'` で光を加算合成し、
-  毎フレーム薄い闇で覆うことで残像（トレイル）を表現
-- **音** — Web Audio API。3 音のドローン＋花が咲くたびのトライアングル・チャイム。
-  メジャーペンタトニックなので不協和にならない
-- **配慮** — `prefers-reduced-motion` を尊重、HiDPI 対応、タッチ対応
+## 番人と公開
 
-## このリポジトリの番人
-
-作品だけでなく、**これから先も秘密が混入しないための仕組み** を一緒に入れてあります。
-
-- `.github/workflows/gitleaks.yml` — push / PR / 毎週の定期巡回で
-  [gitleaks](https://github.com/gitleaks/gitleaks) が git 履歴と作業ツリーを走査
-- `.gitleaks.toml` — デフォルトルールを継承しつつ、この作品ファイル向けの除外を定義
-
-初回スキャン結果は **クリーン（漏洩ゼロ）** でした。
+- **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
+- **test** が `生` の人工生命コアをブラウザなしで検証
+- **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
+  `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
 
 ---
 

@@ -1,0 +1,25 @@
+name: test
+
+# 作品のうちロジックを持つもの（genesis の人工生命コア）を
+# ヘッドレスで検証する。ブラウザ不要、依存ゼロ、Node 標準のテストランナー。
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  genesis:
+    name: genesis — artificial life core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run the universe in a test tube
+        working-directory: works/genesis
+        run: node --test tests/*.test.js
