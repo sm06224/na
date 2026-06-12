@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌**
 
 </div>
 
@@ -50,6 +50,13 @@ Excel 対応 CSV／iCal／印刷／PWA（オフライン動作）。コアは DO
 **言語が生存と結びついている**。群をクリックすると**勝手に書かれた辞書**が読め、語の誕生・
 意味の変化・借用が言語史に刻まれる。誰も設計しない言語を眺める。コアは DOM 非依存・**20 tests**。
 
+### 🎵 [歌 `uta`](./works/uta/) — *music that composes itself*
+**無から音楽が生まれる**世界。胸に残った節だけが、もう一度歌われる。歌は変奏され、
+**覚えやすい歌ほど生き残る**——この淘汰圧だけで、誰も教えていないのに**フック（サビ）が
+創発する**。分派の創始者効果が節回しの方言を生み、覚えやすい歌ほど群れを越えて**流行**する。
+そして Web Audio で**この世界の歌が実際に聴こえる**（五音音階なので、どの歌が重なっても
+協和する）。出力が「言葉」だった系譜が、ここで「音」になる。コアは DOM 非依存・**24 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -80,10 +87,15 @@ na/
 │  │  ├─ js/core/           model · rules · solver · csv · ical · store · …
 │  │  ├─ js/ui/             grid · panels · violations · …
 │  │  └─ tests/
-│  └─ koto/                 🗣 言（創発する言語）
+│  ├─ koto/                 🗣 言（創発する言語）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           phonology · meaning · lexicon · chronicle · world
+│  │  ├─ js/ui/             render · panels · main
+│  │  └─ tests/
+│  └─ uta/                  🎵 歌（創発する音楽）
 │     ├─ index.html · style.css
-│     ├─ js/core/           phonology · meaning · lexicon · chronicle · world
-│     ├─ js/ui/             render · panels · main
+│     ├─ js/core/           scale · occasions · repertoire · chronicle · world
+│     ├─ js/ui/             render · audio · panels · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -96,7 +108,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言` のコアをブラウザなしで検証（計 100 tests）
+- **test** が `生`・`史`・`番`・`言`・`歌` のコアをブラウザなしで検証（計 124 tests）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
 

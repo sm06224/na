@@ -1,0 +1,143 @@
+:root { color-scheme: dark; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  display: flex; background: #080709; color: #f0e9e2;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  font-size: 13px;
+}
+
+#stage { position: relative; flex: 1; min-width: 0; }
+#map { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#map:active { cursor: grabbing; }
+#hud {
+  position: absolute; top: 12px; left: 14px; font-size: 11px; letter-spacing: .1em;
+  color: rgba(245,235,225,.65); pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,.85);
+  font-variant-numeric: tabular-nums;
+}
+#seed {
+  position: absolute; bottom: 10px; left: 14px; font-size: 10px; letter-spacing: .18em;
+  color: rgba(245,235,225,.25); pointer-events: none;
+}
+
+/* 序章 */
+#intro {
+  position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.6rem; text-align: center; padding: 2rem;
+  background: radial-gradient(100% 80% at 50% 45%, rgba(8,7,9,.5), rgba(8,7,9,.93));
+  transition: opacity 1.4s ease, visibility 1.4s;
+}
+#intro.gone { opacity: 0; visibility: hidden; }
+#intro h1 {
+  font-size: clamp(5rem, 18vw, 11rem); font-weight: 200; line-height: 1;
+  background: linear-gradient(140deg, #ffd9a8, #ffb8c6 55%, #b8c6ff);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 36px rgba(255,200,150,.22));
+}
+#intro p { line-height: 2; opacity: .75; font-weight: 300; max-width: 38em; }
+#intro button {
+  border: 1px solid rgba(255,200,160,.4); background: rgba(255,200,160,.07); color: #ffe2c6;
+  padding: .7em 2.4em; border-radius: 999px; font-size: .95rem; letter-spacing: .2em;
+  cursor: pointer; transition: background .3s, transform .2s;
+}
+#intro button:hover { background: rgba(255,200,160,.15); transform: translateY(-2px); }
+
+/* 全史 */
+#annals {
+  position: absolute; inset: 0; z-index: 7; display: none; background: rgba(8,7,9,.7);
+  backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 4vh 4vw;
+}
+#annals.open { display: flex; }
+#annalsBox {
+  width: min(640px,100%); height: min(78vh,100%); background: #110e0e;
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+}
+#annalsBox header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.07); }
+#annalsBox h2 { font-size: 1rem; font-weight: 400; letter-spacing: .15em; flex: 1; }
+#annalsBox select { background: rgba(255,255,255,.06); color: #f0e9e2; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 4px 8px; font-size: .76rem; }
+#annalsList { flex: 1; overflow-y: auto; padding: 10px 16px; }
+
+/* パネル */
+#panel {
+  width: 286px; flex: none; overflow-y: auto; background: #0e0b0c;
+  border-left: 1px solid rgba(255,255,255,.06); padding: 14px; display: flex; flex-direction: column; gap: 14px;
+}
+#panel header h2 { font-weight: 300; font-size: 1.5rem; letter-spacing: .1em; }
+#panel header .en { font-size: .8rem; opacity: .4; letter-spacing: .2em; }
+#panel .tagline { font-size: .68rem; opacity: .4; letter-spacing: .12em; margin-top: 2px; }
+#panel section h3 {
+  font-size: .72rem; font-weight: 500; letter-spacing: .18em; color: rgba(250,238,225,.75);
+  margin-bottom: 7px; display: flex; align-items: center; gap: 8px;
+}
+.dim { color: rgba(250,238,225,.4); font-weight: 300; }
+.small { font-size: .66rem; }
+.hint { font-size: .72rem; }
+#minimap, #chart { width: 100%; border-radius: 8px; background: #080709; border: 1px solid rgba(255,255,255,.05); }
+
+/* 歌集 */
+.songbook-head { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; font-size: .9rem; }
+.swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.song-list { display: flex; flex-direction: column; gap: 6px; }
+.song-row { display: grid; grid-template-columns: 3.6em 1fr auto; grid-template-rows: auto auto; gap: 2px 8px; align-items: baseline; }
+.occ { font-size: .72rem; grid-row: 1 / 3; align-self: center; }
+button.melody {
+  text-align: left; background: none; border: none; padding: 1px 2px; border-radius: 5px;
+  font-size: .98rem; font-weight: 600; letter-spacing: .03em; color: #f5efe8; cursor: pointer;
+}
+button.melody:hover { background: rgba(255,220,180,.1); color: #ffe2c6; }
+.melody.none { font-size: .78rem; color: rgba(250,238,225,.3); font-weight: 300; }
+.alts { font-size: .66rem; color: rgba(250,238,225,.4); align-self: center; }
+.strength-bar { grid-column: 2 / 4; height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+.strength-bar i { display: block; height: 100%; border-radius: 2px; }
+
+/* フィード */
+#events { display: flex; flex-direction: column; gap: 3px; min-height: 110px; }
+.ev { font-size: .7rem; line-height: 1.5; padding: 2px 3px; border-radius: 4px; color: rgba(248,240,232,.78); display: flex; gap: 6px; align-items: baseline; }
+.ev-year { opacity: .38; font-variant-numeric: tabular-nums; font-size: .62rem; min-width: 2.6em; text-align: right; flex: none; }
+.ev-ic { flex: none; width: 1.1em; text-align: center; }
+.ev-text { flex: 1; }
+.ev-birth .ev-ic { color: #9af5c8; }
+.ev-death { color: rgba(248,240,232,.5); }
+.ev-death .ev-ic, .ev-flockdeath .ev-ic { color: #ff9c9c; }
+.ev-var .ev-ic { color: #ffd9a8; }
+.ev-shift .ev-ic { color: #ffc6e0; }
+.ev-split .ev-ic { color: #cda4ff; }
+.ev-spread .ev-ic { color: #9ec3ff; }
+.ev-worldevent .ev-ic { color: #ffe296; }
+.ev-genesis { color: #ffd9ec; }
+
+/* ボタン */
+button {
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #ece2d8;
+  border-radius: 8px; padding: 7px 0; cursor: pointer; font-size: .78rem; letter-spacing: .06em;
+  transition: background .25s, color .25s, border-color .25s;
+}
+button:hover { background: rgba(255,255,255,.12); }
+button.active { color: #ffd9a8; border-color: rgba(255,217,168,.45); background: rgba(255,217,168,.08); }
+button.mini { padding: 2px 10px; font-size: .62rem; border-radius: 999px; }
+.row { display: flex; gap: 6px; margin-bottom: 8px; }
+.row button { flex: 1; }
+.wide { width: 100%; margin: 0 0 8px; }
+.half { flex: 1; }
+.danger { color: rgba(255,160,170,.85); border-color: rgba(255,120,140,.25); }
+.danger:hover { background: rgba(255,120,140,.12); }
+
+#panel footer { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; font-size: .66rem; border-top: 1px solid rgba(255,255,255,.05); }
+#panel footer a { color: rgba(255,210,180,.7); text-decoration: none; }
+#panel footer a:hover { color: #ffd9a8; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 14px); z-index: 99;
+  background: #2a2018; border: 1px solid rgba(255,255,255,.16); color: #f0e9e2; padding: 10px 18px;
+  border-radius: 10px; font-size: .84rem; opacity: 0; transition: opacity .3s, transform .3s;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast-good { border-color: rgba(111,191,143,.5); }
+.toast-warn { border-color: rgba(232,177,79,.5); }
+
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  #stage { height: 54%; }
+  #panel { width: 100%; flex: 1; border-left: 0; border-top: 1px solid rgba(255,255,255,.06); }
+}

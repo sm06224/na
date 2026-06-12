@@ -59,3 +59,15 @@ jobs:
       - name: Grow a language from nothing, headless
         working-directory: works/koto
         run: node --test tests/*.test.js
+
+  uta:
+    name: uta — emergent music core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Let six centuries of songs be sung, headless
+        working-directory: works/uta
+        run: node --test tests/*.test.js
