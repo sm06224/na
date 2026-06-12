@@ -1,0 +1,16 @@
+# gitleaks 設定 — デフォルトのルール群を継承しつつ、
+# このリポジトリ向けの除外（誤検知対策）を加える。
+[extend]
+useDefault = true
+
+[allowlist]
+description = "na の作品ファイルが拾われないように"
+paths = [
+  '''index\.html''',          # 生成アートのソース（鍵を含まない）
+  '''README\.md''',
+]
+# サンプルやプレースホルダ的な擬似トークンを無視
+regexes = [
+  '''EXAMPLE''',
+  '''placeholder''',
+]

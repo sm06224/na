@@ -1,0 +1,32 @@
+name: gitleaks
+
+# 「無から生まれる庭」を、秘密の混入から守る番人。
+# push / PR のたびに git 履歴と作業ツリーを走査する。
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # 毎週月曜の朝に定期巡回（過去にすり抜けたものも拾う）
+    - cron: "0 0 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: scan for secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+          GITLEAKS_ENABLE_SUMMARY: "true"
