@@ -1,0 +1,10 @@
+{
+  "name": "sei",
+  "version": "1.0.0",
+  "description": "生 — a world that evolves without you. Zero-dependency artificial life.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}

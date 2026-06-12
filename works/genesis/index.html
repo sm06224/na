@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="生 (sei) — 誰の意思も介在しない、ひとりでに進化し続ける人工生命の世界。">
+<meta name="theme-color" content="#04050a">
+<title>生 — a world that evolves without you</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="view"></canvas>
+  <div id="hud">…</div>
+  <div id="seed"></div>
+
+  <!-- 序章 -->
+  <div id="intro">
+    <h1>生</h1>
+    <p>これは、あなたの意思が介在しない世界。<br>
+       生き物たちは神経の脳で考え、食べ、増え、写し間違い、種に分かれ、滅びる。<br>
+       あなたにできるのは、眺めることと、時間の速さを変えることだけ。</p>
+    <button id="bBegin">世界を眺める</button>
+  </div>
+</main>
+
+<aside id="panel">
+  <header>
+    <h2>生 <span class="en">/ sei</span></h2>
+    <p class="tagline">a world that evolves without you</p>
+  </header>
+
+  <section>
+    <h3>世界 <span class="dim">— 神の視点</span></h3>
+    <canvas id="minimap" width="252" height="252"></canvas>
+  </section>
+
+  <section>
+    <h3>年代記 <span class="dim">— 個体数と種の興亡</span></h3>
+    <canvas id="chart" width="252" height="110"></canvas>
+  </section>
+
+  <section>
+    <h3>出来事</h3>
+    <div id="events"></div>
+  </section>
+
+  <section>
+    <h3>検眼鏡 <span class="dim">— 選んだ一匹の中身</span></h3>
+    <div id="info"><div class="dim">個体をクリックすると、その一生と脳の中が見えます</div></div>
+    <canvas id="brain" width="252" height="170"></canvas>
+    <button id="bFollow" class="wide">この個体を追う</button>
+  </section>
+
+  <section>
+    <h3>神の手 <span class="dim">— 許された干渉</span></h3>
+    <div class="row">
+      <button id="bPause" class="spd" title="一時停止 (Space)">⏸</button>
+      <button id="b1x" class="spd" title="等速 (1)">1×</button>
+      <button id="b4x" class="spd" title="4 倍速 (2)">4×</button>
+      <button id="b16x" class="spd" title="16 倍速 (3)">16×</button>
+    </div>
+    <label class="slider">植生の繁茂
+      <input type="range" id="growth" min="0" max="20" value="7">
+      <span id="growthVal">7</span>
+    </label>
+    <div class="row">
+      <button id="bSave" class="half">世界を保存</button>
+      <button id="bLoad" class="half">世界を開く</button>
+      <input type="file" id="fileLoad" accept=".json" hidden>
+    </div>
+    <button id="bReset" class="wide danger">宇宙を畳む（やり直す）</button>
+  </section>
+
+  <footer>
+    <a href="../../">← na</a>
+    <span class="dim">無 → 庭 → 生</span>
+  </footer>
+</aside>
+
+<script type="module" src="js/main.js"></script>
+<script>
+  document.getElementById('bBegin').addEventListener('click', () => {
+    document.getElementById('intro').classList.add('gone');
+  });
+</script>
+</body>
+</html>

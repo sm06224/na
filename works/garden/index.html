@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="na — 無から生まれる、ジェネラティブな庭。Generative ambient garden, born from nothing.">
+<meta name="theme-color" content="#05060a">
+<meta property="og:title" content="na — 無から生まれる庭">
+<meta property="og:description" content="触れると流れ、待てば咲く。依存ゼロ、ひとつのファイルで動く瞑想的な体験。">
+<title>na — 無から生まれる庭</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #05060a; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; }
+  canvas { display: block; position: fixed; inset: 0; touch-action: none; }
+
+  /* ---- 序章: タイトルのオーバーレイ ---- */
+  #intro {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.4rem; color: #e8eaf2; text-align: center;
+    background: radial-gradient(120% 90% at 50% 45%, rgba(5,6,10,0) 0%, rgba(5,6,10,.55) 70%, rgba(5,6,10,.9) 100%);
+    transition: opacity 1.6s ease, visibility 1.6s;
+    cursor: pointer; padding: 2rem;
+  }
+  #intro.gone { opacity: 0; visibility: hidden; }
+  #intro h1 {
+    font-size: clamp(4rem, 22vw, 13rem); font-weight: 200; letter-spacing: .04em; line-height: .9;
+    background: linear-gradient(120deg, #b8c6ff, #ffd9ec 45%, #9af5e0 90%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 38px rgba(150,170,255,.28));
+    animation: breathe 6s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.025)} }
+  #intro p { font-size: clamp(.85rem, 2.6vw, 1.05rem); font-weight: 300; opacity: .72; letter-spacing: .14em; }
+  #intro .hint { font-size: .72rem; opacity: .42; letter-spacing: .28em; text-transform: uppercase; margin-top: .6rem; animation: pulse 2.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.22} 50%{opacity:.55} }
+
+  /* ---- HUD（操作系） ---- */
+  #hud {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 6;
+    display: flex; gap: 10px; align-items: center;
+    padding: 8px 12px; border-radius: 999px;
+    background: rgba(16,18,28,.42); backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.08);
+    opacity: 0; transition: opacity .8s ease; pointer-events: none;
+  }
+  #hud.show { opacity: 1; pointer-events: auto; }
+  .btn {
+    border: 0; cursor: pointer; color: #d8dcec;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    width: 40px; height: 40px; border-radius: 50%; font-size: 16px;
+    display: grid; place-items: center; transition: background .25s, transform .15s, color .25s;
+  }
+  .btn:hover { background: rgba(255,255,255,.13); transform: translateY(-2px); }
+  .btn.active { color: #9af5e0; border-color: rgba(154,245,224,.4); background: rgba(154,245,224,.08); }
+  #hud .label { font-size: .62rem; letter-spacing: .22em; opacity: .5; text-transform: uppercase; padding: 0 6px; color:#cfd4e6; }
+
+  #count {
+    position: fixed; top: 16px; right: 18px; z-index: 6;
+    font-size: .62rem; letter-spacing: .2em; color: rgba(220,225,245,.34);
+    font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .8s;
+  }
+  #count.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { #intro h1 { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="intro">
+  <h1>na</h1>
+  <p>無から、生まれる庭</p>
+  <div class="hint">触れて始める · touch to begin</div>
+</div>
+
+<div id="count"></div>
+
+<div id="hud" aria-label="操作パネル">
+  <button class="btn" id="bSound" title="環境音 on/off">♪</button>
+  <span class="label" id="seasonLabel">spring</span>
+  <button class="btn" id="bSeason" title="季節をめぐらせる">❀</button>
+  <button class="btn" id="bClear" title="霧で流す">~</button>
+  <button class="btn" id="bSave" title="一枚の絵として保存">⤓</button>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   na — 無から生まれる庭
+   A single-file generative ambient garden. No dependencies.
+
+   思想 / concept:
+     空のキャンバスに流れ場（flow field）を描き、その流れに
+     沿って光の粒が走る。触れれば乱れ、待てば花が咲く。
+     季節がめぐり、色と音がゆっくり移ろう。
+   ============================================================ */
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.width = Math.floor(innerWidth * DPR);
+  H = canvas.height = Math.floor(innerHeight * DPR);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+  // 初期化時、闇で塗る
+  ctx.fillStyle = '#05060a';
+  ctx.fillRect(0, 0, W, H);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- 2D value-noise（依存なしの滑らかなノイズ） ---------- */
+// 軽量な勾配ノイズ。flow field の角度を生むために使う。
+const Noise = (() => {
+  const p = new Uint8Array(512);
+  const perm = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) perm[i] = i;
+  // 決定的シャッフル（毎回同じ庭の「素地」から始まる）
+  let seed = 1337;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 255; i > 0; i--) {
+    const j = (rnd() * (i + 1)) | 0;
+    [perm[i], perm[j]] = [perm[j], perm[i]];
+  }
+  for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const lerp = (a, b, t) => a + t * (b - a);
+  const grad = (h, x, y) => {
+    const u = (h & 1) ? x : -x;
+    const v = (h & 2) ? y : -y;
+    return u + v;
+  };
+  return (x, y) => {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    x -= Math.floor(x); y -= Math.floor(y);
+    const u = fade(x), v = fade(y);
+    const aa = p[p[X] + Y], ab = p[p[X] + Y + 1];
+    const ba = p[p[X + 1] + Y], bb = p[p[X + 1] + Y + 1];
+    return lerp(
+      lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
+      lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
+      v
+    ); // 概ね -1..1
+  };
+})();
+
+/* ---------- 季節 / パレット ---------- */
+// 各季節は粒の色相レンジと花の色を持つ。
+const SEASONS = [
+  { name: 'spring', hue: [320, 200], bloom: [340, 60], sky: '#070810' },
+  { name: 'summer', hue: [150, 190], bloom: [50, 90],  sky: '#05080c' },
+  { name: 'autumn', hue: [20, 45],   bloom: [10, 35],  sky: '#0a0706' },
+  { name: 'winter', hue: [210, 230], bloom: [200, 260],sky: '#06080e' },
+];
+let season = 0;
+
+/* ---------- 粒（流れに乗る光） ---------- */
+const MAX = (innerWidth * innerHeight > 700000) ? 900 : 600;
+const particles = [];
+class Particle {
+  constructor() { this.reset(true); }
+  reset(spread) {
+    this.x = spread ? Math.random() * W : this.x;
+    this.y = spread ? Math.random() * H : this.y;
+    this.vx = 0; this.vy = 0;
+    this.life = 0;
+    this.max = 120 + Math.random() * 220;
+    this.w = (0.6 + Math.random() * 1.4) * DPR;
+    const [h0, h1] = SEASONS[season].hue;
+    this.hue = h0 + Math.random() * (h1 - h0);
+    this.sat = 60 + Math.random() * 30;
+  }
+  step(t) {
+    // flow field 角度
+    const scale = 0.0016 / DPR;
+    const n = Noise(this.x * scale, this.y * scale + t * 0.06);
+    let ang = n * Math.PI * 2.2;
+    // ポインタの影響（引力＋渦）
+    if (pointer.active) {
+      const dx = this.x - pointer.x, dy = this.y - pointer.y;
+      const d2 = dx * dx + dy * dy;
+      const R = (190 * DPR) ** 2;
+      if (d2 < R) {
+        const f = (1 - d2 / R);
+        const pa = Math.atan2(dy, dx) + Math.PI * 0.5; // 渦
+        ang = ang * (1 - f) + pa * f;
+        this.vx += Math.cos(pa) * f * 0.9;
+        this.vy += Math.sin(pa) * f * 0.9;
+      }
+    }
+    const sp = 1.1 * DPR;
+    this.vx += Math.cos(ang) * sp;
+    this.vy += Math.sin(ang) * sp;
+    this.vx *= 0.82; this.vy *= 0.82;
+    const px = this.x, py = this.y;
+    this.x += this.vx; this.y += this.vy;
+    this.life++;
+
+    // 描画：軌跡の線分
+    const a = Math.min(1, this.life / 16) * Math.min(1, (this.max - this.life) / 40);
+    ctx.strokeStyle = `hsla(${this.hue},${this.sat}%,68%,${0.5 * a})`;
+    ctx.lineWidth = this.w;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(this.x, this.y);
+    ctx.stroke();
+
+    if (this.life > this.max || this.x < -10 || this.x > W + 10 || this.y < -10 || this.y > H + 10) {
+      this.reset(true);
+    }
+  }
+}
+for (let i = 0; i < MAX; i++) particles.push(new Particle());
+
+/* ---------- 花（クリック/長く留まると咲く） ---------- */
+const blooms = [];
+class Bloom {
+  constructor(x, y) {
+    this.x = x; this.y = y; this.r = 0;
+    this.maxR = (24 + Math.random() * 46) * DPR;
+    this.petals = 5 + (Math.random() * 4 | 0);
+    this.rot = Math.random() * Math.PI;
+    this.life = 0; this.maxLife = 220 + Math.random() * 160;
+    const [b0, b1] = SEASONS[season].bloom;
+    this.hue = b0 + Math.random() * (b1 - b0);
+    audio.chime(this.hue);
+  }
+  step() {
+    this.life++;
+    const grow = Math.min(1, this.life / 50);
+    this.r = this.maxR * (1 - Math.pow(1 - grow, 3));
+    const fade = Math.min(1, (this.maxLife - this.life) / 80);
+    const a = grow * fade;
+    if (a <= 0) return false;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot + this.life * 0.002);
+    for (let i = 0; i < this.petals; i++) {
+      ctx.rotate((Math.PI * 2) / this.petals);
+      const g = ctx.createRadialGradient(0, this.r * 0.5, 0, 0, this.r * 0.5, this.r * 0.7);
+      g.addColorStop(0, `hsla(${this.hue},85%,72%,${0.45 * a})`);
+      g.addColorStop(1, `hsla(${this.hue},85%,60%,0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(0, this.r * 0.5, this.r * 0.32, this.r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 中心
+    ctx.fillStyle = `hsla(${(this.hue + 40) % 360},90%,78%,${0.6 * a})`;
+    ctx.beginPath(); ctx.arc(0, 0, this.r * 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return this.life < this.maxLife;
+  }
+}
+
+/* ---------- ポインタ ---------- */
+const pointer = { x: W / 2, y: H / 2, active: false, downAt: 0, hold: 0 };
+function setPointer(e) {
+  const t = e.touches ? e.touches[0] : e;
+  pointer.x = t.clientX * DPR;
+  pointer.y = t.clientY * DPR;
+  pointer.active = true;
+}
+canvas.addEventListener('pointermove', setPointer);
+canvas.addEventListener('pointerdown', (e) => {
+  setPointer(e);
+  pointer.downAt = performance.now();
+  blooms.push(new Bloom(pointer.x, pointer.y));
+});
+canvas.addEventListener('pointerup', () => { pointer.downAt = 0; });
+canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+
+/* ---------- 環境音（Web Audio、ペンタトニック） ---------- */
+const audio = (() => {
+  let ctxA = null, master = null, on = false, pad = null;
+  const scale = [0, 2, 4, 7, 9]; // メジャーペンタトニック
+  function ensure() {
+    if (ctxA) return;
+    ctxA = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctxA.createGain();
+    master.gain.value = 0.0;
+    master.connect(ctxA.destination);
+  }
+  function startPad() {
+    // ゆっくり揺れるドローン
+    pad = ctxA.createGain(); pad.gain.value = 0.06; pad.connect(master);
+    [110, 164.81, 220].forEach((f, i) => {
+      const o = ctxA.createOscillator();
+      o.type = 'sine'; o.frequency.value = f;
+      const lfo = ctxA.createOscillator(); lfo.frequency.value = 0.05 + i * 0.03;
+      const lg = ctxA.createGain(); lg.gain.value = 1.5;
+      lfo.connect(lg); lg.connect(o.detune);
+      const g = ctxA.createGain(); g.gain.value = 0.5;
+      o.connect(g); g.connect(pad);
+      o.start(); lfo.start();
+    });
+  }
+  function toggle() {
+    ensure();
+    if (ctxA.state === 'suspended') ctxA.resume();
+    on = !on;
+    if (on && !pad) startPad();
+    master.gain.cancelScheduledValues(ctxA.currentTime);
+    master.gain.linearRampToValueAtTime(on ? 0.5 : 0.0, ctxA.currentTime + 0.8);
+    return on;
+  }
+  function chime(hue) {
+    if (!on || !ctxA) return;
+    const oct = 3 + ((hue / 90) | 0) % 3;
+    const note = scale[(hue | 0) % scale.length];
+    const freq = 220 * Math.pow(2, (note + oct * 12) / 12);
+    const t = ctxA.currentTime;
+    const o = ctxA.createOscillator(); o.type = 'triangle';
+    o.frequency.value = freq;
+    const g = ctxA.createGain(); g.gain.value = 0;
+    g.gain.linearRampToValueAtTime(0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+    const pan = ctxA.createStereoPanner ? ctxA.createStereoPanner() : null;
+    if (pan) { pan.pan.value = (Math.random() * 2 - 1) * 0.6; o.connect(g); g.connect(pan); pan.connect(master); }
+    else { o.connect(g); g.connect(master); }
+    o.start(t); o.stop(t + 2.5);
+  }
+  return { toggle, chime, isOn: () => on };
+})();
+
+/* ---------- メインループ ---------- */
+let t = 0, frame = 0;
+function loop() {
+  t += 1;
+  frame++;
+  // 残像：薄い闇で覆い、軌跡を少しずつ消す
+  ctx.fillStyle = SEASONS[season].sky;
+  ctx.globalAlpha = 0.06;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
+
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of particles) p.step(t);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // 長押しで花が連続して咲く
+  if (pointer.downAt && performance.now() - pointer.downAt > 260) {
+    if (frame % 12 === 0) blooms.push(new Bloom(
+      pointer.x + (Math.random() - 0.5) * 40 * DPR,
+      pointer.y + (Math.random() - 0.5) * 40 * DPR));
+  }
+  for (let i = blooms.length - 1; i >= 0; i--) {
+    if (!blooms[i].step()) blooms.splice(i, 1);
+  }
+
+  // たまに自発的に咲く（待つ庭）
+  if (Math.random() < 0.006 && blooms.length < 18) {
+    blooms.push(new Bloom(Math.random() * W, Math.random() * H));
+  }
+
+  if (countEl.classList.contains('show')) {
+    countEl.textContent = `${SEASONS[season].name.toUpperCase()} · ${particles.length} flows · ${blooms.length} blooms`;
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- UI ---------- */
+const intro = document.getElementById('intro');
+const hud = document.getElementById('hud');
+const countEl = document.getElementById('count');
+const seasonLabel = document.getElementById('seasonLabel');
+const bSound = document.getElementById('bSound');
+let started = false;
+function begin() {
+  if (started) return;
+  started = true;
+  intro.classList.add('gone');
+  setTimeout(() => { hud.classList.add('show'); countEl.classList.add('show'); }, 700);
+}
+intro.addEventListener('click', begin);
+intro.addEventListener('touchstart', begin, { passive: true });
+
+bSound.addEventListener('click', () => {
+  const on = audio.toggle();
+  bSound.classList.toggle('active', on);
+});
+document.getElementById('bSeason').addEventListener('click', () => {
+  season = (season + 1) % SEASONS.length;
+  seasonLabel.textContent = SEASONS[season].name;
+  // 既存の粒は次の周回で新しい季節色になる
+});
+document.getElementById('bClear').addEventListener('click', () => {
+  // 霧で流す：白くフェードしてリセット
+  ctx.fillStyle = 'rgba(220,228,255,.22)';
+  ctx.fillRect(0, 0, W, H);
+  setTimeout(() => { ctx.fillStyle = SEASONS[season].sky; ctx.fillRect(0, 0, W, H); }, 60);
+  for (const p of particles) p.reset(true);
+});
+document.getElementById('bSave').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.download = `na-${SEASONS[season].name}-${Date.now()}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+});
+
+// キーボードの小技
+addEventListener('keydown', (e) => {
+  if (e.key === ' ') { document.getElementById('bSeason').click(); e.preventDefault(); }
+  if (e.key.toLowerCase() === 's') document.getElementById('bSound').click();
+  if (e.key.toLowerCase() === 'c') document.getElementById('bClear').click();
+});
+
+loop();
+</script>
+</body>
+</html>
