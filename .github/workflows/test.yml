@@ -71,3 +71,12 @@ jobs:
       - name: Let six centuries of songs be sung, headless
         working-directory: works/uta
         run: node --test tests/*.test.js
+
+  hotaru:
+    name: 蛍 — do the fireflies still glow?
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # 蛍にテストの檻は似合わない。光るかどうかだけ、そっと確かめる。
+      - name: Three frames of June night
+        run: HOTARU_ITSUDEMO=1 HOTARU_FRAMES=3 ./蛍 > /dev/null

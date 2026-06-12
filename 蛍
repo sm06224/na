@@ -1,0 +1,180 @@
+#!/bin/sh
+# ============================================================
+# 蛍 — ターミナルに棲む、六月だけの生き物
+#
+#   ./蛍
+#
+# ブラウザはいらない。seed もない。保存もできない。
+# ゲンジボタルがほんとうにそうするように、はじめは
+# ばらばらに明滅し、たがいの灯を見て、すこしずつ位相を
+# 合わせてゆく（蔵本モデル）。やがて岸じゅうが
+# ひとつの心拍になる。それは今夜かぎりの同調で、
+# あなたが見たその光り方は、二度と再現できない。
+#
+# 六月以外の夜は光らない。待てないなら HOTARU_ITSUDEMO=1 を。
+# やめるときは Ctrl-C。
+# ============================================================
+
+mon=$(date +%m)
+if [ "$mon" != "06" ] && [ -z "$HOTARU_ITSUDEMO" ]; then
+  echo "いまは蛍の季節ではありません。"
+  echo "六月の夜に、また来てください。"
+  echo "（どうしても待てない人は HOTARU_ITSUDEMO=1 ./蛍 ）"
+  exit 0
+fi
+
+COLS=$(tput cols 2>/dev/null); LINES=$(tput lines 2>/dev/null)
+[ -n "$COLS" ] || COLS=80
+[ -n "$LINES" ] || LINES=24
+
+cleanup() {
+  printf '\033[0m\033[?25h\033[?1049l'
+  echo "ひかりあう ことをおぼえて 川の蛍"
+  exit 0
+}
+trap cleanup INT TERM
+
+printf '\033[?1049h\033[?25l'
+
+awk -v W="$COLS" -v H="$LINES" -v SEED="$(date +%s)" -v FRAMES="${HOTARU_FRAMES:-0}" '
+function put(yy, xx, c, col) {
+  if (xx < 1 || xx > W || yy < 1 || yy >= H) return
+  ch[yy, xx] = c; co[yy, xx] = col
+}
+
+# 升目を 1 行ずつ流し込み、最終行はことばの行として別に描く
+function draw(cap, meter,   buf, yy, xx, k, cur, c, col) {
+  buf = "\033[H"
+  for (yy = 1; yy < H; yy++) {
+    cur = ""
+    for (xx = 1; xx <= W; xx++) {
+      k = yy SUBSEP xx
+      c = (k in ch) ? ch[k] : " "
+      if (c != " ") {
+        col = co[k]
+        if (col != cur) { buf = buf col; cur = col }
+      }
+      buf = buf c
+    }
+    buf = buf "\033[0m\n"
+  }
+  buf = buf C_CAP " " cap "\033[K\033[" H ";" (W - 11) "H" meter "\033[0m"
+  printf "%s", buf
+}
+
+BEGIN {
+  srand(SEED + 0)
+  PI = 3.14159265358979
+  if (W < 40) W = 40
+  if (H < 16) H = 16
+
+  riverTop = H - 5          # ここから下が川
+  grassY   = riverTop - 1   # 土手
+  N = int(W * H / 46); if (N < 18) N = 18; if (N > 64) N = 64
+
+  for (i = 1; i <= N; i++) {
+    x[i]  = 2 + rand() * (W - 4)
+    y[i]  = 2 + rand() * (grassY - 4)
+    th[i] = rand() * 2 * PI                  # 明滅の位相 — 最初はばらばら
+    om[i] = 2 * PI * (0.36 + rand() * 0.26)  # それぞれの生まれつきの速さ
+    vx[i] = (rand() - 0.5) * 1.2
+    vy[i] = (rand() - 0.5) * 0.5
+  }
+
+  # 色
+  C_STAR  = "\033[38;2;90;100;140m"
+  C_MOON  = "\033[38;2;230;220;160m"
+  C_GRASS = "\033[38;2;42;92;46m"
+  C_RIVER = "\033[38;2;50;90;130m"
+  C_GLOW1 = "\033[38;2;70;140;40m"    # 灯りかけ
+  C_GLOW2 = "\033[38;2;150;220;60m"   # 灯り
+  C_GLOW3 = "\033[38;2;220;255;120m"  # まんなかの灯
+  C_REFL  = "\033[38;2;70;130;60m"    # 川面のうつりこみ
+  C_CAP   = "\033[38;2;120;130;150m"
+
+  dt = 0.066; K = 0; t = 0; frame = 0
+  moonX = W - 10; moonY = 2
+
+  while (FRAMES == 0 || frame < FRAMES) {
+    frame++; t += dt
+
+    # 夜が深まるほど、たがいの灯がよく見える（結合がゆっくり強まる）
+    # 1 分は闇とばらばらの瞬き、2 分でそろいはじめ、3 分で岸はひとつの心拍になる
+    if (K < 1.15) K += dt * 0.006
+
+    # --- 蔵本モデル：群れ全体の「拍」 ---
+    sx = 0; sy = 0
+    for (i = 1; i <= N; i++) { sx += cos(th[i]); sy += sin(th[i]) }
+    r = sqrt(sx * sx + sy * sy) / N
+    psi = atan2(sy, sx)
+
+    for (i = 1; i <= N; i++) {
+      # 同調はゆらぎとせめぎあう（完全には揃いきらない、生き物だから）
+      th[i] += dt * (om[i] + K * r * sin(psi - th[i])) + (rand() - 0.5) * 0.05
+      # 漂い
+      vx[i] += (rand() - 0.5) * 0.3;  vy[i] += (rand() - 0.5) * 0.15
+      if (vx[i] >  1.4) vx[i] =  1.4; if (vx[i] < -1.4) vx[i] = -1.4
+      if (vy[i] >  0.5) vy[i] =  0.5; if (vy[i] < -0.5) vy[i] = -0.5
+      x[i] += vx[i] * dt * 6; y[i] += vy[i] * dt * 6
+      if (x[i] < 1)          { x[i] = 1;          vx[i] = -vx[i] }
+      if (x[i] > W - 1)      { x[i] = W - 1;      vx[i] = -vx[i] }
+      if (y[i] < 2)          { y[i] = 2;          vy[i] = -vy[i] }
+      if (y[i] > grassY - 1) { y[i] = grassY - 1; vy[i] = -vy[i] }
+    }
+
+    # --- 描画バッファを組む ---
+    split("", ch); split("", co)
+
+    # 星（位置は固定、まれにまたたく）
+    for (yy = 1; yy <= grassY - 2; yy++)
+      for (xx = 1; xx <= W; xx += 7)
+        if ((xx * 31 + yy * 57) % 23 == 0 && rand() > 0.04)
+          put(yy, xx + (yy * 13) % 5, ".", C_STAR)
+
+    # 月
+    put(moonY,     moonX + 1, "_", C_MOON)
+    put(moonY + 1, moonX,     "(", C_MOON)
+    put(moonY + 1, moonX + 2, ")", C_MOON)
+    put(moonY + 2, moonX + 1, "\"", C_MOON)
+
+    # 土手の草
+    for (xx = 1; xx <= W; xx++) {
+      g = (xx * 2654435761) % 97
+      put(grassY, xx,
+        (g < 22 ? "w" : g < 44 ? "v" : g < 64 ? "," : g < 84 ? "\"" : "y"), C_GRASS)
+    }
+
+    # 川（ゆらぎ）と月の道
+    for (yy = riverTop; yy < H; yy++)
+      for (xx = 1; xx <= W; xx++) {
+        if (xx >= moonX - 1 && xx <= moonX + 3 && rand() < 0.30)
+          put(yy, xx, "~", C_MOON)
+        else if (rand() < 0.05)
+          put(yy, xx, (rand() < 0.5 ? "~" : "-"), C_RIVER)
+      }
+
+    # 蛍 — 灯っているあいだだけ、そこにいるとわかる
+    for (i = 1; i <= N; i++) {
+      b = sin(th[i])
+      if (b > 0.92)      put(int(y[i]), int(x[i]), "@", C_GLOW3)
+      else if (b > 0.65) put(int(y[i]), int(x[i]), "o", C_GLOW2)
+      else if (b > 0.30) put(int(y[i]), int(x[i]), ".", C_GLOW1)
+      # 強く灯った蛍は川面にうつる
+      if (b > 0.80) {
+        ry = riverTop + int((H - 1 - riverTop) * y[i] / grassY)
+        if (rand() < 0.7) put(ry, int(x[i]), "~", C_REFL)
+      }
+    }
+
+    # ことば（同調の度合いで変わる）
+    if      (r < 0.25) cap = "六月の夜。蛍は、となりの灯を見て、自分の灯をすこし直す。"
+    else if (r < 0.75) cap = "灯が、そろいはじめている。"
+    else               cap = "いま、岸じゅうが ひとつの心拍になった。"
+
+    draw(cap, sprintf("同調 %2d%%", int(r * 100)))
+    system("sleep 0.05")
+  }
+}
+'
+
+cleanup
