@@ -1,0 +1,11 @@
+{
+  "name": "ori",
+  "version": "1.0.0",
+  "description": "織 — a loom that weaves songs into cloth. A melody's pitches choose the weave structure, its durations become rows of weft, and the song's hook becomes a visible pattern. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "tegami": "node tegami.js"
+  }
+}

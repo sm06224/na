@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="織 (ori) — 歌を布に織る織り機。旋律の高さが組織を選び、長さが緯糸の段数になり、フックが目に見える柄になる。">
+<meta name="theme-color" content="#0a0908">
+<title>織 — cloth woven from song</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="cloth"></canvas>
+  <div id="hud"></div>
+</main>
+
+<aside id="panel">
+  <header>
+    <h2>織 <span class="en">/ ori</span></h2>
+    <p class="tagline">cloth woven from song</p>
+  </header>
+
+  <section>
+    <label for="kana">節（カナ譜）</label>
+    <textarea id="kana" rows="2" spellcheck="false">らドレドレドーそーー</textarea>
+    <p class="hint">ひらがな＝低い音、カタカナ＝高い音、「ー」＝伸ばし（三拍まで）。<br>
+       使える字：ど れ み そ ら ・ ド レ ミ ソ ラ</p>
+    <div class="row">
+      <label>種 <input id="seed" type="number" value="20260612"></label>
+      <label>丈 <select id="rows">
+        <option value="80">80 段</option>
+        <option value="120" selected>120 段</option>
+        <option value="200">200 段</option>
+      </select></label>
+      <label>経糸 <select id="warp">
+        <option value="48">48 本</option>
+        <option value="72" selected>72 本</option>
+        <option value="96">96 本</option>
+      </select></label>
+    </div>
+    <label class="check"><input id="sound" type="checkbox" checked> 織りながら、歌う</label>
+    <div class="row">
+      <button id="bWeave">織る</button>
+      <button id="bSave" disabled>SVG で持ち帰る</button>
+    </div>
+    <p id="error" hidden></p>
+  </section>
+
+  <section id="meiBox" hidden>
+    <label>銘 — この布の指紋</label>
+    <p id="mei"></p>
+  </section>
+
+  <section>
+    <label>染め — 音の高さは、緯糸の色</label>
+    <div id="dyes"></div>
+  </section>
+
+  <footer>
+    <p>はじめに入っている節「らドレドレドーそーー」は、<a href="../uta/">歌</a> の
+       seed 20260612 の世界で紀元 2 年に生まれた恋歌。種 20260612 で織ると
+       銘「3cdabf73」の布になり、CI が永遠にそれを照合している。</p>
+    <p><a href="./README.md">しくみを読む</a> · <a href="../../">作品集へ</a></p>
+  </footer>
+</aside>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
