@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="備 (sonae) — 家庭の防災備蓄チェッカー。家族構成を入れると必要な備蓄量がすぐわかり、A4チェックリストとして印刷できる。無料・登録不要・オフラインで動き、データは端末から一歩も出ない。">
+<meta name="theme-color" content="#faf7f0">
+<title>備 — 我が家の備蓄は、三分でわかる</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="top">
+  <div class="title">
+    <h1>備 <span class="en">/ sonae</span></h1>
+    <p class="tagline">我が家の備蓄は、三分でわかる — 無料・登録不要・データは端末から出ない</p>
+  </div>
+  <div class="progress no-print" aria-live="polite">
+    <div class="bar"><i id="bar"></i></div>
+    <span id="rate">…</span>
+  </div>
+</header>
+
+<main>
+  <section id="inputs" class="card no-print" aria-label="家族構成">
+    <h2>だれの備えですか</h2>
+    <div id="steppers"></div>
+    <h2>何日分そなえますか</h2>
+    <div class="days" role="radiogroup">
+      <button id="d3" class="day">3日分 <small>最低限</small></button>
+      <button id="d7" class="day">7日分 <small>推奨</small></button>
+    </div>
+    <p class="hint">大きな災害では物流の回復に1週間以上かかることがあります。
+       マンションなどで在宅避難を考えるなら7日分を。</p>
+    <div class="actions">
+      <button id="bPrint" class="primary">🖨 チェックリストを印刷</button>
+      <button id="bCopy">テキストをコピー</button>
+      <button id="bReset" class="danger">チェックをリセット</button>
+    </div>
+  </section>
+
+  <section id="list" aria-label="備蓄リスト"></section>
+
+  <section class="card rolling">
+    <h2>ローリングストックのすすめ</h2>
+    <p>非常食を特別に買い込むより、<b>ふだん食べるものを少し多めに買い、
+       食べたら買い足す</b>——それだけで備蓄は回りはじめます。
+       賞味期限切れの山もできません。このリストの「主食」「主菜」は、
+       ぜんぶ普段の食卓に出せるもので構いません。</p>
+  </section>
+
+  <footer>
+    <p class="sources">数量の根拠（目安）：
+      <a href="https://www.maff.go.jp/j/zyukyu/foodstock/guidebook/" target="_blank" rel="noopener">農林水産省「災害時に備えた食品ストックガイド」</a> ·
+      <a href="https://www.bichiku.metro.tokyo.lg.jp/" target="_blank" rel="noopener">東京都「東京備蓄ナビ」</a> ·
+      <a href="https://www.env.go.jp/nature/dobutsu/aigo/2_data/pamph/h3009a.html" target="_blank" rel="noopener">環境省「人とペットの災害対策ガイドライン」</a>
+    </p>
+    <p class="disclaimer">あくまで一般的な目安です。持病・アレルギー・体格など、ご家庭の事情に合わせて増減してください。
+       入力とチェックはこの端末のブラウザにだけ保存され、どこにも送信されません。</p>
+    <p><a href="../../">← na</a> <span class="dim">作品集で二番目の実用品（一番目は <a href="../ban/">番</a>）</span></p>
+  </footer>
+</main>
+
+<div id="printHead" class="print-only"></div>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
