@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>番 — 使い方</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0c12; color: #e4e8f4; line-height: 1.9;
+    font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    font-size: 15px;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 24px 120px; }
+  h1 { font-weight: 300; font-size: 2.4rem; margin-bottom: .2em; }
+  h1 .sub { font-size: 1rem; color: rgba(228,232,244,.5); margin-left: 12px; }
+  h2 {
+    font-size: 1.15rem; font-weight: 600; margin: 2.2em 0 .6em;
+    padding-left: 12px; border-left: 3px solid #e8b14f;
+  }
+  p, li { color: rgba(228,232,244,.85); }
+  ul, ol { padding-left: 1.6em; margin: .4em 0 1em; }
+  li { margin: .3em 0; }
+  .step {
+    background: #11141d; border: 1px solid rgba(255,255,255,.09);
+    border-radius: 12px; padding: 16px 20px; margin: 12px 0;
+  }
+  .step b { color: #e8b14f; }
+  kbd, .tag {
+    background: #181c28; border: 1px solid rgba(255,255,255,.13); border-radius: 5px;
+    padding: 1px 7px; font-size: .85em;
+  }
+  .note { font-size: .85rem; color: rgba(228,232,244,.55); }
+  .warn { color: #e8b14f; }
+  table { border-collapse: collapse; margin: .6em 0 1em; }
+  th, td { border: 1px solid rgba(255,255,255,.12); padding: 6px 12px; font-size: .86rem; text-align: left; }
+  th { color: rgba(228,232,244,.55); font-weight: 400; }
+  a { color: #9ab8ff; }
+  .top { display: inline-block; margin-bottom: 24px; color: #9ab8ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <a class="top" href="./">← 番にもどる</a>
+  <h1>番<span class="sub">使い方の手引き</span></h1>
+  <p>毎月のシフト作成に何時間も取られているあなたへ。やることは 4 つだけです。</p>
+
+  <h2>最短の流れ</h2>
+  <div class="step"><b>① スタッフを登録する</b><br>
+    「スタッフ」タブで名前を追加。パートさんは<span class="tag">週の上限</span>や<span class="tag">月の目標</span>を、
+    夜勤に入れない人は「入れるシフト」のチェックを外します。</div>
+  <div class="step"><b>② シフト種別と必要人数を決める</b><br>
+    「シフト種別」タブで時刻と、曜日ごとの必要人数を設定。
+    終了時刻が開始より早ければ（例 16:00〜9:00）自動で夜勤扱いになります。</div>
+  <div class="step"><b>③ 希望休を記録する</b><br>
+    「シフト表」のセルをクリック →「本人の希望として記録」から
+    <span class="tag">休み希望</span>を選びます。希望休は<b>絶対に破られません</b>。</div>
+  <div class="step"><b>④「⚙ 自動作成」を押す</b><br>
+    数秒で表ができます。気に入らなければ「もう一案」。
+    手で直したいセルは直してから、動かしたくないセルを<b>右クリックでロック</b>して、もう一度自動作成。</div>
+
+  <h2>自動でチェックされる決まり</h2>
+  <p>既定値は公的なガイドラインに合わせています。「ルール」タブで職場に合わせて変えられます。</p>
+  <table>
+    <tr><th>決まり</th><th>既定</th><th>根拠の目安</th></tr>
+    <tr><td>勤務間インターバル</td><td>11 時間</td><td>厚労省が努力義務として推奨。夜勤明け→早番を自動で防ぐ</td></tr>
+    <tr><td>連勤の上限</td><td>5 日</td><td>法律上の上限は 12 日だが、健康面では 3〜5 日が推奨</td></tr>
+    <tr><td>夜勤の連続</td><td>2 回まで</td><td>日本看護協会ガイドラインの目安</td></tr>
+    <tr><td>夜勤の月間回数</td><td>8 回まで</td><td>三交代制の目安（同ガイドライン）</td></tr>
+  </table>
+  <p class="note">※ 番は労務管理の参考情報を提供するもので、法令遵守の最終判断は事業者にあります。</p>
+
+  <h2>セルの見かた</h2>
+  <ul>
+    <li>セルの色 = シフト種別の色。<span class="tag">休</span>は休み、空欄は未定</li>
+    <li>セル右上の小さな三角 = 🔒ロック（自動作成が動かさない）</li>
+    <li>セル下端の赤い線 = 休み希望 / 青い線 = シフト希望 / 紫の線 = このシフト不可</li>
+    <li>赤い枠 = ルール違反。下の一覧をクリックすると該当セルに飛びます</li>
+    <li>表の下の数字 = その日の人数（実績/必要）。足りない日は赤くなります</li>
+  </ul>
+
+  <h2>希望の集めかた（Excel 派の職場でも）</h2>
+  <ol>
+    <li>「入出力 → 希望収集テンプレート CSV」を書き出して配る（Excel でそのまま開けます）</li>
+    <li>スタッフは自分の行に「休」やシフトの略称を書く</li>
+    <li>「入出力 → 希望 CSV を取り込む」で一括反映</li>
+  </ol>
+
+  <h2>できた表の配りかた</h2>
+  <ul>
+    <li><b>印刷</b> — 🖨ボタン。A4 横で壁貼り用に整形されます</li>
+    <li><b>CSV</b> — Excel で開いて加工できます（文字化けしない BOM 付き）</li>
+    <li><b>スマホのカレンダー</b> — 「入出力 → スマホ用カレンダー」で一人ずつ .ics を書き出し。
+      LINE などで送れば、本人の Google/Apple カレンダーに取り込めます</li>
+  </ul>
+
+  <h2>データの置き場所（たいせつ）</h2>
+  <p>番はサーバを持ちません。スタッフの名前も希望も、<b>このブラウザの中にだけ</b>自動保存されます。
+     外部に送信されることは一切ありません。</p>
+  <p class="warn">⚠ そのぶん、ブラウザの履歴消去や端末の変更でデータは消えます。
+     月が確定したら「入出力 → JSON で保存」でファイルに残してください。別の端末でも「JSON を開く」で続きができます。</p>
+
+  <h2>よくある質問</h2>
+  <ul>
+    <li><b>自動作成しても人数不足が消えない</b> — そもそも人手が足りていない可能性が高いです。
+      「統計」タブで総出勤数と必要数を見比べてください。週上限つきパートが多いときも起こります</li>
+    <li><b>特定の日だけ人を増やしたい</b> — 「シフト種別」タブの「＋特定日の人数」で上書きできます</li>
+    <li><b>月初の連勤がおかしい</b> — 前月から「▶」で進めば月末の勤務が引き継がれ、月またぎの連勤・夜勤明けも正しく判定されます</li>
+    <li><b>新人を一人にしたくない</b> — 「スタッフ」タブの「ペアの決まりごと」で先輩と組ませる設定を</li>
+    <li><b>オフラインで使える？</b> — 一度開けば、その後は電波がなくても開けます（対応ブラウザ）</li>
+  </ul>
+
+  <p class="note" style="margin-top:48px">
+    番 (ban) は <a href="https://github.com/sm06224/na">na</a> 作品集のひとつ。
+    無料・オープンソース（MIT）。不具合は GitHub の Issue へどうぞ。</p>
+</main>
+</body>
+</html>

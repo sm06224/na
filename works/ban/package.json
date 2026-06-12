@@ -1,0 +1,10 @@
+{
+  "name": "ban",
+  "version": "1.0.0",
+  "description": "番 — シフト表は、ブラウザだけで。Zero-dependency shift scheduler that never uploads your staff data.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

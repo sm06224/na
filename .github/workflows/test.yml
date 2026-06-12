@@ -35,3 +35,15 @@ jobs:
       - name: Run eight centuries of history headless
         working-directory: works/shi
         run: node --test tests/*.test.js
+
+  ban:
+    name: ban — shift scheduler core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Solve a month of rosters headless
+        working-directory: works/ban
+        run: node --test tests/*.test.js
