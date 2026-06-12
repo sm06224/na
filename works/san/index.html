@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="算 (san) — ブラウザの中に完結する架空の16bit計算機。128×96の画面、16色、4チャンネルの音。アセンブリと高級言語「珠」で書き、組んで、走らせ、止めて、覗く。">
+<meta name="theme-color" content="#0a0b0c">
+<title>算 — a little machine from nothing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="toolbar">
+  <h1>算 <span class="en">/ san</span></h1>
+  <span class="tagline">手のひらの 16bit</span>
+  <button id="bPower" class="primary">電源を入れる</button>
+  <button id="bMute" title="音の栓">音を消す</button>
+  <div class="spacer"></div>
+  <span id="stState" class="state idle">待機</span>
+  <span id="stFrame" class="num">フレーム 0</span>
+  <span id="stSteps" class="num">命令 0</span>
+</header>
+
+<div id="layout">
+
+  <!-- 機械 — 画面と口 -->
+  <main id="machine">
+    <section id="screenBox" tabindex="0" title="ここを選ぶと、鍵盤が機械に届く">
+      <canvas id="screen" width="128" height="96"></canvas>
+    </section>
+    <p id="screenHint" class="hint">画面を選ぶと 矢印=十字 Z=A X=B Enter=開始 Shift=選択 が届く</p>
+
+    <section id="consoleBox">
+      <h3>口 <span class="dim">— シリアル</span></h3>
+      <div id="serialOut" aria-live="polite"></div>
+      <input id="serialIn" placeholder="ここに打って Enter で機械へ" autocomplete="off">
+      <div id="buildErrors" hidden></div>
+    </section>
+  </main>
+
+  <!-- 工房 — 紙と虫眼鏡 -->
+  <aside id="workshop">
+    <section id="shelf">
+      <h3>棚</h3>
+      <div class="row">
+        <select id="romSel" title="ROM を選ぶ"></select>
+        <select id="langSel" title="言葉を選ぶ">
+          <option value="asm">アセンブリ</option>
+          <option value="tama">珠</option>
+        </select>
+      </div>
+      <p id="romBlurb" class="hint"></p>
+    </section>
+
+    <section id="editorBox">
+      <h3>紙 <span class="dim">— 行番号を押すと中断点</span></h3>
+      <div id="editor"></div>
+    </section>
+
+    <section id="debugBox">
+      <h3>虫眼鏡</h3>
+      <div class="row" id="debugBtns">
+        <button id="bPause">一時停止</button>
+        <button id="bStepI" title="1 命令だけ進める">1命令</button>
+        <button id="bStepF" title="1 フレームだけ進める">1フレーム</button>
+        <button id="bReset" title="据え直して入口へ">リセット</button>
+      </div>
+      <div id="dbgPanes" class="stale">
+        <div id="dbgRegs"></div>
+        <div id="dbgDisasm"></div>
+        <div id="dbgMem">
+          <label class="memLabel">番地（16進） <input id="memAddr" value="8000" autocomplete="off"></label>
+          <pre id="memDump"></pre>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <a href="../../">← 作品集</a>
+      <span class="dim">無から、機械をひとつ。故障は恥ではない。</span>
+    </footer>
+  </aside>
+
+</div>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
