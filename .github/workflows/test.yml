@@ -23,3 +23,15 @@ jobs:
       - name: Run the universe in a test tube
         working-directory: works/genesis
         run: node --test tests/*.test.js
+
+  shi:
+    name: shi — civilization core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run eight centuries of history headless
+        working-directory: works/shi
+        run: node --test tests/*.test.js

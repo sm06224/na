@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="史 (shi) — ひとりでに書かれてゆく歴史書。文明が勝手に興り、戦い、滅びる。">
+<meta name="theme-color" content="#04050a">
+<title>史 — a history that writes itself</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="map"></canvas>
+  <div id="hud">…</div>
+  <div id="seed"></div>
+
+  <!-- 序章 -->
+  <div id="intro">
+    <h1>史</h1>
+    <p>これは、ひとりでに書かれてゆく歴史書。<br>
+       集落が興り、王が立ち、道が結ばれ、国境がこすれ、戦が起き、疫病が旅をする。<br>
+       あなたは読者であって、著者ではない。</p>
+    <button id="bBegin">第一頁をひらく</button>
+  </div>
+
+  <!-- 全史の間 -->
+  <div id="annals">
+    <div id="annalsBox">
+      <header>
+        <h2>全史の間</h2>
+        <select id="annalsFilter">
+          <option value="major" selected>大事のみ</option>
+          <option value="war">戦火</option>
+          <option value="state">王と国</option>
+          <option value="calamity">厄災</option>
+          <option value="all">すべて</option>
+        </select>
+        <button id="annalsClose">閉じる</button>
+      </header>
+      <div id="annalsList"></div>
+    </div>
+  </div>
+</main>
+
+<aside id="panel">
+  <header>
+    <h2>史 <span class="en">/ shi</span></h2>
+    <p class="tagline">a history that writes itself</p>
+  </header>
+
+  <section>
+    <h3>世界 <span class="dim">— 鳥瞰</span></h3>
+    <canvas id="minimap" width="252" height="252"></canvas>
+  </section>
+
+  <section>
+    <h3>年表 <span class="dim">— 人口・都市・国</span></h3>
+    <canvas id="chart" width="252" height="110"></canvas>
+  </section>
+
+  <section>
+    <h3>近況 <button id="bAnnals" class="mini">全史を読む</button></h3>
+    <div id="events"></div>
+  </section>
+
+  <section>
+    <h3>見聞録 <span class="dim">— 選んだ都市</span></h3>
+    <div id="info"><div class="dim">地図上の都市をクリックすると、その来歴が読めます</div></div>
+  </section>
+
+  <section>
+    <h3>読者の手 <span class="dim">— 頁をめくる速さ</span></h3>
+    <div class="row">
+      <button id="bPause" class="spd" title="しおりを挟む (Space)">⏸</button>
+      <button id="b1x" class="spd" title="ひと月ずつ (1)">1×</button>
+      <button id="b4x" class="spd" title="季節ごと (2)">4×</button>
+      <button id="b12x" class="spd" title="年ごと (3)">12×</button>
+    </div>
+    <div class="row">
+      <button id="bPolitical" title="国境の色">政</button>
+      <button id="bTrade" title="交易路">交</button>
+      <button id="bLabels" title="地名">名</button>
+    </div>
+    <div class="row">
+      <button id="bSave" class="half">巻を綴じる</button>
+      <button id="bLoad" class="half">巻をひらく</button>
+      <input type="file" id="fileLoad" accept=".json" hidden>
+    </div>
+    <button id="bNew" class="wide danger">新しい世界の第一頁へ</button>
+  </section>
+
+  <footer>
+    <a href="../../">← na</a>
+    <span class="dim">無 → 庭 → 生 → 史</span>
+  </footer>
+</aside>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
