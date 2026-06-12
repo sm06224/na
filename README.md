@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔**
 
 </div>
 
@@ -70,6 +70,12 @@ Excel 対応 CSV／iCal／印刷／PWA（オフライン動作）。コアは DO
 ひとりでも重ね録りの合奏になる。残響はノイズから手作り。音源ファイルなし・サーバーなし。
 `庭` と `歌` の血を引く、あなたたちが鳴らす楽器。コアは DOM 非依存・**12 tests**。
 
+### 🪨 [苔 `koke`](./works/koke/) — *moss grows over this repository*
+作品集で唯一、**開いても動かない**作品。時間がたつと変わる作品。毎週月曜の朝、
+CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし描き足して、**自分でコミットして帰る**。
+庭は状態を持たず**週番号の純粋関数**なので、庭師が何週眠っても苔は経った時間ぶん育つ。
+そして第8週・第26週・第52週……**歳月だけが連れてくる客**が、コードの中で待っている。**7 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -115,14 +121,19 @@ na/
 │  │  ├─ js/core/           items · calc
 │  │  ├─ js/ui/main.js
 │  │  └─ tests/
-│  └─ kanade/               🎐 奏（みんなで触れる楽器）
-│     ├─ index.html · style.css
-│     ├─ js/core/music.js   音階・量子化・こだま
-│     ├─ js/ui/             audio · main
+│  ├─ kanade/               🎐 奏（みんなで触れる楽器）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/music.js   音階・量子化・こだま
+│  │  ├─ js/ui/             audio · main
+│  │  └─ tests/
+│  └─ koke/                 🪨 苔（時間の純粋関数としての庭）
+│     ├─ garden.svg         毎週、CI がここに苔を描き足す
+│     ├─ grow.js · js/core/garden.js
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
-│  ├─ test.yml              生と史のコアをヘッドレス検証
+│  ├─ test.yml              各作品のコアをヘッドレス検証
+│  ├─ koke.yml              苔の庭師（毎週月曜の朝、勝手にコミットする）
 │  └─ pages.yml             GitHub Pages へ自動公開
 ├─ .gitleaks.toml
 └─ LICENSE (MIT)
@@ -131,13 +142,21 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏` のコアをブラウザなしで検証（計 153 tests）、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔` のコアをブラウザなしで検証（計 160 tests）、`蛍` は光るかどうかだけ
+- **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
 
 ---
 
 <div align="center">
+
+<img src="works/koke/garden.svg" width="92%" alt="苔庭 — 毎週月曜の朝、CI がここに苔を描き足していく">
+
+<sub>↑ この庭は毎週月曜の朝、ひとりでに育ちます（<a href="works/koke/">苔</a>）</sub>
+
+<br><br>
+
 <sub>無一物中無尽蔵 — 何も無いところに、尽きせぬものが宿る。</sub><br>
 <sub>……六月の夜なら、ターミナルで <code>./蛍</code> を。</sub>
 </div>
