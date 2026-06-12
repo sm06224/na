@@ -1,0 +1,10 @@
+{
+  "name": "sonae",
+  "version": "1.0.0",
+  "description": "備 — 家庭の防災備蓄チェッカー。家族構成から必要量を計算し、A4チェックリストに。無料・登録不要・データは端末から出ない。",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

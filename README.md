@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備**
 
 </div>
 
@@ -57,6 +57,12 @@ Excel 対応 CSV／iCal／印刷／PWA（オフライン動作）。コアは DO
 そして Web Audio で**この世界の歌が実際に聴こえる**（五音音階なので、どの歌が重なっても
 協和する）。出力が「言葉」だった系譜が、ここで「音」になる。コアは DOM 非依存・**24 tests**。
 
+### 🎒 [備 `sonae`](./works/sonae/) — *我が家の備蓄は、三分でわかる*
+二番目の**実用ツール**。家族構成（乳幼児・高齢者・ペット・生理用品まで）と日数を入れると、
+**公的な目安に基づく約30品目の備蓄リスト**が数量つきで出る。チェックすると備え率が見え、
+**冷蔵庫に貼れる A4 チェックリスト**として印刷できる。無料・登録不要・オフラインで動き、
+**データは端末から一歩も出ない**。根拠は農水省・東京備蓄ナビ・環境省。コアは DOM 非依存・**17 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -92,10 +98,15 @@ na/
 │  │  ├─ js/core/           phonology · meaning · lexicon · chronicle · world
 │  │  ├─ js/ui/             render · panels · main
 │  │  └─ tests/
-│  └─ uta/                  🎵 歌（創発する音楽）
+│  ├─ uta/                  🎵 歌（創発する音楽）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           scale · occasions · repertoire · chronicle · world
+│  │  ├─ js/ui/             render · audio · panels · main
+│  │  └─ tests/
+│  └─ sonae/                🎒 備（防災備蓄チェッカー）
 │     ├─ index.html · style.css
-│     ├─ js/core/           scale · occasions · repertoire · chronicle · world
-│     ├─ js/ui/             render · audio · panels · main
+│     ├─ js/core/           items · calc
+│     ├─ js/ui/main.js
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -108,7 +119,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌` のコアをブラウザなしで検証（計 124 tests）
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備` のコアをブラウザなしで検証（計 141 tests）、`蛍` は光るかどうかだけ
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
 
