@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織**
 
 </div>
 
@@ -76,6 +76,14 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 庭は状態を持たず**週番号の純粋関数**なので、庭師が何週眠っても苔は経った時間ぶん育つ。
 そして第8週・第26週・第52週……**歳月だけが連れてくる客**が、コードの中で待っている。**7 tests**。
 
+### 🧵 [織 `ori`](./works/ori/) — *cloth woven from song*
+**歌を布に織る織り機**。旋律の高さが組織（経糸の浮き沈みの規則＝セルオートマトン）を選び、
+長さが緯糸の段数になり、高さは草木染めの色になる——だから**歌のフックが、目に見える柄になる**。
+カナ譜の文法は `歌` と同じなので、**あちらの世界で生まれた節をそのまま織って持ち帰れる**。
+布の丈が満ちるまで歌はリピートされるが、組織の状態は繰り返しを越えて流れるので、
+同じ色の帯が巡っても織り味は二度と同じにならない。出力の系譜は「言葉 → 音 → **紋様**」へ。
+織り上がりには**銘**（決定的な指紋）がつき、SVG で持ち帰れる。コアは DOM 非依存・**12 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -126,9 +134,14 @@ na/
 │  │  ├─ js/core/music.js   音階・量子化・こだま
 │  │  ├─ js/ui/             audio · main
 │  │  └─ tests/
-│  └─ koke/                 🪨 苔（時間の純粋関数としての庭）
-│     ├─ garden.svg         毎週、CI がここに苔を描き足す
-│     ├─ grow.js · js/core/garden.js
+│  ├─ koke/                 🪨 苔（時間の純粋関数としての庭）
+│  │  ├─ garden.svg         毎週、CI がここに苔を描き足す
+│  │  ├─ grow.js · js/core/garden.js
+│  │  └─ tests/
+│  └─ ori/                  🧵 織（歌を布に織る織り機）
+│     ├─ index.html · style.css
+│     ├─ tegami.svg         額装された手紙（恋歌を織った布）
+│     ├─ tegami.js · js/core/  rng · kana · loom
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

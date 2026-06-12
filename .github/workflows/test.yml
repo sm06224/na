@@ -108,6 +108,18 @@ jobs:
         working-directory: works/koke
         run: node --test tests/*.test.js
 
+  ori:
+    name: ori — loom core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Weave the letter again and compare every pixel
+        working-directory: works/ori
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
