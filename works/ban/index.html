@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="番 (ban) — シフト表は、ブラウザだけで。無料・登録不要・データは端末から出ない自動シフト作成ツール。勤務間インターバル・連勤上限・夜勤回数を自動チェック。">
+<meta name="theme-color" content="#0a0c12">
+<title>番 — シフト表は、ブラウザだけで</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+
+<header id="appHead">
+  <div class="brand">
+    <span class="brand-glyph">番</span>
+    <span class="brand-text">
+      <b>番</b><span class="brand-sub">シフト表は、ブラウザだけで</span>
+    </span>
+  </div>
+  <nav id="tabs"></nav>
+  <div class="privacy-note" title="このツールはサーバを持ちません。スタッフの名前も希望も、この端末の中だけに保存されます。">
+    🔒 データは端末から出ません
+  </div>
+  <a class="help-link" href="help.html" target="_blank" title="使い方">？</a>
+</header>
+
+<div id="toolbar"></div>
+
+<main id="main">
+  <div id="gridWrap">
+    <div id="grid"></div>
+    <div id="violations"></div>
+  </div>
+  <div id="panel" style="display:none"></div>
+</main>
+
+<!-- はじめての人へ -->
+<div id="welcome" style="display:none">
+  <div class="welcome-box">
+    <h1>番<span class="en"> / ban</span></h1>
+    <p class="lead">シフト表は、ブラウザだけで。</p>
+    <ul class="sell">
+      <li>⚙ <b>自動作成</b> — 希望休・人数・労務ルールを満たす表を数秒で</li>
+      <li>⚖ <b>法令の番人</b> — 勤務間インターバル 11h・連勤上限・夜勤回数を自動チェック</li>
+      <li>🤝 <b>公平</b> — 土日・夜勤の偏りを数えて均す</li>
+      <li>🔒 <b>秘密が守られる</b> — 登録不要・無料。スタッフの情報は端末の外に出ない</li>
+      <li>📄 <b>Excel と仲良し</b> — CSV で配って、書いてもらって、取り込める</li>
+    </ul>
+    <div class="welcome-btns">
+      <button id="btnDemo" class="primary big">デモを開く（介護施設 12 人）</button>
+      <button id="btnFresh" class="ghost big">まっさらから始める</button>
+    </div>
+    <p class="fine">うまく使うコツ: ①スタッフ登録 → ②シフト種別と必要人数 → ③希望休をセルに記録 → ④自動作成</p>
+  </div>
+</div>
+
+<footer id="appFoot">
+  <a href="../../">← na</a>
+  <span>無 → 庭 → 生 → 史 → 番</span>
+  <span class="foot-note">ブラウザを変えるとデータは引き継がれません。大事な表は JSON で保存を。</span>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
