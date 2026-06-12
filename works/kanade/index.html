@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="奏 (kanade) — みんなで触れる光の楽器。何本の指で触っても、誰が弾いても濁らない。弾いた音はこだまになって還ってくる。無料・登録不要・ブラウザだけ。">
+<meta name="theme-color" content="#07080e">
+<title>奏 — an instrument for everyone at once</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div id="hint" class="fade">触れると、鳴ります — 上ほど高く、なぞれば走ります。キーボードでも（A〜; と Q〜P）</div>
+
+<div id="bar">
+  <div id="scales"></div>
+  <button id="bEcho" class="chip wide active" title="弾いた音が 8 秒後に薄く還ってくる">こだま</button>
+  <button id="bDrone" class="chip wide active" title="場をひとつの調に保つ、ごく薄い持続音">調べ</button>
+</div>
+
+<div id="intro">
+  <h1>奏</h1>
+  <p>ひとつの画面に、何本でも指を。<br>
+     ここにあるのは半音のない音階だけ——<br>
+     だから誰がどこを触っても、音は濁らずに重なる。<br>
+     弾いた音と光は、八秒たつと、すこし薄くなって還ってくる。<br>
+     スマホを輪の真ん中に置いて、はじめてください。</p>
+  <button id="bBegin">奏ではじめる</button>
+</div>
+
+<footer>
+  <a href="../../">← na</a>
+  <span class="dim">無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏</span>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

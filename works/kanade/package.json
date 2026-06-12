@@ -1,0 +1,10 @@
+{
+  "name": "kanade",
+  "version": "1.0.0",
+  "description": "奏 — an instrument anyone can jam on, together. Touch makes light and pentatonic sound; echoes return. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
