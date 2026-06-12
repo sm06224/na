@@ -1,0 +1,10 @@
+{
+  "name": "shi",
+  "version": "1.0.0",
+  "description": "史 — a history that writes itself. Autonomous civilization simulator, zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
