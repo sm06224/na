@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="歌 (uta) — 無から音楽が生まれる世界。節が生まれ、口から口へ変奏され、覚えやすい歌だけが生き残り、群れを越えて流行し、忘れられていく様を聴く。">
+<meta name="theme-color" content="#080709">
+<title>歌 — music that composes itself</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="map"></canvas>
+  <div id="hud">…</div>
+  <div id="seed"></div>
+
+  <div id="intro">
+    <h1>歌</h1>
+    <p>はじめに、歌はなかった。<br>
+       誰かが声を伸ばし、誰かの胸に残った節だけが、もう一度歌われる。<br>
+       歌は生まれ、訛り、群れを越えて流行り、覚えやすく磨かれ、忘れられる。<br>
+       誰も作曲しない音楽が、ひとりでに育つのを、ただ聴く。</p>
+    <button id="bBegin">最初の声をきく</button>
+  </div>
+
+  <div id="annals">
+    <div id="annalsBox">
+      <header>
+        <h2>歌史のすべて</h2>
+        <select id="annalsFilter">
+          <option value="major" selected>大事</option>
+          <option value="birth">歌の誕生</option>
+          <option value="death">忘却</option>
+          <option value="vary">変奏と転用</option>
+          <option value="spread">流行と分派</option>
+          <option value="all">すべて</option>
+        </select>
+        <button id="annalsClose">閉じる</button>
+      </header>
+      <div id="annalsList"></div>
+    </div>
+  </div>
+</main>
+
+<aside id="panel">
+  <header>
+    <h2>歌 <span class="en">/ uta</span></h2>
+    <p class="tagline">music that composes itself</p>
+  </header>
+
+  <section>
+    <h3>世界 <span class="dim">— 歌い手の分布</span></h3>
+    <canvas id="minimap" width="252" height="252"></canvas>
+  </section>
+
+  <section>
+    <h3>歌集 <span class="dim">— 選んだ民のいま。♪で聴く</span></h3>
+    <div id="songbook"><div class="dim hint">地図の群をクリックすると、その民の歌集が読めます</div></div>
+  </section>
+
+  <section>
+    <h3>年表 <span class="dim">— 歌・群・覚えやすさ</span></h3>
+    <canvas id="chart" width="252" height="110"></canvas>
+  </section>
+
+  <section>
+    <h3>歌史 <button id="bAnnals" class="mini">全史</button></h3>
+    <div id="events"></div>
+  </section>
+
+  <section>
+    <h3>読者の耳</h3>
+    <button id="bSound" class="wide">♪ 沈黙</button>
+    <div class="row">
+      <button id="bPause" class="spd" title="止める (Space)">⏸</button>
+      <button id="b1x" class="spd" title="ゆっくり (1)">×1</button>
+      <button id="b4x" class="spd" title="速く (2)">×4</button>
+      <button id="b16x" class="spd" title="一気に (3)">×24</button>
+    </div>
+    <div class="row">
+      <button id="bContact" title="歌が届く距離の線">接触</button>
+      <button id="bBook" title="選んだ民の歌集を書き出す">歌集を保存</button>
+    </div>
+    <div class="row">
+      <button id="bSave" class="half">世界を保存</button>
+      <button id="bLoad" class="half">世界を開く</button>
+    </div>
+    <button id="bNew" class="wide danger">新しい静寂から始める</button>
+  </section>
+
+  <footer>
+    <a href="../../">← na</a>
+    <span class="dim">無 → 庭 → 生 → 史 → 番 → 言 → 歌</span>
+  </footer>
+</aside>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

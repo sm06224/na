@@ -1,0 +1,10 @@
+{
+  "name": "uta",
+  "version": "1.0.0",
+  "description": "歌 — music that composes itself. Songs are born from nothing, varied mouth to mouth, selected for hooks, and forgotten. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
