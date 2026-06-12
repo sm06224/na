@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏**
 
 </div>
 
@@ -63,6 +63,13 @@ Excel 対応 CSV／iCal／印刷／PWA（オフライン動作）。コアは DO
 **冷蔵庫に貼れる A4 チェックリスト**として印刷できる。無料・登録不要・オフラインで動き、
 **データは端末から一歩も出ない**。根拠は農水省・東京備蓄ナビ・環境省。コアは DOM 非依存・**17 tests**。
 
+### 🎐 [奏 `kanade`](./works/kanade/) — *みんなで触れる、光の楽器*
+ひとつの画面に**何本でも指を**。スマホを輪の真ん中に置けば、その場の全員で合奏できる。
+使える音を**半音のない五音音階**に量子化してあるので、**誰がでたらめに触っても濁らない**
+（この約束はテストが守る）。弾いた音と光は**8 秒後に薄くなって還ってくる**（こだま）ので、
+ひとりでも重ね録りの合奏になる。残響はノイズから手作り。音源ファイルなし・サーバーなし。
+`庭` と `歌` の血を引く、あなたたちが鳴らす楽器。コアは DOM 非依存・**12 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -103,10 +110,15 @@ na/
 │  │  ├─ js/core/           scale · occasions · repertoire · chronicle · world
 │  │  ├─ js/ui/             render · audio · panels · main
 │  │  └─ tests/
-│  └─ sonae/                🎒 備（防災備蓄チェッカー）
+│  ├─ sonae/                🎒 備（防災備蓄チェッカー）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           items · calc
+│  │  ├─ js/ui/main.js
+│  │  └─ tests/
+│  └─ kanade/               🎐 奏（みんなで触れる楽器）
 │     ├─ index.html · style.css
-│     ├─ js/core/           items · calc
-│     ├─ js/ui/main.js
+│     ├─ js/core/music.js   音階・量子化・こだま
+│     ├─ js/ui/             audio · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -119,7 +131,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備` のコアをブラウザなしで検証（計 141 tests）、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏` のコアをブラウザなしで検証（計 153 tests）、`蛍` は光るかどうかだけ
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
 
