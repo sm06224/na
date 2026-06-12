@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算**
 
 </div>
 
@@ -84,6 +84,14 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 同じ色の帯が巡っても織り味は二度と同じにならない。出力の系譜は「言葉 → 音 → **紋様**」へ。
 織り上がりには**銘**（決定的な指紋）がつき、SVG で持ち帰れる。コアは DOM 非依存・**12 tests**。
 
+### 🖥 [算 `san`](./works/san/) — *a computer born from nothing*
+作品集でいちばん大きな作品。**無から作った計算機**——ブラウザに住む架空の 16bit コンソール。
+自作の CPU（独自命令セット）・アセンブラ・**日本語キーワードの高級言語「珠」とそのコンパイラ**・
+128×96・16色の画面・4チャンネル音源・**ステップ実行とブレークポイントを持つデバッガ**まで、
+すべて依存ゼロで一そろい。仕様書（[HARDWARE.md](./works/san/HARDWARE.md)・
+[LANGUAGE.md](./works/san/LANGUAGE.md)）が機械の唯一の真実。同梱 ROM では**蛍が機械の中で
+もう一度光り**、へびが遊べ、電卓がシリアル越しに答える。コアは DOM 非依存。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -138,10 +146,19 @@ na/
 │  │  ├─ garden.svg         毎週、CI がここに苔を描き足す
 │  │  ├─ grow.js · js/core/garden.js
 │  │  └─ tests/
-│  └─ ori/                  🧵 織（歌を布に織る織り機）
+│  ├─ ori/                  🧵 織（歌を布に織る織り機）
+│  │  ├─ index.html · style.css
+│  │  ├─ tegami.svg         額装された手紙（恋歌を織った布）
+│  │  ├─ tegami.js · js/core/  rng · kana · loom
+│  │  └─ tests/
+│  └─ san/                  🖥 算（無から生まれた計算機）
+│     ├─ HARDWARE.md        機械仕様書（ISA・メモリマップ・デバイス）
+│     ├─ LANGUAGE.md        言語「珠」仕様書
 │     ├─ index.html · style.css
-│     ├─ tegami.svg         額装された手紙（恋歌を織った布）
-│     ├─ tegami.js · js/core/  rng · kana · loom
+│     ├─ js/core/           vm · asm · bus · devices · machine
+│     ├─ js/lang/           珠コンパイラ
+│     ├─ js/ui/             画面 · 音 · エディタ · デバッガ
+│     ├─ js/roms.js · roms/ 同梱 ROM（蛍・へび・万華鏡・電卓 …）
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

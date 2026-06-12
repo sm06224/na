@@ -1,0 +1,10 @@
+{
+  "name": "san",
+  "version": "1.0.0",
+  "description": "算 — a computer born from nothing. A 16-bit fantasy console that lives in the browser: custom CPU, assembler, a Japanese-keyword language, memory-mapped devices, a debugger, and ROMs. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
