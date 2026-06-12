@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="言 (koto) — 無から言葉が生まれる世界。単語が発生し、訛り、方言に分かれ、意味がずれ、死語になる様を眺める。">
+<meta name="theme-color" content="#070810">
+<title>言 — a language that invents itself</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="map"></canvas>
+  <div id="hud">…</div>
+  <div id="seed"></div>
+
+  <div id="intro">
+    <h1>言</h1>
+    <p>はじめに、言葉はなかった。<br>
+       群れは音をさぐり、通じた音だけが生き残り、約束となる。<br>
+       やがて単語は生まれ、訛り、方言に分かれ、意味がずれ、死語になる。<br>
+       誰も設計しない言語が、ひとりでに育つのを、ただ眺める。</p>
+    <button id="bBegin">最初の沈黙をひらく</button>
+  </div>
+
+  <div id="annals">
+    <div id="annalsBox">
+      <header>
+        <h2>言語史のすべて</h2>
+        <select id="annalsFilter">
+          <option value="major" selected>大事</option>
+          <option value="birth">語の誕生</option>
+          <option value="death">語の死</option>
+          <option value="shift">意味の変化</option>
+          <option value="dialect">方言と借用</option>
+          <option value="all">すべて</option>
+        </select>
+        <button id="annalsClose">閉じる</button>
+      </header>
+      <div id="annalsList"></div>
+    </div>
+  </div>
+</main>
+
+<aside id="panel">
+  <header>
+    <h2>言 <span class="en">/ koto</span></h2>
+    <p class="tagline">a language that invents itself</p>
+  </header>
+
+  <section>
+    <h3>世界 <span class="dim">— 言語の分布</span></h3>
+    <canvas id="minimap" width="252" height="252"></canvas>
+  </section>
+
+  <section>
+    <h3>辞書 <span class="dim">— 選んだ言語の今</span></h3>
+    <div id="dict"><div class="dim hint">地図の群をクリックすると、その言語の辞書が読めます</div></div>
+  </section>
+
+  <section>
+    <h3>年表 <span class="dim">— 語彙・群・理解度</span></h3>
+    <canvas id="chart" width="252" height="110"></canvas>
+  </section>
+
+  <section>
+    <h3>言語史 <button id="bAnnals" class="mini">全史</button></h3>
+    <div id="events"></div>
+  </section>
+
+  <section>
+    <h3>読者の手</h3>
+    <div class="row">
+      <button id="bPause" class="spd" title="止める (Space)">⏸</button>
+      <button id="b1x" class="spd" title="ゆっくり (1)">×1</button>
+      <button id="b4x" class="spd" title="速く (2)">×4</button>
+      <button id="b16x" class="spd" title="一気に (3)">×12</button>
+    </div>
+    <div class="row">
+      <button id="bContact" title="群どうしの接触線">接触</button>
+      <button id="bDict" title="選んだ言語の辞書を書き出す">辞書を保存</button>
+    </div>
+    <div class="row">
+      <button id="bSave" class="half">世界を保存</button>
+      <button id="bLoad" class="half">世界を開く</button>
+    </div>
+    <button id="bNew" class="wide danger">新しい沈黙から始める</button>
+  </section>
+
+  <footer>
+    <a href="../../">← na</a>
+    <span class="dim">無 → 庭 → 生 → 史 → 番 → 言</span>
+  </footer>
+</aside>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

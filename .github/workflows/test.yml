@@ -47,3 +47,15 @@ jobs:
       - name: Solve a month of rosters headless
         working-directory: works/ban
         run: node --test tests/*.test.js
+
+  koto:
+    name: koto — emergent language core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Grow a language from nothing, headless
+        working-directory: works/koto
+        run: node --test tests/*.test.js

@@ -1,0 +1,10 @@
+{
+  "name": "koto",
+  "version": "1.0.0",
+  "description": "言 — a language that invents itself. Watch words be born, drift, split into dialects, and die. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
