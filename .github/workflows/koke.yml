@@ -1,0 +1,41 @@
+name: 苔
+
+# 毎週月曜の朝（JST 6:00）、庭に苔をひと巡りぶん描き足して、
+# 自分でコミットする。リポジトリは、誰も見ていなくても育つ。
+# 止めたくなったら、このファイルを消すだけでいい。庭は怒らない。
+on:
+  schedule:
+    - cron: "0 21 * * 0"   # 日曜 21:00 UTC = 月曜 6:00 JST
+  workflow_dispatch:        # 待ちきれない人のための手動ボタン
+
+permissions:
+  contents: write
+
+concurrency:
+  group: koke
+  cancel-in-progress: false
+
+jobs:
+  grow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Let the moss grow
+        id: grow
+        run: echo "line=$(node works/koke/grow.js)" >> "$GITHUB_OUTPUT"
+      - name: Commit, if anything grew
+        env:
+          LINE: ${{ steps.grow.outputs.line }}
+        run: |
+          if git diff --quiet -- works/koke/garden.svg; then
+            echo "今週はまだ、何も変わっていない"
+            exit 0
+          fi
+          git config user.name "koke-no-niwa"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add works/koke/garden.svg
+          git commit -m "$LINE"
+          git push

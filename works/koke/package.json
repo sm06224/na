@@ -1,0 +1,11 @@
+{
+  "name": "koke",
+  "version": "1.0.0",
+  "description": "苔 — moss grows over this repository. A garden that is a pure function of time, tended weekly by CI.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "grow": "node grow.js"
+  }
+}
