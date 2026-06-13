@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐**
 
 </div>
 
@@ -100,7 +100,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 磁気センサーの磁北は**国土地理院の偏角近似式で真北に補正**、🔔を入れると**正しい方向ほど
 速く脈打つ振動**で画面を見ずに歩ける。座標を URL に畳んだリンクを送れば、相手はブラウザで
 開くだけの**サーバーなし待ち合わせ**。登録なし・**場所は端末から出ない**・PWA。
-コアは DOM 非依存・**23 tests**。
+コアは DOM 非依存・**29 tests**。
+
+### 🦊 [狐 `kitsune`](./works/kitsune/) — *a GPS treasure hunt*
+`針` から生まれた、**スマホひとつで遊ぶ宝探し**。**狐（出題者）**が街を歩いて的を仕掛け、
+名前・ヒント・通過方法を添えて**コースまるごとを一本のリンクに畳む**。**追手**はそれを開くだけ、
+針と同じ**矢印**で次の的へ駆ける——地図は出ないから、知っている街も迷宮になる。
+通過のしるしは三つ：📍**GPS**（輪に入れば自動）・🔳**QR**（現地に貼った QR を標準カメラで。
+**コードは依存ゼロで自作**）・📷**写真**（その場の一枚が証明であり思い出）。QR が運ぶのは
+答えの**ハッシュだけ**だからリンクを解読してもズルできず、順番も飛ばせない。
+**サーバーは一台もない**——コースも進行も写真も端末から出ない。コアは DOM 非依存・**24 tests**。
 
 ```bash
 git clone https://github.com/sm06224/na.git
@@ -170,10 +179,15 @@ na/
 │  │  ├─ js/ui/             画面 · 音 · エディタ · デバッガ
 │  │  ├─ js/roms.js · roms/ 同梱 ROM（蛍・へび・万華鏡・電卓 …）
 │  │  └─ tests/
-│  └─ hari/                 🧭 針（帰り道を覚えている羅針盤・PWA）
+│  ├─ hari/                 🧭 針（帰り道を覚えている羅針盤・PWA）
+│  │  ├─ index.html · style.css · manifest · sw.js
+│  │  ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
+│  │  ├─ js/ui/             sensors · needle · main
+│  │  └─ tests/
+│  └─ kitsune/              🦊 狐（GPS 宝探し・PWA）
 │     ├─ index.html · style.css · manifest · sw.js
-│     ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
-│     ├─ js/ui/             sensors · needle · main
+│     ├─ js/core/           geo · course（コース符号・通過判定） · qr（QR 自作）
+│     ├─ js/ui/             sensors · needle · camera · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

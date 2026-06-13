@@ -1,0 +1,10 @@
+{
+  "name": "kitsune",
+  "version": "1.0.0",
+  "description": "狐 — a GPS treasure hunt for two roles. A fox plants checkpoints around a place and sends one link; hunters follow an arrow (no map) and prove arrival by GPS, a printed QR, or a photo. Serverless: the whole course folds into the URL. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

@@ -144,6 +144,18 @@ jobs:
         working-directory: works/hari
         run: node --test tests/*.test.js
 
+  kitsune:
+    name: kitsune — GPS treasure hunt core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fold a course, build a QR, and walk the hunt to the end
+        working-directory: works/kitsune
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

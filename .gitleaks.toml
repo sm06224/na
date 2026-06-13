@@ -10,4 +10,7 @@ description = "誤検知になりうる擬似トークンだけを無視する"
 regexes = [
   '''EXAMPLE''',
   '''placeholder''',
+  # 狐 (kitsune) の合言葉の字母 — 紛らわしい字を抜いた人が読める集合で、鍵ではない。
+  # 高エントロピーゆえ汎用APIキーに誤認されるので、この既知の並びだけを見逃す。
+  '''ABCDEFGHJKMNPQRSTUVWXYZ23456789''',
 ]
