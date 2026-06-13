@@ -1,9 +1,12 @@
 /* 狐の留守番 — 電波があるときは常に最新を取り、控えを更新する。
    電波が絶えたときだけ、控えが狩りを支える。
-   （針の v1 で学んだ：キャッシュ優先は、直した版を閉め出す檻になる。
-   だから初めから network-first。） */
 
-const CACHE = 'kitsune-v1';
+   学び：network-first でも fetch(e.request) は既定でブラウザの HTTP
+   キャッシュを使うので、GitHub Pages の max-age が切れるまで古い版が
+   返ってしまう（直したのに黒画面のまま、の正体）。だから取得は必ず
+   HTTP キャッシュを迂回（no-store）し、控えはこの SW 自身が持つ。 */
+
+const CACHE = 'kitsune-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -23,7 +26,7 @@ const ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
+      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'no-store' }))))
       .then(() => self.skipWaiting()));
 });
 
@@ -34,11 +37,17 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim()));
 });
 
+/* HTTP キャッシュを迂回して網から取り、控えを更新。失敗したら控えで支える。 */
+function fresh(request) {
+  const url = new URL(request.url);
+  return fetch(new Request(url, { cache: 'no-store', credentials: 'same-origin' }));
+}
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
-    fetch(e.request).then(res => {
-      if (res.ok) {
+    fresh(e.request).then(res => {
+      if (res && res.ok) {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
       }
