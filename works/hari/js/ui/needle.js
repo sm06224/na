@@ -4,6 +4,10 @@
 const rad = d => d * Math.PI / 180;
 
 function approach(cur, target, k = 0.18) {
+  // 数でない目標は追わない。自分が壊れていたら目標へ跳ぶ。
+  // （rotate(NaN) は変換行列ごと壊し、以後なにも描けなくなる）
+  if (!Number.isFinite(target)) return Number.isFinite(cur) ? cur : 0;
+  if (!Number.isFinite(cur)) return target;
   let d = (target - cur) % 360;
   if (d > 180) d -= 360;
   if (d < -180) d += 360;

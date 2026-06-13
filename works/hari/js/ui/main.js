@@ -80,8 +80,8 @@ async function startCompass() {
   try {
     await listenCompass(magnetic => {
       const t = fix ? trueHeading(magnetic, fix.lat, fix.lon) : magnetic;
-      heading = smoother.push(t);
-      headingAt = Date.now();
+      const v = smoother.push(t);
+      if (Number.isFinite(v)) { heading = v; headingAt = Date.now(); }
     });
   } catch {
     // 断られた。歩けば GPS が向きを教えるので、そう伝える

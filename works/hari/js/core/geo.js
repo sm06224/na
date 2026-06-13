@@ -48,10 +48,11 @@ export function trueHeading(magneticHeading, lat, lon) {
    それ以外は deviceorientationabsolute の alpha（反時計回り）を
    時計回りに返し、画面の回転ぶんを足す。 */
 export function headingFromEvent({ webkitCompassHeading, alpha, absolute }, screenAngle = 0) {
-  if (typeof webkitCompassHeading === 'number' && !Number.isNaN(webkitCompassHeading)) {
+  // センサは null だけでなく NaN もよこす。数でないものは向きではない
+  if (Number.isFinite(webkitCompassHeading)) {
     return (webkitCompassHeading % 360 + 360) % 360;
   }
-  if (typeof alpha === 'number' && absolute) {
+  if (Number.isFinite(alpha) && absolute) {
     return ((360 - alpha + screenAngle) % 360 + 360) % 360;
   }
   return null;
@@ -74,6 +75,7 @@ export class HeadingSmoother {
     this.y = null;
   }
   push(h) {
+    if (!Number.isFinite(h)) return this.value();   // 毒は飲まない
     const x = Math.cos(rad(h)), y = Math.sin(rad(h));
     if (this.x === null) { this.x = x; this.y = y; }
     else {
@@ -130,7 +132,7 @@ export function pickHeading({
   gps = null, gpsSpeed = 0, gpsAt = 0,
   now = Date.now(),
 } = {}) {
-  if (compass !== null && now - compassAt < 3000) {
+  if (Number.isFinite(compass) && now - compassAt < 3000) {
     return { heading: compass, source: 'compass' };
   }
   if (gps !== null && Number.isFinite(gps) && Number.isFinite(gpsSpeed) &&
