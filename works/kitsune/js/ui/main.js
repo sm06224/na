@@ -70,9 +70,13 @@ watchGeo(
   e => { $('gps').textContent = geoErrorWord(e); });
 
 /* ===== 画面の切り替え ===== */
+/* モード → 見せるセクションの id。'home' の顔は #hero。 */
+const SECTION = { home: 'hero', builder: 'builder', pinning: 'pinning', hunt: 'hunt', result: 'result' };
+
 function show(m) {
   mode = m;
-  for (const id of ['hero', 'builder', 'pinning', 'hunt', 'result']) $(id).hidden = id !== m;
+  const vis = SECTION[m] || 'hero';   // 知らないモードでも真っ暗にはしない
+  for (const id of ['hero', 'builder', 'pinning', 'hunt', 'result']) $(id).hidden = id !== vis;
   $('bHome').hidden = (m === 'home');
   $('bPin').hidden = (m !== 'builder');
   $('bQR').hidden = !(m === 'builder' && draft.cps.some(c => c.proof === 'qr'));
