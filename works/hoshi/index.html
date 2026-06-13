@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="星 (hoshi) — 誰も設計しない夜空。種ひとつから星が撒かれ、明るい星がひとりでに星座を結び、自分で名前をつけ、由来（神話）が書かれる。同じ種からは同じ空。">
+<meta name="theme-color" content="#05060d">
+<title>星 — a sky that names itself</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="hud">
+  <h1>星 <span class="en">/ hoshi</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>はじめに、空は暗かった。<br>
+       種をひとつ蒔くと、星が撒かれ、明るい星はおのずと結ばれ、<br>
+       名のり、由来を語りはじめる。誰も、星座を描いてはいない。</p>
+    <button id="bOpen">夜をひらく</button>
+    <p class="fine">同じ種からは、同じ空。指でなぞって星座にふれてください。</p>
+  </div>
+</div>
+
+<aside id="card" hidden>
+  <button id="cardClose" class="x">×</button>
+  <h2 id="cName"></h2>
+  <p id="cLead"></p>
+  <p id="cMyth"></p>
+</aside>
+
+<nav id="bar" hidden>
+  <button id="bAnother" class="ghost">べつの空をみる</button>
+  <button id="bLead" class="ghost">一番星へ</button>
+  <button id="bShare" class="ghost">この空を送る</button>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

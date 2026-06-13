@@ -1,0 +1,10 @@
+{
+  "name": "hoshi",
+  "version": "1.0.0",
+  "description": "星 — a sky that names itself. From a single seed, stars are scattered, the bright ones join into constellations on their own, name themselves, and write their own myths. Same seed, same sky. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
