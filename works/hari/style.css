@@ -1,5 +1,6 @@
 :root { color-scheme: dark; }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }   /* display 指定が hidden 属性に勝たないように */
 html, body { height: 100%; }
 body {
   display: flex; flex-direction: column;
