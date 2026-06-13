@@ -1,0 +1,77 @@
+:root { color-scheme: dark; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: #05060d; color: #e9ecf6;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  user-select: none; touch-action: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+#sky:active { cursor: grabbing; }
+
+#hud { position: fixed; top: 14px; left: 18px; pointer-events: none; }
+#hud h1 { font-weight: 200; font-size: 1.5rem; letter-spacing: .14em; text-shadow: 0 0 20px rgba(150,170,255,.4); }
+#hud .en { font-size: .64rem; opacity: .4; letter-spacing: .24em; }
+#seedline { margin-top: 4px; font-size: .64rem; letter-spacing: .2em; opacity: .4; font-variant-numeric: tabular-nums; }
+
+/* 序章 */
+#intro {
+  position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 2rem;
+  background: radial-gradient(120% 90% at 50% 30%, rgba(8,10,22,.55), rgba(5,6,13,.95));
+  transition: opacity 1.6s ease, visibility 1.6s;
+}
+#intro.gone { opacity: 0; visibility: hidden; }
+#intro .lead { display: flex; flex-direction: column; gap: 1.5rem; align-items: center; max-width: 34em; }
+#intro p { line-height: 2.1; opacity: .82; font-weight: 300; font-size: .92rem; letter-spacing: .03em; }
+#intro .fine { font-size: .72rem; opacity: .42; line-height: 1.9; }
+#intro button {
+  border: 1px solid rgba(160,180,255,.4); background: rgba(160,180,255,.07); color: #cdd6ff;
+  padding: .75em 2.6em; border-radius: 999px; font-size: 1rem; letter-spacing: .24em;
+  cursor: pointer; transition: background .3s, transform .2s; font-family: inherit;
+}
+#intro button:hover { background: rgba(160,180,255,.16); transform: translateY(-2px); }
+
+/* 由来の札 */
+#card {
+  position: fixed; left: 50%; bottom: calc(74px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 9; width: min(440px, 90vw);
+  background: rgba(12,14,28,.92); border: 1px solid rgba(150,170,255,.22); border-radius: 16px;
+  padding: 18px 20px 20px; backdrop-filter: blur(8px);
+  box-shadow: 0 10px 50px rgba(0,0,0,.6);
+  animation: rise .4s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes rise { from { opacity: 0; transform: translate(-50%, 14px); } }
+#card .x {
+  position: absolute; top: 8px; right: 10px; background: none; border: none; color: #9aa3c8;
+  font-size: 1.3rem; cursor: pointer; line-height: 1; padding: 4px;
+}
+#card h2 { font-weight: 400; font-size: 1.5rem; letter-spacing: .12em; margin-bottom: 4px;
+  background: linear-gradient(120deg, #cdd6ff, #fff2cf); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+#card #cLead { font-size: .72rem; opacity: .55; letter-spacing: .08em; margin-bottom: 10px; }
+#card #cMyth { font-size: .9rem; line-height: 2; opacity: .9; font-weight: 300; }
+
+#bar {
+  position: fixed; bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  z-index: 7; display: flex; gap: 8px;
+}
+#bar button {
+  border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); color: #d6dbf0;
+  padding: .6em 1.1em; border-radius: 999px; font-size: .76rem; letter-spacing: .06em;
+  cursor: pointer; font-family: inherit; transition: background .2s;
+}
+#bar button:active { background: rgba(255,255,255,.12); }
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 20; background: rgba(12,14,28,.95); border: 1px solid rgba(150,170,255,.3);
+  color: #e9ecf6; border-radius: 12px; padding: .7em 1.2em; font-size: .8rem; letter-spacing: .04em;
+}
+
+#foot {
+  position: fixed; bottom: 8px; right: 16px; font-size: .64rem; opacity: .32; letter-spacing: .08em;
+}
+#foot a { color: #aab3da; }

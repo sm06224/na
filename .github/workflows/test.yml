@@ -156,6 +156,18 @@ jobs:
         working-directory: works/kitsune
         run: node --test tests/*.test.js
 
+  hoshi:
+    name: hoshi — a sky that names itself
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Scatter a sky from a seed and read the letter in the lead star
+        working-directory: works/hoshi
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

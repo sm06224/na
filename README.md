@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星**
 
 </div>
 
@@ -111,6 +111,15 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 答えの**ハッシュだけ**だからリンクを解読してもズルできず、順番も飛ばせない。
 **サーバーは一台もない**——コースも進行も写真も端末から出ない。コアは DOM 非依存・**24 tests**。
 
+### ★ [星 `hoshi`](./works/hoshi/) — *a sky that names itself*
+**誰も設計しない夜空**。種ひとつから 600 の星が撒かれ、明るい星は近ければ
+**おのずと結ばれて星座になり**（最小全域木で枝を張る）、**自分で名のり**、かたちと
+主星の色から**由来＝神話が書かれる**。`言`・`歌`・`史` と続いた「ひとりでに名づけ、
+物語る」系譜の、夜の章。すべては種の純粋関数だから、**同じ種からは一星も一文字も
+ちがわない同じ空**——リンク（`#s=種`）で誰かと同じ夜を見上げられる。空でいちばん
+明るい**一番星**が最初に灯り、その由来は次に来る人への言づてになっている。
+コアは DOM 非依存・**9 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -184,10 +193,15 @@ na/
 │  │  ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
 │  │  ├─ js/ui/             sensors · needle · main
 │  │  └─ tests/
-│  └─ kitsune/              🦊 狐（GPS 宝探し・PWA）
-│     ├─ index.html · style.css · manifest · sw.js
-│     ├─ js/core/           geo · course（コース符号・通過判定） · qr（QR 自作）
-│     ├─ js/ui/             sensors · needle · camera · main
+│  ├─ kitsune/              🦊 狐（GPS 宝探し・PWA）
+│  │  ├─ index.html · style.css · manifest · sw.js
+│  │  ├─ js/core/           geo · course（コース符号・通過判定） · qr（QR 自作）
+│  │  ├─ js/ui/             sensors · needle · camera · main
+│  │  └─ tests/
+│  └─ hoshi/                ★ 星（ひとりでに名づける夜空）
+│     ├─ index.html · style.css
+│     ├─ js/core/           rng · sky（星・星座・命名・神話・銘）
+│     ├─ js/ui/             render · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
