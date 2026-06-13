@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   distance, bearing, declination, trueHeading, headingFromEvent,
   needleAngle, HeadingSmoother, averagePosition, fmtDistance, dirWord,
-  pulseInterval,
+  pulseInterval, pickHeading,
 } from '../js/core/geo.js';
 
 const 東京駅 = [35.6812, 139.7671];
@@ -115,4 +115,24 @@ test('振動の脈：合うほど速く、90° からは沈黙', () => {
   const mid = pulseInterval(52.5);
   assert.ok(mid > 600 && mid < 900, `mid ${mid}`);
   assert.ok(pulseInterval(30) < pulseInterval(60), '近いほうが速い');
+});
+
+test('向きの出どころ：磁石が生きていれば磁石を信じる', () => {
+  const now = 10_000;
+  const p = pickHeading({ compass: 80, compassAt: now - 500, gps: 200, gpsSpeed: 2, gpsAt: now, now });
+  assert.deepEqual(p, { heading: 80, source: 'compass' });
+});
+
+test('向きの出どころ：磁石が黙ったら、歩いている間は GPS の進行方位', () => {
+  const now = 10_000;
+  const p = pickHeading({ compass: 80, compassAt: now - 5000, gps: 365, gpsSpeed: 1.2, gpsAt: now - 1000, now });
+  assert.deepEqual(p, { heading: 5, source: 'gps' });
+});
+
+test('向きの出どころ：立ち止まれば GPS は信じない、古い情報も信じない', () => {
+  const now = 10_000;
+  assert.equal(pickHeading({ gps: 90, gpsSpeed: 0.2, gpsAt: now, now }).source, 'none');
+  assert.equal(pickHeading({ gps: 90, gpsSpeed: 2, gpsAt: now - 9000, now }).source, 'none');
+  assert.equal(pickHeading({ gps: NaN, gpsSpeed: 2, gpsAt: now, now }).source, 'none');
+  assert.equal(pickHeading({ now }).heading, null);
 });

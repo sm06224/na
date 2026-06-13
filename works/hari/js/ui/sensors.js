@@ -14,6 +14,8 @@ export function watchGeo(onFix, onError) {
       lat: p.coords.latitude,
       lon: p.coords.longitude,
       acc: p.coords.accuracy ?? 50,
+      heading: p.coords.heading,     // 進行方位（真北基準）。動いていないと null/NaN
+      speed: p.coords.speed,         // m/s
       at: p.timestamp,
     }),
     e => onError(e),
@@ -41,29 +43,34 @@ function screenAngle() {
 }
 
 /* 方位の購読。iOS では先に requestPermission（ユーザー操作の中で呼ぶこと）。
-   onHeading(磁北からの度) — センサが黙っていれば呼ばれない。 */
+   onHeading(磁北からの度) — センサが黙っていれば呼ばれない。
+
+   どちらの窓から本物の向きが来るかはブラウザごとに違うので、
+   両方の窓を同時に開け、最初に向きをくれたほうに固定する。
+   （片方だけ開ける作りにしていたら、窓を選び間違えた端末で
+   針が永遠に黙った。同じ過ちは二度としない。） */
 export async function listenCompass(onHeading) {
   if (compassNeedsAsking()) {
     const ans = await DeviceOrientationEvent.requestPermission();
     if (ans !== 'granted') throw new Error('denied');
   }
-  const handler = ev => {
+  let source = null;
+  const make = type => ev => {
+    if (source && source !== type) return;
     const h = headingFromEvent({
       webkitCompassHeading: ev.webkitCompassHeading,
       alpha: ev.alpha,
-      absolute: ev.absolute || ev.type === 'deviceorientationabsolute',
+      absolute: ev.absolute || type === 'deviceorientationabsolute',
     }, screenAngle());
-    if (h !== null) onHeading(h);
+    if (h !== null) { source = type; onHeading(h); }
   };
-  /* absolute（磁北基準）が来る窓には absolute を、iOS には素のほうを */
-  if ('ondeviceorientationabsolute' in window) {
-    window.addEventListener('deviceorientationabsolute', handler);
-  } else {
-    window.addEventListener('deviceorientation', handler);
-  }
+  const onAbs = make('deviceorientationabsolute');
+  const onRel = make('deviceorientation');
+  window.addEventListener('deviceorientationabsolute', onAbs);
+  window.addEventListener('deviceorientation', onRel);
   return () => {
-    window.removeEventListener('deviceorientationabsolute', handler);
-    window.removeEventListener('deviceorientation', handler);
+    window.removeEventListener('deviceorientationabsolute', onAbs);
+    window.removeEventListener('deviceorientation', onRel);
   };
 }
 
