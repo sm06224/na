@@ -120,7 +120,8 @@ function beat() {
 
   let angle = null;
   if (arrived) {
-    $('note').textContent = 'もう着いています。あたりを見まわして';
+    $('note').textContent =
+      `もう着いています（±${Math.round(Math.max(15, fix.acc * 1.2))}m の輪の中）。ここより近くは GPS には見えません。離れると針が立ちます`;
     $('note').className = '';
   } else if (pick.source !== 'none') {
     angle = needleAngle(brg, pick.heading);

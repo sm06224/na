@@ -74,15 +74,19 @@ export class Dial {
     c.restore();
 
     if (arrived) {
-      /* もう着いている — 波紋だけが残る */
+      /* もう着いている — 針は引っ込み、波紋と「着」が残る。
+         （ここまで近いと GPS の揺らぎで針はデタラメに回るだけ。
+         できない案内はしない） */
       for (const k of [0, 0.5]) {
         const p = (this.pulse + k) % 1;
         c.strokeStyle = `rgba(120,220,170,${(1 - p) * 0.55})`;
         c.lineWidth = 2;
-        c.beginPath(); c.arc(0, 0, 14 + p * r * 0.55, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.arc(0, 0, r * 0.22 + p * r * 0.5, 0, Math.PI * 2); c.stroke();
       }
       c.fillStyle = 'rgba(120,220,170,.95)';
-      c.beginPath(); c.arc(0, 0, 7, 0, Math.PI * 2); c.fill();
+      c.font = `300 ${Math.round(r * 0.3)}px ui-sans-serif, "Hiragino Kaku Gothic ProN", sans-serif`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('着', 0, 2);
       c.restore();
       return;
     }
