@@ -122,6 +122,24 @@ export function dirWord(bearingDeg) {
   return DIRS[Math.round(((bearingDeg % 360 + 360) % 360) / 22.5) % 16];
 }
 
+/* 向きの出どころを選ぶ。磁石が生きていれば磁石。
+   磁石が黙っていても、歩いていれば GPS が進行方位（真北基準）を
+   教えてくれる——それを針に使う。どちらも無ければ正直に null。 */
+export function pickHeading({
+  compass = null, compassAt = 0,
+  gps = null, gpsSpeed = 0, gpsAt = 0,
+  now = Date.now(),
+} = {}) {
+  if (compass !== null && now - compassAt < 3000) {
+    return { heading: compass, source: 'compass' };
+  }
+  if (gps !== null && Number.isFinite(gps) && Number.isFinite(gpsSpeed) &&
+      gpsSpeed >= 0.7 && now - gpsAt < 6000) {
+    return { heading: ((gps % 360) + 360) % 360, source: 'gps' };
+  }
+  return { heading: null, source: 'none' };
+}
+
 /* 振動の脈 — 針が合っているほど速く脈打つ。
    ずれ |angle| ≤ 15° で最速 (250ms)、90° 以上は沈黙 (null)。 */
 export function pulseInterval(angleDeg) {

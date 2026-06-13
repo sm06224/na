@@ -94,6 +94,16 @@ button.on { border-color: rgba(120,220,170,.55); background: rgba(120,220,170,.1
 #spotRows .tools button { padding: .45em .6em; font-size: .8rem; border: none; background: none; }
 #spotRows .empty { opacity: .5; font-size: .85rem; cursor: default; }
 
+#toast {
+  position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom));
+  transform: translateX(-50%); z-index: 20;
+  max-width: min(34em, 88vw);
+  background: rgba(20,19,25,.95); border: 1px solid rgba(230,120,110,.35);
+  color: #f2e6e2; border-radius: 12px; padding: .8em 1.2em;
+  font-size: .8rem; line-height: 1.7; text-align: center;
+  box-shadow: 0 6px 28px rgba(0,0,0,.5);
+}
+
 #foot {
   display: flex; gap: 12px; justify-content: center; align-items: center;
   padding: 0 18px 10px; font-size: .68rem; opacity: .4; letter-spacing: .06em;

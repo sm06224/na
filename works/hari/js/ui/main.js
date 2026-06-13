@@ -2,7 +2,7 @@
 
 import {
   distance, bearing, trueHeading, needleAngle, HeadingSmoother,
-  averagePosition, fmtDistance, dirWord, pulseInterval,
+  averagePosition, fmtDistance, dirWord, pulseInterval, pickHeading,
 } from '../core/geo.js';
 import { Spots, encodeSpotLink, decodeSpotLink, fmtAge } from '../core/spots.js';
 import {
@@ -19,9 +19,9 @@ const persist = () => localStorage.setItem('hari.spots', spots.save());
 let currentId = localStorage.getItem('hari.current');
 
 /* ----- 状態 ----- */
-let fix = null;                 // 最新の測位 { lat, lon, acc }
+let fix = null;                 // 最新の測位 { lat, lon, acc, heading, speed }
 let heading = null;             // 真北基準の向き（なめらか済み）
-let compassOn = false;          // 方位が実際に届いているか
+let headingAt = 0;              // 磁石が最後にものを言った時刻
 let compassAsked = false;
 let buzzing = false;
 let lastBuzz = 0;
@@ -57,9 +57,19 @@ function select(id) {
   maybeAskCompass();
 }
 
+/* ----- ひとことの灯（描画ループに消されない通知） ----- */
+let toastTimer = null;
+function toast(msg, ms = 3200) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, ms);
+}
+
 /* ----- 方位センサー ----- */
 function maybeAskCompass() {
-  if (compassOn || compassAsked) return;
+  if (compassAsked) return;
   if (compassNeedsAsking()) { $('wake').hidden = false; return; }
   startCompass();   // Android などは黙って起こせる
 }
@@ -69,12 +79,13 @@ async function startCompass() {
   $('wake').hidden = true;
   try {
     await listenCompass(magnetic => {
-      compassOn = true;
       const t = fix ? trueHeading(magnetic, fix.lat, fix.lon) : magnetic;
       heading = smoother.push(t);
+      headingAt = Date.now();
     });
   } catch {
-    compassOn = false;   // 断られた。北上のままで生きる
+    // 断られた。歩けば GPS が向きを教えるので、そう伝える
+    toast('方位センサーは使えません。歩き出せば GPS が向きを教えます（iPhone は 設定 → Safari → モーションと画面の向き）', 5000);
   }
 }
 $('bWake').addEventListener('click', startCompass);
@@ -101,28 +112,39 @@ function beat() {
   $('walk').textContent = arrived ? '' : f.walk;
   $('target').textContent = `${spot.icon} ${spot.name} ・ 刺したのは${fmtAge(spot.at)}`;
 
+  /* 向きの出どころ：磁石 → （歩行中の）GPS → なし */
+  const pick = pickHeading({
+    compass: heading, compassAt: headingAt,
+    gps: fix.heading, gpsSpeed: fix.speed ?? NaN, gpsAt: fix.at,
+  });
+
   let angle = null;
   if (arrived) {
     $('note').textContent = 'もう着いています。あたりを見まわして';
     $('note').className = '';
-  } else if (compassOn && heading !== null) {
-    angle = needleAngle(brg, heading);
-    $('note').textContent = fix.acc > 50 ? `測位がまだ粗い（±${Math.round(fix.acc)}m）。空の下でしばらく待って` : '';
-    $('note').className = fix.acc > 50 ? 'warn' : '';
+  } else if (pick.source !== 'none') {
+    angle = needleAngle(brg, pick.heading);
+    if (pick.source === 'gps') {
+      $('note').textContent = '磁石の代わりに、歩く向きで合わせています';
+      $('note').className = '';
+    } else {
+      $('note').textContent = fix.acc > 50 ? `測位がまだ粗い（±${Math.round(fix.acc)}m）。空の下でしばらく待って` : '';
+      $('note').className = fix.acc > 50 ? 'warn' : '';
+    }
   } else {
     angle = brg;   // 北上の地図のつもりで読む
-    $('note').textContent = `上を北として、${dirWord(brg)}のほうです（方位センサーなし）`;
+    $('note').textContent = `上を北として、${dirWord(brg)}のほうです。歩き出せば向きが分かります`;
     $('note').className = '';
   }
   dial.render({
     needleDeg: angle,
-    roseDeg: compassOn && heading !== null && !arrived ? -heading : 0,
+    roseDeg: pick.source !== 'none' && !arrived ? -pick.heading : 0,
     arrived,
-    dim: !compassOn && !arrived,
+    dim: pick.source === 'none' && !arrived,
   });
 
   /* 振動の脈 — 針が合うほど速く */
-  if (buzzing && !arrived && angle !== null && compassOn) {
+  if (buzzing && !arrived && angle !== null && pick.source !== 'none') {
     const iv = pulseInterval(angle);
     const now = performance.now();
     if (iv !== null && now - lastBuzz >= iv) { vibrate(35); lastBuzz = now; }
@@ -175,16 +197,15 @@ $('bShare').addEventListener('click', async () => {
   if (!spot) return;
   const url = location.href.split('#')[0] + '#' + encodeSpotLink(spot);
   const data = { title: '針', text: `「${spot.name}」の場所です。開くと針が案内します`, url };
+  if (navigator.share) {
+    try { await navigator.share(data); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; /* 思い直しただけ */ }
+  }
   try {
-    if (navigator.share) { await navigator.share(data); return; }
-    throw 0;
+    await navigator.clipboard.writeText(url);
+    toast('リンクを写しました。そのまま貼って送れます');
   } catch {
-    try {
-      await navigator.clipboard.writeText(url);
-      $('note').textContent = 'リンクを写しました。そのまま貼って送れます';
-    } catch {
-      prompt('このリンクを送ってください', url);
-    }
+    prompt('このリンクを送ってください', url);
   }
 });
 
