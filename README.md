@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針**
 
 </div>
 
@@ -93,6 +93,15 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 もう一度光り**、へびが遊べ、電卓がシリアル越しに答え、珠で書かれた「恋歌」が
 あの節を機械の声で歌う。コアは DOM 非依存・**105 tests**。
 
+### 🧭 [針 `hari`](./works/hari/) — *a needle that remembers the way back*
+三番目の**実用ツール**、そして**スマホでこそ**の一品。駐車場・フェスのテント・宿に
+ワンタップで針を刺せば、あとは**矢印と距離だけ**が連れ戻す。地図を出さない設計だから
+**完全オフライン**——電波のない立体駐車場や山でいちばん効く。GPS は精度加重平均で刺し、
+磁気センサーの磁北は**国土地理院の偏角近似式で真北に補正**、🔔を入れると**正しい方向ほど
+速く脈打つ振動**で画面を見ずに歩ける。座標を URL に畳んだリンクを送れば、相手はブラウザで
+開くだけの**サーバーなし待ち合わせ**。登録なし・**場所は端末から出ない**・PWA。
+コアは DOM 非依存・**23 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -152,14 +161,19 @@ na/
 │  │  ├─ tegami.svg         額装された手紙（恋歌を織った布）
 │  │  ├─ tegami.js · js/core/  rng · kana · loom
 │  │  └─ tests/
-│  └─ san/                  🖥 算（無から生まれた計算機）
-│     ├─ HARDWARE.md        機械仕様書（ISA・メモリマップ・デバイス）
-│     ├─ LANGUAGE.md        言語「珠」仕様書
-│     ├─ index.html · style.css
-│     ├─ js/core/           vm · asm · bus · devices · machine
-│     ├─ js/lang/           珠コンパイラ
-│     ├─ js/ui/             画面 · 音 · エディタ · デバッガ
-│     ├─ js/roms.js · roms/ 同梱 ROM（蛍・へび・万華鏡・電卓 …）
+│  ├─ san/                  🖥 算（無から生まれた計算機）
+│  │  ├─ HARDWARE.md        機械仕様書（ISA・メモリマップ・デバイス）
+│  │  ├─ LANGUAGE.md        言語「珠」仕様書
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           vm · asm · bus · devices · machine
+│  │  ├─ js/lang/           珠コンパイラ
+│  │  ├─ js/ui/             画面 · 音 · エディタ · デバッガ
+│  │  ├─ js/roms.js · roms/ 同梱 ROM（蛍・へび・万華鏡・電卓 …）
+│  │  └─ tests/
+│  └─ hari/                 🧭 針（帰り道を覚えている羅針盤・PWA）
+│     ├─ index.html · style.css · manifest · sw.js
+│     ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
+│     ├─ js/ui/             sensors · needle · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

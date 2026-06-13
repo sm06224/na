@@ -132,6 +132,18 @@ jobs:
         working-directory: works/san
         run: node --test tests/*.test.js
 
+  hari:
+    name: hari — way-back needle core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the spherical math a walker will rely on
+        working-directory: works/hari
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
