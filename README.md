@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐**
 
 </div>
 
@@ -170,10 +170,15 @@ na/
 │  │  ├─ js/ui/             画面 · 音 · エディタ · デバッガ
 │  │  ├─ js/roms.js · roms/ 同梱 ROM（蛍・へび・万華鏡・電卓 …）
 │  │  └─ tests/
-│  └─ hari/                 🧭 針（帰り道を覚えている羅針盤・PWA）
+│  ├─ hari/                 🧭 針（帰り道を覚えている羅針盤・PWA）
+│  │  ├─ index.html · style.css · manifest · sw.js
+│  │  ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
+│  │  ├─ js/ui/             sensors · needle · main
+│  │  └─ tests/
+│  └─ kitsune/              🦊 狐（GPS 宝探し・PWA）
 │     ├─ index.html · style.css · manifest · sw.js
-│     ├─ js/core/           geo（球面三角・磁気偏角・平滑化） · spots（覚え書き・リンク符号）
-│     ├─ js/ui/             sensors · needle · main
+│     ├─ js/core/           geo · course（コース符号・通過判定） · qr（QR 自作）
+│     ├─ js/ui/             sensors · needle · camera · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

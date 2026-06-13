@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#0b0a0e"/>
+  <circle cx="90" cy="92" r="62" fill="none" stroke="#2a2630" stroke-width="3"/>
+  <!-- 狐の顔 -->
+  <g>
+    <path d="M52 70 L46 40 L72 60 Z" fill="#e0913a"/>
+    <path d="M128 70 L134 40 L108 60 Z" fill="#e0913a"/>
+    <path d="M90 58 C64 58 56 80 56 98 C56 122 74 138 90 138 C106 138 124 122 124 98 C124 80 116 58 90 58 Z" fill="#e0913a"/>
+    <path d="M90 108 C78 108 70 116 70 124 C70 132 80 140 90 140 C100 140 110 132 110 124 C110 116 102 108 90 108 Z" fill="#f4e9dc"/>
+    <circle cx="74" cy="92" r="6" fill="#1a1518"/>
+    <circle cx="106" cy="92" r="6" fill="#1a1518"/>
+    <path d="M90 118 l-7 -7 h14 Z" fill="#1a1518"/>
+  </g>
+</svg>

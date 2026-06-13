@@ -1,0 +1,15 @@
+{
+  "name": "狐 — GPS 宝探し",
+  "short_name": "狐",
+  "description": "狐が街に的を仕掛け、追手は矢印を頼りに駆ける。GPS・QR・写真で通過を証明する宝探し。地図なし・サーバーなし・登録なし。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0a0e",
+  "theme_color": "#0b0a0e",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

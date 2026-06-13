@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="狐 (kitsune) — スマホひとつで遊ぶ GPS 宝探し。狐（出題者）が街に的を仕掛け、追手はリンクひとつ受け取って、矢印を頼りに駆ける。GPS・QR・写真で通過を証明。地図なし・サーバーなし・登録なし。">
+<meta name="theme-color" content="#0b0a0e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>狐 — GPS 宝探し</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="top">
+  <h1>狐 <span class="en">/ kitsune</span></h1>
+  <button id="bHome" class="ghost" hidden>やめる</button>
+</header>
+
+<main id="stage">
+
+  <!-- はじめの画面：役をえらぶ -->
+  <section id="hero">
+    <div class="mark">🦊</div>
+    <h2>スマホひとつの、宝探し</h2>
+    <p><strong>狐</strong>は街に的を仕掛け、リンクをひとつ送る。<br>
+       <strong>追手</strong>はそれを開き、矢印だけを頼りに駆ける。<br>
+       地図は出ない。だから知っている街も、はじめての迷宮になる。</p>
+    <p class="fine">登録なし・サーバーなし。コースはリンクの中に畳まれて渡る。<br>
+       通過のしるしは GPS・QR・写真の三つ。電波が薄くても遊べる。</p>
+    <div class="heroActs">
+      <button id="bBecomeFox">🦊 狐になる（コースを作る）</button>
+      <button id="bDemo" class="ghost">遊び方を見る</button>
+    </div>
+  </section>
+
+  <!-- 狐：コースを組む -->
+  <section id="builder" hidden>
+    <div class="bhead">
+      <input id="courseName" type="text" maxlength="40" placeholder="コースの名前（例：放課後の校庭）" spellcheck="false">
+      <p class="fine" id="builderStat"></p>
+    </div>
+    <ul id="cpRows"></ul>
+    <p id="builderEmpty" class="fine center">まだ的がありません。<br>いまいる場所に立って「ここに的を刺す」を押すと、一つ目の的になります。</p>
+  </section>
+
+  <!-- 的を刺している最中（GPS をならす） -->
+  <section id="pinning" hidden>
+    <div class="spin"></div>
+    <h2>的を据えています…</h2>
+    <p id="pinStat">衛星のこえを待っています</p>
+    <p class="fine">数秒ぶんの測位をならして、いちばん確かな一点に据えます</p>
+    <button id="bPinCancel" class="ghost">やめる</button>
+  </section>
+
+  <!-- 追手：矢印で駆ける -->
+  <section id="hunt" hidden>
+    <div id="huntBar"><div id="huntBarFill"></div></div>
+    <canvas id="dial"></canvas>
+    <div id="readout">
+      <div id="dist"><span id="distMain">—</span><span id="distUnit"></span></div>
+      <div id="walk"></div>
+      <div id="cpName"></div>
+      <div id="cpHint"></div>
+      <div id="note"></div>
+    </div>
+  </section>
+
+  <!-- 終わり：記録 -->
+  <section id="result" hidden>
+    <div class="mark">🏁</div>
+    <h2 id="resultTitle">狩り、おわり</h2>
+    <p id="resultTime"></p>
+    <ul id="splits"></ul>
+    <div id="gallery"></div>
+  </section>
+
+</main>
+
+<nav id="actions">
+  <button id="bPin" hidden>📍 ここに的を刺す</button>
+  <button id="bQR" class="ghost" hidden>🖨 QRを刷る</button>
+  <button id="bSendCourse" hidden>📤 コースを送る</button>
+  <button id="bProof" hidden>✓</button>
+  <button id="bShareResult" hidden>📤 記録を送る</button>
+</nav>
+
+<!-- 的の設定（刺した直後） -->
+<div id="cpsetup" class="sheet" hidden>
+  <div class="card">
+    <h2 id="cpsetupTitle">的を仕掛ける</h2>
+    <label>名前 <input id="cpNameIn" type="text" maxlength="30" placeholder="例：桜の木の下" spellcheck="false"></label>
+    <label>ヒント <input id="cpHintIn" type="text" maxlength="80" placeholder="例：いちばん高い枝を見上げて" spellcheck="false"></label>
+    <p class="fine">通過のしるし</p>
+    <div id="proofPick" class="pick">
+      <button data-proof="gps" class="on">📍 近づけば通過<small>いちばん手軽。半径も決められる</small></button>
+      <button data-proof="qr">🔳 QRを読む<small>現地に貼った QR を標準カメラで。ズルできない</small></button>
+      <button data-proof="photo">📷 写真をとる<small>その場の一枚が証明であり、思い出になる</small></button>
+    </div>
+    <label id="radiusRow">半径 <input id="cpRadius" type="range" min="10" max="100" step="5" value="25"><span id="cpRadiusVal">25m</span></label>
+    <div class="row">
+      <button id="bCpSave">この的を置く</button>
+      <button id="bCpCancel" class="ghost">やめる</button>
+    </div>
+  </div>
+</div>
+
+<!-- コースが届いた（追手） -->
+<div id="received" class="sheet" hidden>
+  <div class="card">
+    <h2>挑戦状が届きました</h2>
+    <p id="receivedInfo"></p>
+    <button id="bHuntStart">🦊 狩りをはじめる</button>
+    <button id="bHuntResume" class="ghost" hidden>続きから</button>
+    <button id="bHuntNo" class="ghost">いまはやめておく</button>
+  </div>
+</div>
+
+<!-- いまの的の証明（追手） -->
+<div id="proofSheet" class="sheet" hidden>
+  <div class="card" id="proofCard"></div>
+</div>
+
+<!-- QR を刷る（狐） -->
+<div id="qrsheet" class="sheet sheet-full" hidden>
+  <div class="card">
+    <div class="qrhead noprint">
+      <h2>現地に貼る QR</h2>
+      <button id="bQRClose" class="ghost">とじる</button>
+    </div>
+    <p class="fine noprint">QR の的ごとに一枚。印刷して、それぞれの場所にこっそり貼ってください。
+       追手は標準のカメラで読むだけ。リンクには答えのハッシュしか入らないので、解読されても通過はできません。</p>
+    <div id="qrPages"></div>
+    <button id="bQRPrint" class="noprint">印刷する</button>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <span id="gps"></span>
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

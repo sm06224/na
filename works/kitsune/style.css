@@ -1,0 +1,186 @@
+:root { color-scheme: dark; --fox: #e0913a; --foxd: #c47a2a; --go: #78dca6; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }   /* display 指定が hidden 属性に勝たないように */
+html, body { height: 100%; }
+body {
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 0%, #15121a, #0b0a0e 70%);
+  color: #ece7df;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  font-size: 15px;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  user-select: none; touch-action: manipulation; overflow: hidden;
+}
+
+#top { display: flex; align-items: center; padding: 14px 18px 6px; }
+#top h1 { font-weight: 300; font-size: 1.5rem; letter-spacing: .1em; flex: 1; }
+#top .en { font-size: .68rem; opacity: .4; letter-spacing: .2em; }
+
+#stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 18px; width: 100%; }
+.center { text-align: center; }
+
+/* ----- はじめ ----- */
+#hero { text-align: center; max-width: 30em; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+#hero .mark, #result .mark { font-size: 3.6rem; filter: drop-shadow(0 0 24px rgba(224,145,58,.35)); }
+#hero h2 { font-weight: 400; font-size: 1.25rem; letter-spacing: .06em; }
+#hero p { line-height: 2; opacity: .74; font-weight: 300; font-size: .88rem; }
+.fine { font-size: .72rem; opacity: .45; line-height: 1.9; }
+.heroActs { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 8px; }
+
+/* ----- 狐：コースを組む ----- */
+#builder { width: 100%; max-width: 560px; height: 100%; display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+.bhead { display: flex; flex-direction: column; gap: 6px; }
+#courseName {
+  width: 100%; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+  color: #ece7df; border-radius: 10px; padding: .7em .8em; font-size: 1.05rem; font-family: inherit;
+}
+#cpRows { list-style: none; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+#cpRows li {
+  display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+}
+#cpRows .num {
+  width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(224,145,58,.18); color: var(--fox); font-size: .82rem; font-variant-numeric: tabular-nums;
+}
+#cpRows .body { flex: 1; min-width: 0; }
+#cpRows .name { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#cpRows .meta { font-size: .7rem; opacity: .5; }
+#cpRows .tools { display: flex; gap: 2px; }
+#cpRows .tools button { padding: .45em .55em; font-size: .85rem; border: none; background: none; }
+#builderEmpty { margin: auto 0; }
+
+/* ----- 追手：羅針盤 ----- */
+#hunt { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; height: 100%; justify-content: center; }
+#huntBar { width: min(78vw, 420px); height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+#huntBarFill { height: 100%; width: 0; background: var(--go); transition: width .5s ease; }
+#dial { width: min(74vw, 42vh, 400px); aspect-ratio: 1; }
+#readout { text-align: center; display: flex; flex-direction: column; gap: 3px; }
+#dist { font-variant-numeric: tabular-nums; }
+#distMain { font-size: 2.8rem; font-weight: 200; }
+#distUnit { font-size: 1.1rem; opacity: .6; margin-left: .15em; }
+#walk { font-size: .78rem; opacity: .5; }
+#cpName { font-size: 1.05rem; margin-top: 6px; letter-spacing: .04em; }
+#cpHint { font-size: .82rem; opacity: .7; line-height: 1.6; max-width: 26em; }
+#note { font-size: .72rem; opacity: .55; min-height: 1.3em; line-height: 1.6; }
+#note.warn { color: #e8a187; opacity: .9; }
+#note.go { color: var(--go); opacity: .95; }
+
+/* ----- 据えている最中 ----- */
+#pinning { text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+#pinning h2 { font-weight: 400; font-size: 1.1rem; letter-spacing: .1em; }
+#pinning p { font-size: .85rem; opacity: .7; }
+.spin {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2px solid rgba(224,145,58,.18); border-top-color: var(--fox);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ----- 終わり ----- */
+#result { text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 30em; width: 100%; overflow-y: auto; }
+#result h2 { font-weight: 400; font-size: 1.3rem; letter-spacing: .08em; }
+#resultTime { font-size: 1.1rem; color: var(--go); font-variant-numeric: tabular-nums; }
+#splits { list-style: none; width: 100%; display: flex; flex-direction: column; gap: 4px; }
+#splits li { display: flex; gap: 10px; font-size: .85rem; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+#splits .s-name { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#splits .s-time { opacity: .6; font-variant-numeric: tabular-nums; }
+#gallery { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#gallery img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); }
+
+/* ----- ボタン ----- */
+#actions { display: flex; gap: 10px; padding: 10px 18px 14px; justify-content: center; flex-wrap: wrap; }
+button {
+  border: 1px solid rgba(224,145,58,.55); background: rgba(224,145,58,.12); color: #ffdfb8;
+  padding: .9em 1.5em; border-radius: 999px; font-size: 1rem; letter-spacing: .08em;
+  cursor: pointer; transition: background .25s, transform .12s; font-family: inherit;
+}
+button:active { transform: scale(.97); }
+button.ghost { border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: #d8d2c8; font-size: .85rem; }
+button.go { border-color: rgba(120,220,166,.6); background: rgba(120,220,166,.16); color: #c8f2dd; }
+button:disabled { opacity: .4; }
+
+/* ----- シート ----- */
+.sheet {
+  position: fixed; inset: 0; z-index: 10; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(5,5,8,.62); backdrop-filter: blur(3px);
+}
+.sheet .card {
+  width: min(560px, 100%); background: #16141b;
+  border-radius: 18px 18px 0 0; border: 1px solid rgba(255,255,255,.1); border-bottom: none;
+  padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px; max-height: 84vh; overflow-y: auto;
+}
+.sheet h2 { font-weight: 400; font-size: 1.05rem; letter-spacing: .08em; }
+.sheet p { font-size: .85rem; line-height: 1.9; opacity: .78; }
+.sheet label { display: flex; flex-direction: column; gap: 5px; font-size: .76rem; opacity: .7; letter-spacing: .04em; }
+.sheet label input[type=text] {
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); color: #ece7df;
+  border-radius: 9px; padding: .65em .75em; font-size: 1rem; font-family: inherit;
+}
+.sheet .row { display: flex; gap: 10px; }
+.sheet .row button { flex: 1; }
+
+/* 証明の選択 */
+.pick { display: flex; flex-direction: column; gap: 8px; }
+.pick button {
+  text-align: left; border-radius: 12px; padding: .8em 1em; font-size: .92rem; letter-spacing: 0;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: #ece7df;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.pick button small { font-size: .68rem; opacity: .55; font-weight: 300; }
+.pick button.on { border-color: var(--fox); background: rgba(224,145,58,.14); color: #ffdfb8; }
+#radiusRow { flex-direction: row; align-items: center; gap: 10px; }
+#radiusRow input[type=range] { flex: 1; accent-color: var(--fox); }
+#cpRadiusVal { font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; opacity: .8; }
+
+/* 証明シートの中身 */
+#proofCard .pbig { font-size: 2.4rem; text-align: center; }
+#proofCard .ptoken {
+  font-size: 1.6rem; letter-spacing: .3em; text-align: center; color: var(--fox);
+  font-variant-numeric: tabular-nums; padding: .3em 0;
+}
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom));
+  transform: translateX(-50%); z-index: 20; max-width: min(34em, 88vw);
+  background: rgba(20,18,24,.96); border: 1px solid rgba(224,145,58,.4);
+  color: #f2e6e2; border-radius: 12px; padding: .8em 1.2em;
+  font-size: .8rem; line-height: 1.7; text-align: center; box-shadow: 0 6px 28px rgba(0,0,0,.5);
+}
+
+#foot {
+  display: flex; gap: 12px; justify-content: center; align-items: center;
+  padding: 0 18px 10px; font-size: .68rem; opacity: .4; letter-spacing: .06em;
+}
+#foot a { color: #c9a88a; }
+#gps { font-variant-numeric: tabular-nums; }
+
+/* ----- QR を刷る ----- */
+.sheet-full { align-items: stretch; }
+.sheet-full .card { width: 100%; max-width: 720px; margin: 0 auto; border-radius: 0; max-height: 100vh; }
+.qrhead { display: flex; align-items: center; }
+.qrhead h2 { flex: 1; }
+#qrPages { display: flex; flex-direction: column; gap: 18px; }
+.qrcard {
+  background: #fff; color: #111; border-radius: 12px; padding: 18px; text-align: center;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; break-inside: avoid;
+}
+.qrcard .qtitle { font-size: 1.1rem; font-weight: 600; }
+.qrcard .qsub { font-size: .8rem; color: #555; }
+.qrcard svg { width: min(60vw, 280px); height: auto; }
+.qrcard .qtoken { font-size: 1rem; letter-spacing: .25em; color: #333; }
+
+@media (min-width: 760px) {
+  body { align-items: center; }
+  #top, #stage, #actions, #foot { width: min(620px, 100%); }
+}
+
+@media print {
+  body { background: #fff; color: #111; overflow: visible; height: auto; }
+  body > *:not(#qrsheet) { display: none !important; }
+  #qrsheet { position: static; background: #fff; display: block !important; backdrop-filter: none; }
+  #qrsheet .card { box-shadow: none; border: none; background: #fff; max-height: none; padding: 0; }
+  .noprint { display: none !important; }
+  .qrcard { border: 1px solid #ddd; page-break-after: always; }
+}
