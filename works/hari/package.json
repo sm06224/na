@@ -1,0 +1,10 @@
+{
+  "name": "hari",
+  "version": "1.0.0",
+  "description": "針 — a needle that remembers the way back. Pin a spot (parked car, tent, hotel) and an arrow + distance guides you back. No map, fully offline, no account, location never leaves the device. Share a spot as a serverless link. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="針 (hari) — 帰り道を覚えている羅針盤。駐車場・テント・宿にワンタップで針を刺せば、地図なしで矢印と距離が連れ戻す。リンクを送れば待ち合わせにも。オフライン・登録不要・データは端末から出ない。">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>針 — 帰り道を覚えている羅針盤</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="top">
+  <h1>針 <span class="en">/ hari</span></h1>
+  <button id="bList" class="ghost" hidden>一覧</button>
+</header>
+
+<main id="stage">
+
+  <!-- はじめの画面（針がまだ無いとき） -->
+  <section id="hero">
+    <div class="mark">🧭</div>
+    <h2>帰り道を、覚えている針</h2>
+    <p>駐車場で。フェスのテントで。はじめての街の宿で。<br>
+       いまいる場所に針を刺しておけば、あとで<strong>矢印と距離だけ</strong>が
+       あなたを連れ戻します。地図は出ません。だから電波のない地下でも山でも動きます。</p>
+    <p class="fine">登録なし・サーバーなし。場所はこの端末から出ません。<br>
+       「送る」を押したときだけ、座標はリンクの中に畳まれて相手に渡ります。</p>
+  </section>
+
+  <!-- 針の画面 -->
+  <section id="compass" hidden>
+    <canvas id="dial"></canvas>
+    <div id="readout">
+      <div id="dist"><span id="distMain">—</span><span id="distUnit"></span></div>
+      <div id="walk"></div>
+      <div id="target"></div>
+      <div id="note"></div>
+    </div>
+  </section>
+
+  <!-- 刺している最中 -->
+  <section id="pinning" hidden>
+    <div class="spin"></div>
+    <h2>針を研いでいます…</h2>
+    <p id="pinStat">衛星のこえを待っています</p>
+    <p class="fine">数秒ぶんの測位をならして、いちばん確かな一点に刺します</p>
+    <button id="bPinCancel" class="ghost">やめる</button>
+  </section>
+
+</main>
+
+<nav id="actions">
+  <button id="bPin">📍 ここに針を刺す</button>
+  <button id="bBuzz" class="ghost" hidden>🔕 振動</button>
+  <button id="bShare" class="ghost" hidden>📤 送る</button>
+</nav>
+
+<!-- コンパス許可（iOS） -->
+<div id="wake" class="sheet" hidden>
+  <div class="card">
+    <h2>磁石の力を借ります</h2>
+    <p>針を回すために、端末の方位センサーを使います。<br>この許可は端末の中で完結します。</p>
+    <button id="bWake">コンパスを起こす</button>
+    <button id="bWakeSkip" class="ghost">矢印なしで使う</button>
+  </div>
+</div>
+
+<!-- 分かち合われた針を受け取る -->
+<div id="received" class="sheet" hidden>
+  <div class="card">
+    <h2>針が届きました</h2>
+    <p id="receivedInfo"></p>
+    <button id="bReceiveGo">この針を頼りに歩く</button>
+    <button id="bReceiveNo" class="ghost">受け取らない</button>
+  </div>
+</div>
+
+<!-- 針の一覧 -->
+<div id="list" class="sheet" hidden>
+  <div class="card">
+    <h2>刺してある針</h2>
+    <ul id="spotRows"></ul>
+    <button id="bListClose" class="ghost">とじる</button>
+  </div>
+</div>
+
+<footer id="foot">
+  <span id="gps"></span>
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
