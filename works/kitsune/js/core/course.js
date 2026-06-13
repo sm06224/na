@@ -12,7 +12,9 @@
      photo — その場で一枚。写真そのものが証明であり、思い出
    ============================================================ */
 
-const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // 紛らわしい字は抜く
+// 合言葉に使う字母（紛らわしい I・L・O・0・1 を抜いた人が読める集合）。
+// 鍵ではないが高エントロピーゆえ番人が驚くので、この行だけ見逃してもらう。
+const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // gitleaks:allow
 export const PROOFS = ['gps', 'qr', 'photo'];
 export const MAX_CPS = 30;
 
