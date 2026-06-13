@@ -73,11 +73,13 @@ works/kitsune/
 
 ```bash
 cd works/kitsune
-node --test tests/*.test.js
+node --test tests/*.test.js   # 24 tests
 ```
 
 通過の判定・コースの符号・QR の構造は、すべてヘッドレスでテストされます
-（CI は端末なしで、コースを畳んでほどき、QR を組み、狩りを最後まで歩かせて検めます）。
+（CI は端末なしで、コースを畳んでほどき、QR を組んで**独立した読み手で読み戻し**、
+狩りを最後まで歩かせて検めます）。QR は QR Code Model 2・バイトモード・
+Reed-Solomon 誤り訂正を依存ゼロで自作したものです。
 
 ## 遊び方（はやわかり）
 
