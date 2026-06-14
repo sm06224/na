@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="陽 (hinata) — どこに・いつ・どれだけ陽が射すか。緯度経度と日付から、日の出/日の入り・薄明・ゴールデンアワー・太陽の通り道、そして「この窓は一日どれだけ陽が入るか」を出す。完全オフライン・位置は端末から出ない。">
+<meta name="theme-color" content="#fef3da">
+<title>陽 — どこに、いつ、どれだけ陽が射すか</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>陽 <span class="en">/ hinata</span></h1>
+  <p class="tagline">どこに、いつ、どれだけ陽が射すか</p>
+</header>
+
+<main>
+  <section class="panel place">
+    <div class="row">
+      <button id="geo" class="pill">📍 現在地</button>
+      <select id="city" class="pill" aria-label="地点">
+        <option value="">地点をえらぶ…</option>
+      </select>
+      <input id="date" type="date" class="pill" aria-label="日付">
+    </div>
+    <div class="row coords">
+      <label>緯度 <input id="lat" type="number" step="0.0001" inputmode="decimal"></label>
+      <label>経度 <input id="lon" type="number" step="0.0001" inputmode="decimal"></label>
+      <label>時差 <input id="tz" type="number" step="0.5" value="9"></label>
+    </div>
+    <div id="placeName" class="placeName"></div>
+  </section>
+
+  <section class="panel dome">
+    <canvas id="sky"></canvas>
+    <div class="scrub">
+      <input id="time" type="range" min="0" max="1439" step="1">
+      <div id="timeRead" class="timeRead"></div>
+    </div>
+  </section>
+
+  <section class="panel times">
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="panel timeline">
+    <div class="tlbar" id="tlbar"></div>
+    <div class="tlaxis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+    <div class="legend">
+      <span class="lg lg-night">夜</span><span class="lg lg-astro">天文薄明</span>
+      <span class="lg lg-naut">航海薄明</span><span class="lg lg-civil">市民薄明</span>
+      <span class="lg lg-gold">黄金時間</span><span class="lg lg-day">昼</span>
+    </div>
+  </section>
+
+  <section class="panel window">
+    <h2>窓の日当たり</h2>
+    <p class="hint">窓の向きと、目の前をふさぐ高さ（隣家・山）を入れると、その窓に直射が入る時間が出ます。</p>
+    <div class="facings" id="facings"></div>
+    <label class="obs">遮りの高さ <input id="obs" type="range" min="0" max="60" step="1" value="0">
+      <span id="obsval">0°</span></label>
+    <div id="winResult" class="winResult"></div>
+    <div class="year">
+      <div class="yearbars" id="yearbars"></div>
+      <div class="yearaxis" id="yearaxis"></div>
+      <div class="yearcap">月ごとの日当たり時間（毎月15日・この向きと遮りで）</div>
+    </div>
+  </section>
+
+  <div class="row share">
+    <button id="share" class="pill">この陽あたりを送る</button>
+  </div>
+</main>
+
+<div id="toast" hidden></div>
+
+<footer>
+  陽は誰のものでもありません。位置も日付も、端末から一歩も出ません。<br>
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽**
 
 </div>
 
@@ -130,6 +130,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 光より遅れて届く**（雑音から手作り）。同じ種からは一閃も違わない同じ稲妻——リンクで渡せる。
 コアは DOM 非依存・**10 tests**。
 
+### ☀ [陽 `hinata`](./works/hinata/) — *where, when, and how much sun*
+**四番目の実用品**。緯度経度と日付を入れると、その地の太陽が読める——日の出・南中・日の入り、
+昼の長さ・南中高度、市民／航海／天文の**薄明**、写真の**ゴールデンアワー**、そして太陽の**通り道**を
+方位×高度のドームに描く。核心は**窓の日当たり**：窓の向きと、目の前をふさぐ高さ（隣家・山）を
+入れると、その窓に**直射が入る時間帯と合計**、さらに**通年（毎月）の日当たり時間**が出る。
+南向きの窓がいつも一番とは限らない——夏の真南窓はむしろ直射が短い、といった「計算でしか
+わからない日当たり」を見せる。`針` と同じ球面の数学（NOAA Solar Calculator の式）で、東京の実測と
+**分単位で一致**。位置も日付も**端末から一歩も出ない**（リンクに畳むだけ）・無料・オフライン。
+コアは DOM 非依存・**17 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -213,10 +223,15 @@ na/
 │  │  ├─ js/core/           rng · sky（星・星座・命名・神話・銘）
 │  │  ├─ js/ui/             render · main
 │  │  └─ tests/
-│  └─ kaminari/             ⚡ 雷（おのずと地をさがす稲妻）
+│  ├─ kaminari/             ⚡ 雷（おのずと地をさがす稲妻）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           rng · bolt（場・成長・幹と枝・命名・銘）
+│  │  ├─ js/ui/             render · audio · main
+│  │  └─ tests/
+│  └─ hinata/               ☀ 陽（どこに・いつ・どれだけ陽が射すか）
 │     ├─ index.html · style.css
-│     ├─ js/core/           rng · bolt（場・成長・幹と枝・命名・銘）
-│     ├─ js/ui/             render · audio · main
+│     ├─ js/core/           sun（赤緯・均時差・高度方位・薄明） · window（窓の直射）
+│     ├─ js/ui/             render · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -230,7 +245,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます

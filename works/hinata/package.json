@@ -1,0 +1,10 @@
+{
+  "name": "hinata",
+  "version": "1.0.0",
+  "description": "陽 — where, when and how much the sun reaches. From latitude, longitude and a date it computes sunrise/sunset, twilights, golden hour, the sun's path, and how many hours of direct sun a given window gets. Offline, your location never leaves the device. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
