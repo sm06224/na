@@ -35,6 +35,19 @@ export function splitExpense(amount, participants, weights = {}) {
   return owed;
 }
 
+/* 参加者ごとの重みを決める。人それぞれの既定の割合（傾斜）を base に、
+   その出費だけの上書き override があればそちらを優先する。
+   子どもは 0.5、幹事は多め——を一度決めれば、すべての出費に効く。 */
+export function mergeWeights(participants, base = {}, override = {}) {
+  const w = {};
+  for (const id of participants) {
+    if (Object.prototype.hasOwnProperty.call(override, id)) w[id] = override[id];
+    else if (Object.prototype.hasOwnProperty.call(base, id)) w[id] = base[id];
+    else w[id] = 1;
+  }
+  return w;
+}
+
 /* 全員の差引残高：立て替えた額 − 負担した額。
    members: id[], expenses: [{payer, amount, participants, weights}]
    返り値: Map id -> 残高（＋＝受け取る / −＝払う・合計 0） */

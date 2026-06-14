@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="割 (wari) — 旅行や飲み会の立て替えを、最小の送金回数で精算する。立て替え・割合のちがう負担・不参加者まで。登録なし・サーバーなし・お金の記録は端末から出ない。リンク一本で共有。">
+<meta name="description" content="割 (wari) — 旅行や飲み会の立て替えを、最小の送金回数で精算する。人ごとの傾斜（割合）・領収書の添付・支払い済みチェックつき。登録なし・サーバーなし・お金の記録は端末から出ない。リンク一本で共有。">
 <meta name="theme-color" content="#0f1512">
 <title>割 — 誰が誰にいくら払えばいい？</title>
 <link rel="stylesheet" href="style.css">
@@ -25,9 +25,15 @@
     </div>
     <div id="members" class="chips"></div>
     <form id="addMember" class="addrow">
-      <input id="memberName" placeholder="名前を足す" autocomplete="off" maxlength="12">
+      <input id="memberName" placeholder="名前（カンマ・スペースで複数可）" autocomplete="off">
       <button type="submit" class="add">＋</button>
     </form>
+    <div class="addrow countrow">
+      <span class="countlabel">人数から作る</span>
+      <input id="memberCount" type="number" min="1" max="50" step="1" placeholder="人数">
+      <button id="addCount" type="button" class="add">人を作る</button>
+    </div>
+    <p class="hint mini-hint">名前をタップで変更。「×割合」で傾斜（子どもは0.5、幹事は多めなど）を一度決めると、すべての出費に効きます。</p>
   </section>
 
   <section class="panel">
@@ -42,9 +48,15 @@
       </div>
       <div class="who">
         <div class="wholabel">割る人
-          <label class="wtoggle"><input type="checkbox" id="exWeighted"> 重みで割る</label>
+          <label class="wtoggle"><input type="checkbox" id="exWeighted"> この出費だけ割合を変える</label>
         </div>
         <div id="exParts" class="parts"></div>
+      </div>
+      <div class="exrow receipt">
+        <label class="rcpbtn">📷 領収書をつける
+          <input id="exReceipt" type="file" accept="image/*" hidden>
+        </label>
+        <div id="exReceiptPrev" class="rcpprev"></div>
       </div>
       <button type="submit" class="add wide">この出費を足す</button>
     </form>
@@ -62,10 +74,11 @@
   </div>
 </main>
 
+<div id="lightbox" class="lightbox" hidden><img id="lightimg" alt="領収書"></div>
 <div id="toast" hidden></div>
 
 <footer>
-  お金の記録は、端末から一歩も出ません。リンクの中だけで渡せます。<br>
+  お金の記録も領収書も、端末から一歩も出ません。リンクには金額だけが畳まれます（領収書は手元に残ります）。<br>
   <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
 </footer>
 
