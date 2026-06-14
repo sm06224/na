@@ -124,5 +124,52 @@ input[type=text], input:not([type]), input[type=number], .addrow input, .exform 
 .lightbox { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 1.5rem; cursor: zoom-out; }
 .lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; }
 
+/* タブ */
+.tabs { display: flex; gap: .35rem; max-width: 520px; margin: 0 auto; padding: 0 1rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tab { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; gap: .1rem; min-width: 4.2rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px 12px 0 0; border-bottom: none;
+  color: var(--soft); font: inherit; padding: .55em .5em .6em; cursor: pointer; }
+.tab.on { background: #1b2a22; color: var(--ink); border-color: rgba(79,209,165,.34); }
+.tab .tlabel { font-size: .82rem; }
+.tab .tsum { font-size: .6rem; opacity: .7; font-variant-numeric: tabular-nums; }
+.tabs + .panel { border-top-left-radius: 6px; border-top-right-radius: 6px; }
+
+/* フェーズの表 */
+.phaseinfo { font-size: .74rem; color: var(--soft); line-height: 1.7; margin-bottom: .8rem; }
+.phaseinfo b { color: var(--ink); font-weight: 600; }
+.tablewrap { overflow-x: auto; }
+.ledger { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.ledger th { text-align: left; font-weight: 500; font-size: .68rem; color: var(--soft); padding: .3em .5em; border-bottom: 1px solid var(--line); }
+.ledger th.num, .ledger td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ledger tbody tr { cursor: pointer; }
+.ledger tbody tr:hover { background: rgba(79,209,165,.05); }
+.ledger td { padding: .55em .5em; border-bottom: 1px solid rgba(150,200,170,.08); vertical-align: top; }
+.citem { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .4rem; }
+.ritem { color: var(--ink); }
+.rmemo { width: 100%; font-size: .68rem; color: var(--soft); }
+.rwho { font-size: .66rem; color: var(--accent); }
+.rrcp { width: 26px; height: 26px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.cpay { color: var(--ink); white-space: nowrap; }
+.unpaid { color: var(--soft); font-size: .8rem; }
+.ledger tfoot td { border-top: 1px solid var(--line); border-bottom: none; font-size: .8rem; color: var(--soft); padding-top: .6em; }
+.ledger tfoot td.num { color: #cdeede; font-size: .95rem; }
+.emptyrow td { color: var(--soft); text-align: center; padding: 1.4em .5em; cursor: default; }
+.emptyrow td { font-size: .82rem; }
+
+/* 行エディタ（シート） */
+.modal { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: min(520px, 100%); max-height: 92vh; overflow-y: auto; background: #131b17; border: 1px solid var(--line);
+  border-radius: 18px 18px 0 0; padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .8rem;
+  animation: rise .25s cubic-bezier(.2,.8,.2,1); }
+@keyframes rise { from { transform: translateY(20px); opacity: 0; } }
+.sheethead { display: flex; justify-content: space-between; align-items: center; font-size: 1rem; }
+.sheethead .x { background: none; border: none; color: var(--soft); font-size: 1.4rem; cursor: pointer; }
+.fld { display: flex; flex-direction: column; gap: .3rem; font-size: .72rem; color: var(--soft); }
+.fld > input, .fld > select { background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .6em .7em; font: inherit; }
+.fldrow { display: flex; gap: .7rem; }
+.fldrow .fld { flex: 1; }
+.sheetact { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .3rem; }
+.pill.danger { border-color: rgba(239,125,114,.5); color: var(--minus); background: transparent; }
+
 footer { text-align: center; font-size: .68rem; color: var(--soft); line-height: 1.9; padding: 1rem 1rem 2.5rem; opacity: .8; }
 footer a { color: var(--accent); }
