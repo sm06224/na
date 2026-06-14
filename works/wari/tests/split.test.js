@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitExpense, computeBalances, minimizeTransfers, settle } from '../js/core/split.js';
+import { splitExpense, computeBalances, minimizeTransfers, settle, mergeWeights } from '../js/core/split.js';
 
 const sum = m => [...m.values()].reduce((a, b) => a + b, 0);
 
@@ -94,6 +94,19 @@ test('単純な立て替えは、人数−1 回で済む', () => {
   const { transfers } = settle(['a', 'b', 'c'], [{ payer: 'a', amount: 3000, participants: ['a', 'b', 'c'] }]);
   assert.equal(transfers.length, 2);
   for (const t of transfers) { assert.equal(t.to, 'a'); assert.equal(t.amount, 1000); }
+});
+
+test('傾斜：人ごとの既定の割合が効き、出費ごとの上書きが優先される', () => {
+  const base = { a: 1, b: 0.5, c: 2 };          // b は子ども、c は幹事
+  // 既定の傾斜
+  assert.deepEqual(mergeWeights(['a', 'b', 'c'], base), { a: 1, b: 0.5, c: 2 });
+  // この出費だけ b を 1 に上書き、d は未設定で 1
+  assert.deepEqual(mergeWeights(['a', 'b', 'd'], base, { b: 1 }), { a: 1, b: 1, d: 1 });
+  // 上書きの 0 も尊重される（この回は抜ける）
+  assert.deepEqual(mergeWeights(['a', 'b'], base, { b: 0 }), { a: 1, b: 0 });
+  // 実際に割ってみる：3000 を a:1, b:0.5, c:2（合計 3.5）で
+  const o = splitExpense(3500, ['a', 'b', 'c'], mergeWeights(['a', 'b', 'c'], base));
+  assert.equal(o.get('a'), 1000); assert.equal(o.get('b'), 500); assert.equal(o.get('c'), 2000);
 });
 
 test('決定性：同じ入力からは、同じ精算', () => {
