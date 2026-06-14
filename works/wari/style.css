@@ -157,6 +157,27 @@ input[type=text], input:not([type]), input[type=number], .addrow input, .exform 
 .emptyrow td { font-size: .82rem; }
 
 /* 行エディタ（シート） */
+/* 計画（予算） */
+.planhead { display: flex; flex-wrap: wrap; gap: .7rem; margin-bottom: .9rem; }
+.planhead label { font-size: .72rem; color: var(--soft); display: flex; flex-direction: column; gap: .25rem; }
+.planhead .sub { opacity: .7; }
+.planhead input, .planhead select { background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .5em .6em; font: inherit; width: 6.5em; }
+.planhead select { width: auto; }
+.kindcell { font-size: .74rem; color: var(--soft); white-space: nowrap; }
+.ledger td .amt { width: 6em; background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: .3em .4em; text-align: right; font: inherit; }
+.ledger td .amt + .x { background: none; border: none; color: var(--soft); font-size: 1.05rem; cursor: pointer; margin-left: .3rem; }
+.planadd { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0; }
+.planadd input, .planadd select { background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .55em .7em; font: inherit; }
+.planadd #plName { flex: 1 1 100%; }
+.planadd #plKind { flex: 1; }
+.planadd #plAmount { width: 7em; }
+.planresult { margin-top: .4rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.planbig { font-size: 1.1rem; color: var(--soft); }
+.planbig b { font-size: 1.9rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.planbig .per { font-size: .9rem; }
+.plansub { font-size: .8rem; color: var(--soft); margin-top: .2rem; }
+.planbreak { font-size: .76rem; color: var(--soft); line-height: 1.9; margin-top: .7rem; font-variant-numeric: tabular-nums; }
+
 .modal { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; }
 .sheet { width: min(520px, 100%); max-height: 92vh; overflow-y: auto; background: #131b17; border: 1px solid var(--line);
   border-radius: 18px 18px 0 0; padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .8rem;

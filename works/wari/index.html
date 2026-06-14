@@ -38,7 +38,34 @@
 
   <nav id="tabs" class="tabs"></nav>
 
-  <section class="panel phaseview" id="phaseview">
+  <section class="panel planview" id="planview" hidden>
+    <div class="phaseinfo"><b>計画</b>　会費をいくら集める？　人数割と一式の費用、主賓ぶんの肩代わりから「一人あたり」を出します。</div>
+    <div class="planhead">
+      <label>参加人数<input id="plN" type="number" min="0" max="999" step="1"></label>
+      <label>うち主賓<span class="sub">（無料）</span><input id="plFree" type="number" min="0" max="999" step="1"></label>
+      <label>会費の単位<select id="plRound">
+        <option value="0">1円</option><option value="100">100円</option>
+        <option value="500">500円</option><option value="1000">1000円</option></select></label>
+    </div>
+    <div class="tablewrap">
+      <table class="ledger">
+        <thead><tr><th>費用</th><th>種類</th><th class="num">金額</th></tr></thead>
+        <tbody id="plItems"></tbody>
+      </table>
+    </div>
+    <form id="plAdd" class="planadd">
+      <input id="plName" placeholder="費用の名前（例：料理・会場代・花代）" maxlength="24" autocomplete="off">
+      <select id="plKind">
+        <option value="per">人数割（×人数）</option>
+        <option value="fixed">一式（1回きり）</option>
+      </select>
+      <input id="plAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="金額">
+      <button type="submit" class="add">＋</button>
+    </form>
+    <div id="plResult" class="planresult"></div>
+  </section>
+
+  <section class="panel phaseview" id="phaseview" hidden>
     <div class="phaseinfo" id="phaseinfo"></div>
     <div class="tablewrap">
       <table id="ledger" class="ledger">
