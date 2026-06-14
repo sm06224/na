@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="割 (wari) — 旅行や飲み会の立て替えを、最小の送金回数で精算する。人ごとの傾斜（割合）・領収書の添付・支払い済みチェックつき。登録なし・サーバーなし・お金の記録は端末から出ない。リンク一本で共有。">
+<meta name="description" content="割 (wari) — イベントの会計を、計画→事前→当日→事後→精算のフェーズで、表で一目に。立て替えを最小の送金で再分配。傾斜・領収書・支払い済み・メモつき。登録なし・サーバーなし・お金の記録は端末から出ない。">
 <meta name="theme-color" content="#0f1512">
-<title>割 — 誰が誰にいくら払えばいい？</title>
+<title>割 — イベントの会計と精算</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
   <h1>割 <span class="en">/ wari</span></h1>
-  <p class="tagline">立て替えを、最小の送金で精算する</p>
+  <p class="tagline">計画から精算まで、表で一目に</p>
 </header>
 
 <main>
@@ -33,46 +33,74 @@
       <input id="memberCount" type="number" min="1" max="50" step="1" placeholder="人数">
       <button id="addCount" type="button" class="add">人を作る</button>
     </div>
-    <p class="hint mini-hint">名前をタップで変更。「×割合」で傾斜（子どもは0.5、幹事は多めなど）を一度決めると、すべての出費に効きます。</p>
+    <p class="hint mini-hint">名前をタップで変更。「×割合」で傾斜（子ども0.5・幹事多めなど）を一度決めると、すべての出費に効きます。</p>
   </section>
 
-  <section class="panel">
-    <div class="phead"><h2>出費</h2><span id="total" class="total"></span></div>
-    <div id="expenses" class="exlist"></div>
+  <nav id="tabs" class="tabs"></nav>
 
-    <form id="addExpense" class="exform">
-      <input id="exTitle" placeholder="何に使った？（例：宿・夕食）" autocomplete="off" maxlength="24">
-      <div class="exrow">
-        <label>払った人 <select id="exPayer"></select></label>
-        <label>金額 <input id="exAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label>
-      </div>
-      <div class="who">
-        <div class="wholabel">割る人
-          <label class="wtoggle"><input type="checkbox" id="exWeighted"> この出費だけ割合を変える</label>
-        </div>
-        <div id="exParts" class="parts"></div>
-      </div>
-      <div class="exrow receipt">
-        <label class="rcpbtn">📷 領収書をつける
-          <input id="exReceipt" type="file" accept="image/*" hidden>
-        </label>
-        <div id="exReceiptPrev" class="rcpprev"></div>
-      </div>
-      <button type="submit" class="add wide">この出費を足す</button>
-    </form>
+  <section class="panel phaseview" id="phaseview">
+    <div class="phaseinfo" id="phaseinfo"></div>
+    <div class="tablewrap">
+      <table id="ledger" class="ledger">
+        <thead><tr><th>項目</th><th>払った人</th><th class="num">金額</th></tr></thead>
+        <tbody id="ledgerBody"></tbody>
+        <tfoot id="ledgerFoot"></tfoot>
+      </table>
+    </div>
+    <button id="addRow" class="add wide">＋ この段階の出費を足す</button>
   </section>
 
-  <section class="panel result">
-    <h2>精算</h2>
+  <section class="panel result" id="settleview" hidden>
+    <div class="phaseinfo" id="settleinfo"></div>
     <div id="balances" class="balances"></div>
     <div id="transfers" class="transfers"></div>
   </section>
 
   <div class="row foot-actions">
-    <button id="share" class="pill primary">この精算を送る</button>
+    <button id="share" class="pill primary">この会計を送る</button>
     <button id="clear" class="pill">まっさらにする</button>
   </div>
 </main>
+
+<!-- 行エディタ -->
+<div id="editor" class="modal" hidden>
+  <div class="sheet">
+    <div class="sheethead"><span id="edTitle">出費</span><button id="edClose" class="x">×</button></div>
+    <label class="fld">段階
+      <select id="edPhase"></select>
+    </label>
+    <label class="fld">項目
+      <input id="edItem" placeholder="例：宿・夕食・前売り" maxlength="30" autocomplete="off">
+    </label>
+    <div class="fldrow">
+      <label class="fld">金額
+        <input id="edAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+      </label>
+      <label class="fld">払った人
+        <select id="edPayer"></select>
+      </label>
+    </div>
+    <label class="fld">メモ（誰から借りた・備考など）
+      <input id="edMemo" placeholder="メモ" maxlength="60" autocomplete="off">
+    </label>
+    <div class="fld">
+      <div class="wholabel">割る人
+        <label class="wtoggle"><input type="checkbox" id="edWeighted"> この出費だけ割合を変える</label>
+      </div>
+      <div id="edParts" class="parts"></div>
+    </div>
+    <div class="fldrow receipt">
+      <label class="rcpbtn">📷 領収書
+        <input id="edReceipt" type="file" accept="image/*" hidden>
+      </label>
+      <div id="edReceiptPrev" class="rcpprev"></div>
+    </div>
+    <div class="sheetact">
+      <button id="edDelete" class="pill danger" hidden>消す</button>
+      <button id="edSave" class="pill primary">保存</button>
+    </div>
+  </div>
+</div>
 
 <div id="lightbox" class="lightbox" hidden><img id="lightimg" alt="領収書"></div>
 <div id="toast" hidden></div>
