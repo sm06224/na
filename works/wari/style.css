@@ -1,0 +1,105 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1512; --panel: #161e1a; --line: rgba(150,200,170,.14);
+  --ink: #e7efe9; --soft: #93a89c; --accent: #4fd1a5;
+  --plus: #56d6a0; --minus: #ef7d72;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { width: 100%; min-height: 100%; }
+body {
+  background:
+    radial-gradient(80% 50% at 50% -10%, rgba(79,209,165,.10), transparent 60%),
+    var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+header { text-align: center; padding: 2rem 1rem .8rem; }
+header h1 { font-weight: 300; font-size: 2.1rem; letter-spacing: .16em;
+  background: linear-gradient(120deg, #7ee7c0, #4fd1a5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+header .en { font-size: .68rem; opacity: .42; letter-spacing: .26em; -webkit-text-fill-color: initial; color: var(--soft); }
+.tagline { margin-top: .45rem; color: var(--soft); font-size: .88rem; font-weight: 300; letter-spacing: .04em; }
+
+main { max-width: 520px; margin: 0 auto; padding: 0 1rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.1rem; }
+.phead { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+.phead h2 { font-weight: 500; font-size: 1.05rem; letter-spacing: .06em; }
+.total { font-size: .82rem; color: var(--soft); font-variant-numeric: tabular-nums; }
+
+.mini { font: inherit; font-size: .78rem; background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: .3em .5em; }
+.empty { color: var(--soft); font-size: .82rem; opacity: .7; }
+
+/* メンバー */
+.chips { display: flex; flex-wrap: wrap; gap: .45rem; min-height: 1.6rem; }
+.chip { display: inline-flex; align-items: center; gap: .3rem; background: #1d2a24; border: 1px solid var(--line);
+  border-radius: 999px; padding: .35em .5em .35em .85em; font-size: .86rem; }
+.chip .x { background: none; border: none; color: var(--soft); font-size: 1rem; cursor: pointer; line-height: 1; padding: 0 .1em; }
+.addrow { display: flex; gap: .5rem; margin-top: .8rem; }
+.addrow input { flex: 1; }
+input, select { font: inherit; }
+input[type=text], input:not([type]), input[type=number], .addrow input, .exform input {
+  background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .6em .8em; width: 100%;
+}
+.add { background: linear-gradient(120deg, #4fd1a5, #57c9c0); color: #07140f; border: none; border-radius: 10px;
+  font: inherit; font-weight: 700; padding: 0 1em; cursor: pointer; }
+.add.wide { padding: .7em 1em; width: 100%; margin-top: .8rem; }
+
+/* 出費リスト */
+.exlist { display: flex; flex-direction: column; gap: .5rem; }
+.ex { display: flex; align-items: center; gap: .6rem; background: #121a16; border: 1px solid var(--line); border-radius: 12px; padding: .65rem .8rem; }
+.exmain { flex: 1; min-width: 0; }
+.extitle { display: block; font-size: .95rem; }
+.exmeta { display: block; font-size: .7rem; color: var(--soft); margin-top: .15rem; }
+.examt { font-variant-numeric: tabular-nums; font-size: .95rem; color: #cdeede; }
+.ex .x { background: none; border: none; color: var(--soft); font-size: 1.1rem; cursor: pointer; }
+
+/* 出費フォーム */
+.exform { margin-top: 1rem; border-top: 1px dashed var(--line); padding-top: 1rem; display: flex; flex-direction: column; gap: .7rem; }
+.exrow { display: flex; gap: .6rem; }
+.exrow label { flex: 1; font-size: .72rem; color: var(--soft); display: flex; flex-direction: column; gap: .25rem; }
+.exrow select, .exrow input { width: 100%; }
+.exrow select { background: #0f1512; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .6em .6em; }
+.wholabel { font-size: .72rem; color: var(--soft); display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
+.wtoggle { display: inline-flex; align-items: center; gap: .3rem; }
+.parts { display: flex; flex-wrap: wrap; gap: .4rem; }
+.part { display: inline-flex; align-items: center; gap: .35rem; background: #121a16; border: 1px solid var(--line);
+  border-radius: 10px; padding: .35em .6em; font-size: .84rem; }
+.part .pw { width: 3.4em; padding: .2em .3em; text-align: center; }
+
+/* 精算 */
+.result h2 { margin-bottom: .8rem; }
+.balances { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; }
+.bal { display: flex; justify-content: space-between; align-items: center; padding: .4em .2em; border-bottom: 1px solid var(--line); }
+.bal .bn { font-size: .9rem; }
+.bal .bv { font-size: .86rem; font-variant-numeric: tabular-nums; }
+.bal.plus .bv { color: var(--plus); }
+.bal.minus .bv { color: var(--minus); }
+.bal.zero .bv { color: var(--soft); }
+
+.transfers { display: flex; flex-direction: column; gap: .5rem; }
+.tcap { font-size: .76rem; color: var(--soft); }
+.tr { display: flex; align-items: center; gap: .6rem; background: #13211b; border: 1px solid rgba(79,209,165,.22);
+  border-radius: 12px; padding: .7rem .9rem; }
+.tr .from { font-weight: 500; }
+.tr .arrow { color: var(--accent); font-size: 1.1rem; }
+.tr .to { font-weight: 500; }
+.tr .tamt { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 1.05rem; color: #aef0d4; font-weight: 600; }
+.done { text-align: center; color: var(--plus); padding: 1rem; font-size: .95rem; }
+
+.foot-actions { display: flex; gap: .6rem; justify-content: center; }
+.row { display: flex; }
+.pill { font: inherit; font-size: .86rem; border: 1px solid var(--line); background: #161e1a; color: var(--ink);
+  border-radius: 999px; padding: .6em 1.3em; cursor: pointer; }
+.pill.primary { background: linear-gradient(120deg, #4fd1a5, #57c9c0); color: #07140f; border-color: transparent; font-weight: 700; }
+.pill:active { transform: translateY(1px); }
+
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 20; background: #0b3a2c; color: #d8fff0; border: 1px solid rgba(79,209,165,.4);
+  border-radius: 12px; padding: .7em 1.2em; font-size: .82rem; }
+
+footer { text-align: center; font-size: .68rem; color: var(--soft); line-height: 1.9; padding: 1rem 1rem 2.5rem; opacity: .8; }
+footer a { color: var(--accent); }

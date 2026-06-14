@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割**
 
 </div>
 
@@ -140,6 +140,15 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 **分単位で一致**。位置も日付も**端末から一歩も出ない**（リンクに畳むだけ）・無料・オフライン。
 コアは DOM 非依存・**17 tests**。
 
+### 💴 [割 `wari`](./works/wari/) — *settle up, with the fewest transfers*
+**五番目の実用品**。旅行や飲み会の立て替えを、**最小の送金回数**で精算する——「宿は A、夕食は B、
+タクシーは C が立て替えた。飲まない人もいる。子どもは半分。結局**誰が誰にいくら払えば**チャラに
+なる？」に答える。出費ごとに**割る人**を選べ（不参加者は負担なし）、**重みで割れ**（飲まない人 0・
+子ども 0.5・幹事多め）、割り切れない端数は**公平に 1 円ずつ**配って合計はぴったり。残高（立て替え−
+負担）は必ず合計ゼロ、それを**最大の貸しと借りの相殺**でまとめると送金は**人数−1 回以下**、輪に
+なった貸し借りは送金ゼロで消える。割り勘アプリと違い**登録なし・サーバーなし・お金の記録は端末
+から出ない**——リンク一本で渡せる。コアは DOM 非依存・**11 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -228,10 +237,15 @@ na/
 │  │  ├─ js/core/           rng · bolt（場・成長・幹と枝・命名・銘）
 │  │  ├─ js/ui/             render · audio · main
 │  │  └─ tests/
-│  └─ hinata/               ☀ 陽（どこに・いつ・どれだけ陽が射すか）
+│  ├─ hinata/               ☀ 陽（どこに・いつ・どれだけ陽が射すか）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           sun（赤緯・均時差・高度方位・薄明） · window（窓の直射）
+│  │  ├─ js/ui/             render · main
+│  │  └─ tests/
+│  └─ wari/                 💴 割（立て替えを最小の送金で精算）
 │     ├─ index.html · style.css
-│     ├─ js/core/           sun（赤緯・均時差・高度方位・薄明） · window（窓の直射）
-│     ├─ js/ui/             render · main
+│     ├─ js/core/split.js   割る · 残高 · 最小送金
+│     ├─ js/ui/main.js
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -245,7 +259,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます

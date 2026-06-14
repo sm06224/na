@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="割 (wari) — 旅行や飲み会の立て替えを、最小の送金回数で精算する。立て替え・割合のちがう負担・不参加者まで。登録なし・サーバーなし・お金の記録は端末から出ない。リンク一本で共有。">
+<meta name="theme-color" content="#0f1512">
+<title>割 — 誰が誰にいくら払えばいい？</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>割 <span class="en">/ wari</span></h1>
+  <p class="tagline">立て替えを、最小の送金で精算する</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="phead"><h2>みんな</h2>
+      <select id="cur" class="mini" aria-label="通貨">
+        <option value="¥">¥ 円</option><option value="$">$ ドル</option>
+        <option value="€">€ ユーロ</option><option value="">記号なし</option>
+      </select>
+    </div>
+    <div id="members" class="chips"></div>
+    <form id="addMember" class="addrow">
+      <input id="memberName" placeholder="名前を足す" autocomplete="off" maxlength="12">
+      <button type="submit" class="add">＋</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="phead"><h2>出費</h2><span id="total" class="total"></span></div>
+    <div id="expenses" class="exlist"></div>
+
+    <form id="addExpense" class="exform">
+      <input id="exTitle" placeholder="何に使った？（例：宿・夕食）" autocomplete="off" maxlength="24">
+      <div class="exrow">
+        <label>払った人 <select id="exPayer"></select></label>
+        <label>金額 <input id="exAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label>
+      </div>
+      <div class="who">
+        <div class="wholabel">割る人
+          <label class="wtoggle"><input type="checkbox" id="exWeighted"> 重みで割る</label>
+        </div>
+        <div id="exParts" class="parts"></div>
+      </div>
+      <button type="submit" class="add wide">この出費を足す</button>
+    </form>
+  </section>
+
+  <section class="panel result">
+    <h2>精算</h2>
+    <div id="balances" class="balances"></div>
+    <div id="transfers" class="transfers"></div>
+  </section>
+
+  <div class="row foot-actions">
+    <button id="share" class="pill primary">この精算を送る</button>
+    <button id="clear" class="pill">まっさらにする</button>
+  </div>
+</main>
+
+<div id="toast" hidden></div>
+
+<footer>
+  お金の記録は、端末から一歩も出ません。リンクの中だけで渡せます。<br>
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

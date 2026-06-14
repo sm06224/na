@@ -1,0 +1,10 @@
+{
+  "name": "wari",
+  "version": "1.0.0",
+  "description": "割 — settle up a group's shared expenses with the fewest transfers. Handles who-paid, uneven shares and non-participants, splits remainders fairly, and folds everything into a link. No account, no server, the money stays on your device. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

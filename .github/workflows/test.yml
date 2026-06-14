@@ -192,6 +192,18 @@ jobs:
         working-directory: works/hinata
         run: node --test tests/*.test.js
 
+  wari:
+    name: wari — settle up with the fewest transfers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Split, balance, and minimise the transfers headless
+        working-directory: works/wari
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
