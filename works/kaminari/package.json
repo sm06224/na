@@ -1,0 +1,10 @@
+{
+  "name": "kaminari",
+  "version": "1.0.0",
+  "description": "雷 — lightning that finds its own way to the ground. From a single seed a bolt grows by dielectric breakdown: the potential field decides where the branches reach. Same seed, same lightning. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
