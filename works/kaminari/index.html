@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="雷 (kaminari) — 誰も枝を描かない稲妻。種ひとつから電位の場が張り、稲妻はおのずと地への道をさがして枝分かれする（誘電破壊）。同じ種からは、同じ稲妻。">
+<meta name="theme-color" content="#04050b">
+<title>雷 — lightning that finds its own way down</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="hud">
+  <h1>雷 <span class="en">/ kaminari</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>はじめに、空は鎮まっていた。<br>
+       種をひとつ蒔くと電位の場が張り、稲妻はおのずと<br>
+       ひらいた野＝電位の高いほうへ、地への道をさがして枝分かれする。<br>
+       誰も、稲妻の枝を描いてはいない。</p>
+    <button id="bOpen">空をひらく</button>
+    <p class="fine">同じ種からは、同じ稲妻。画面にふれると、別の雷が落ちる。</p>
+  </div>
+</div>
+
+<aside id="card" hidden>
+  <button id="cardClose" class="x">×</button>
+  <h2 id="cName"></h2>
+  <p id="cKind"></p>
+  <p id="cStruck"></p>
+  <p id="cTale"></p>
+</aside>
+
+<nav id="bar" hidden>
+  <button id="bAgain" class="ghost">もう一度</button>
+  <button id="bLetter" class="ghost">今日の雷</button>
+  <button id="bShare" class="ghost">この雷を送る</button>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

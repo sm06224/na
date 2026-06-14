@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷**
 
 </div>
 
@@ -120,6 +120,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 明るい**一番星**が最初に灯り、その由来は次に来る人への言づてになっている。
 コアは DOM 非依存・**9 tests**。
 
+### ⚡ [雷 `kaminari`](./works/kaminari/) — *lightning that finds its own way down*
+`星` の対、**割れる空**。上辺の雲から下辺の地へ電位の場が張り、稲妻の先端は
+**ひらいた野＝電位の高いほうへ確率的に伸びる**——一マス進むたびに**ラプラス方程式を
+解き直す**、本物の**誘電破壊モデル**（dielectric breakdown）。誰も枝を描かないのに、
+幹と枝とフラクタルが種ひとつから決まる。`生`（神経）・`史`（経路探索）・`星`（最小全域木）
+と続いた「**場の自己組織化が形を生む**」系譜の、嵐の章。やがて地に届くと**落雷点**が決まり、
+稲妻は**おのれの名を名のり**、枝ぶりと落ちどころから物語が書かれる。閃光のあと、**雷鳴は
+光より遅れて届く**（雑音から手作り）。同じ種からは一閃も違わない同じ稲妻——リンクで渡せる。
+コアは DOM 非依存・**10 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -198,10 +208,15 @@ na/
 │  │  ├─ js/core/           geo · course（コース符号・通過判定） · qr（QR 自作）
 │  │  ├─ js/ui/             sensors · needle · camera · main
 │  │  └─ tests/
-│  └─ hoshi/                ★ 星（ひとりでに名づける夜空）
+│  ├─ hoshi/                ★ 星（ひとりでに名づける夜空）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           rng · sky（星・星座・命名・神話・銘）
+│  │  ├─ js/ui/             render · main
+│  │  └─ tests/
+│  └─ kaminari/             ⚡ 雷（おのずと地をさがす稲妻）
 │     ├─ index.html · style.css
-│     ├─ js/core/           rng · sky（星・星座・命名・神話・銘）
-│     ├─ js/ui/             render · main
+│     ├─ js/core/           rng · bolt（場・成長・幹と枝・命名・銘）
+│     ├─ js/ui/             render · audio · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -215,7 +230,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔` のコアをブラウザなしで検証（計 160 tests）、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
