@@ -279,7 +279,7 @@ function showForecast(def) {
   const dd = classDef(def.classId);
   const dmgText = (d, x2) => `${d}${x2 ? '×2' : ''}`;
   $('fcBody').innerHTML =
-    `<div class="fcrow"><b>${u.name}</b> → <b>${def.name}</b>（${dd.name} Lv${def.level}）</div>
+    `<div class="fcrow"><b>${u.name}</b> → <b>${def.name}</b>（${dd.name} Lv${def.level}）${fc.flank === 'back' ? ' <span style="color:#ffd86a">背後!</span>' : fc.flank === 'side' ? ' <span style="color:#9cf0c0">側面</span>' : ''}</div>
      <table class="fctbl">
        <tr><th></th><th>${u.name}</th><th>${def.name}</th></tr>
        <tr><td>HP</td><td>${u.hp}/${u.maxHp}</td><td>${def.hp}/${def.maxHp}</td></tr>

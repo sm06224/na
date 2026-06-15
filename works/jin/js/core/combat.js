@@ -30,6 +30,22 @@ function loneBonus(u, board) {
   return Math.max(0, 3 - near) * 8;
 }
 
+/* 向き（0北1東2南3西）どうしの位置から、背後・側面の補正を出す。
+   背後を突けば命中・会心が大きく上がり、側面でも少し上がる。 */
+const DIRV = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+export function dirToward(from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 1 : 3;
+  return dy >= 0 ? 2 : 0;
+}
+export function flankBonus(att, def) {
+  if (att.facing == null || def.facing == null || !att.pos || !def.pos) return { hit: 0, crit: 0, kind: 'front' };
+  const dir = dirToward(def.pos, att.pos);        // 守り手から見た攻め手の方角
+  if (dir === def.facing) return { hit: 0, crit: 0, kind: 'front' };
+  if (dir === (def.facing + 2) % 4) return { hit: 15, crit: 20, kind: 'back' };
+  return { hit: 7, crit: 8, kind: 'side' };
+}
+
 /* 絆（隣り合う味方の数、最大3）— 布陣そのものが力になる */
 export function bondOf(u, board) {
   if (!board || !u.pos) return 0;
@@ -63,16 +79,17 @@ export function strikeInfo(src, tgt, board) {
   const dmg = Math.max(0, atk - defStat);
 
   const sBond = bondOf(src, board), tBond = bondOf(tgt, board);
-  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5;
+  const flank = flankBonus(src, tgt);
+  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit;
   const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
   const hit = clamp(Math.round(hitStat - avo), 0, 100);
 
-  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2;
+  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2 + flank.crit;
   if (hasSkill(src, 'focus')) critStat += loneBonus(src, board);
   if (hasSkill(src, 'wrath') && src.hp * 2 <= src.maxHp) critStat += 30;     // 憤怒
   const crit = clamp(critStat - sd.lck, 0, 100);
 
-  return { atk, dmg, hit, crit, magic, defStat, weapon: w, eff };
+  return { atk, dmg, hit, crit, magic, defStat, weapon: w, eff, flank: flank.kind };
 }
 
 /* この間合いで src は tgt に届くか */
@@ -92,7 +109,7 @@ export function forecast(a, b, board) {
   const aDouble = (attackSpeed(a) - attackSpeed(b)) >= doubleThresh(a) && !hasSkill(b, 'wary');
   const bDouble = counter && (attackSpeed(b) - attackSpeed(a)) >= doubleThresh(b) && !hasSkill(a, 'wary');
   return {
-    atk: ai.atk, dmg: ai.dmg, hit: ai.hit, crit: ai.crit, doubles: aDouble, eff: ai.eff,
+    atk: ai.atk, dmg: ai.dmg, hit: ai.hit, crit: ai.crit, doubles: aDouble, eff: ai.eff, flank: ai.flank,
     counter: counter ? { dmg: counter.dmg, hit: counter.hit, crit: counter.crit, doubles: bDouble, eff: counter.eff } : null,
   };
 }
