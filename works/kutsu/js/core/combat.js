@@ -20,6 +20,7 @@ export function effStats(actor) {
     actor._resist = actor.resist || {};
   }
   if (actor.hasStatus('might')) s.str += 4;
+  if (actor.hasStatus('fortify')) s.def += (actor.getStatus('fortify').power || 4);
   if (actor.hasStatus('blind')) s.acc -= 4;
   return s;
 }
