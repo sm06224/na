@@ -42,7 +42,7 @@ export class Game {
     this.levels = new Map();
     this.board = null;
     this.state = 'play';
-    this.flags = { amuletPlaced: false, hasAmulet: false };
+    this.flags = { amuletPlaced: false, hasAmulet: false, artifacts: {} };
     this.cause = '力尽きた';
     this.sensed = new Set();
     this._dist = null;

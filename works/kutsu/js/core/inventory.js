@@ -41,8 +41,15 @@ export function equipBonus(actor) {
     if (d.category === 'weapon') { b.acc += (d.acc || 0) + it.enchant; }
     if (d.category === 'ring' && d.passive) {
       for (const [k, v] of Object.entries(d.passive)) {
-        if (k === 'resistFire') resist.fire = v;
+        if (k === 'resistFire') resist.fire = Math.max(resist.fire || 0, v);
         else b[k] = (b[k] || 0) + v + (k === 'def' || k === 'str' || k === 'acc' || k === 'eva' ? it.enchant : 0);
+      }
+    }
+    // 遺物の常時効果（武器・防具・外套などにも passive がある）
+    if (d.artifact && d.passive && d.category !== 'ring') {
+      for (const [k, v] of Object.entries(d.passive)) {
+        if (k === 'resistFire') resist.fire = Math.max(resist.fire || 0, v);
+        else b[k] = (b[k] || 0) + v;
       }
     }
   }

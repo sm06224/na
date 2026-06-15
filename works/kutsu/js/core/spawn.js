@@ -5,7 +5,7 @@
 
 import { monstersForDepth, allMonsters } from './monsterdb.js';
 import { makeMonster, makeItem, randomItemForDepth, makeGold } from './factory.js';
-import { itemKeysByCategory, getItemDef } from './itemdb.js';
+import { itemKeysByCategory, getItemDef, artifactsForDepth } from './itemdb.js';
 import { isStairs } from './tile.js';
 import { chebyshev } from './util.js';
 import { vaultsForDepth, stampVault } from './gen/vault.js';
@@ -81,8 +81,25 @@ function maybeVault(game, board, rng, depth) {
   game.chronicle.record(game.player ? game.player.turns : 0, depth, 'find', `第 ${depth} 階に〈${names[res.id] || res.id}〉があった。`);
 }
 
+/* まれに、まだ出ていない遺物をひとつ眠らせる */
+function maybeArtifact(game, board, rng, depth) {
+  if (!rng.chance(0.12)) return;
+  const spawned = (game.flags && game.flags.artifacts) || {};
+  const pool = artifactsForDepth(depth).filter(d => !spawned[d.key]);
+  if (!pool.length) return;
+  const d = rng.pick(pool);
+  const spot = spawnSpot(game, board, rng, 6);
+  if (!spot) return;
+  const it = makeItem(rng, d.key, { depth });
+  it.identified = true;
+  board.addItem(it, spot.x, spot.y);
+  (game.flags.artifacts = game.flags.artifacts || {})[d.key] = true;
+  game.chronicle.record(game.player ? game.player.turns : 0, depth, 'find', `第 ${depth} 階に ${d.name} が眠っていた。`);
+}
+
 export function populate(game, board, rng, depth) {
   maybeVault(game, board, rng, depth);
+  maybeArtifact(game, board, rng, depth);
   const pool = monstersForDepth(depth);
   // 数：階の広さと深さに応じる
   const floorCount = board.level.meta.floorCount || 400;

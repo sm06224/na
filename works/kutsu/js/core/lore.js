@@ -61,6 +61,18 @@ export const MONSTER_LORE = {
   titan: '神話の巨人。一撃の重みが桁違い。',
   dragon: '古き竜。劫火を吐き、その威に大気が震える。窟の深きヌシ。',
   death_king: '死を統べる王。雷と眷属を従え、生者の精を啜る。窟の最奥に座す。',
+  kobold_shaman: '骨の杖を振るコボルドの呪術師。小さな魔法の矢を飛ばす。',
+  giant_bat: '人ほどもある大蝙蝠。速く、つかみどころがない。',
+  fungus: '淡く光る茸。胞子を吸うと頭がくらむ。',
+  salamander: '炎をまとう火蜥蜴。触れれば火傷を負う。',
+  ghoul: '墓を漁る喰屍鬼。群れで囲み、ときに身を竦ませる。',
+  wight: '塚に眠る古い亡者。触れられると生気を吸われる。',
+  banshee: '夜に泣く女の霊。その声に身が竦み、氷の魔を呼ぶ。',
+  minotaur: '迷宮の牛頭。狭い通路でこそ恐ろしい。',
+  chimera: '三つの頭を持つ獣。火を吐き、爪で薙ぐ。',
+  eye: '宙を漂う大きな眼。睨まれると雷が落ち、身が固まる。',
+  death_knight: '呪われた騎士。重い一撃と、生気を奪う剣。',
+  slime: '酸の粘体。鈍いが、武具を溶かし毒も効かぬ。',
 };
 
 export function monsterLore(key) {
@@ -107,6 +119,11 @@ export function itemInfo(item, idStore) {
   } else if (d.category === 'wand') {
     if (known) parts.push(`効：${d.name}`);
     if (item.charges != null) parts.push(`残 ${item.charges}`);
+  }
+  if (d.artifact) {
+    if (d.passive) parts.push(Object.entries(d.passive).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join('・'));
+    if (d.brand) parts.push(`銘：${d.brand.element || ''}`);
+    parts.unshift('【遺物】');
   }
   const flavor = known ? '' : CAT_FLAVOR[d.category] || '';
   return [parts.join('　'), flavor].filter(Boolean).join('　／　') || CAT_FLAVOR[d.category] || '';

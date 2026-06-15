@@ -63,6 +63,14 @@ export function meleeAttack(game, atk, def) {
       else { applyStatus(def, st.type, st.turns, st.power); res.statuses.push(st.type); }
     }
   }
+  // 銘（遺物武器の属性）：命中時にまれに状態異常を乗せる
+  if (!res.killed && atk.equip && atk.equip.weapon && atk.equip.weapon.d.brand) {
+    const br = atk.equip.weapon.d.brand;
+    if (br.status && rng.chance(br.chance ?? 0.35)) {
+      applyStatus(def, br.status.type, br.status.turns, br.status.power || 1);
+      res.statuses.push(br.status.type);
+    }
+  }
   return res;
 }
 
