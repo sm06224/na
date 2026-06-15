@@ -1,0 +1,125 @@
+/* 陣 — 戦場を描く。地形・移動範囲・攻撃範囲・経路・カーソル・駒・演出。
+   カメラ（位置と拡大）を持ち、画面⇄盤の座標を変換する。 */
+
+import { terrainOf } from '../core/terrain.js';
+import { isAlive } from '../core/unit.js';
+import { drawToken, roundRect } from './sprites.js';
+import { key } from '../core/grid.js';
+
+export const BASE_TILE = 46;
+
+export class Camera {
+  constructor() { this.x = 0; this.y = 0; this.scale = 1; }
+  get tile() { return BASE_TILE * this.scale; }
+  worldToScreen(wx, wy) { return { x: wx * this.tile + this.x, y: wy * this.tile + this.y }; }
+  screenToTile(sx, sy) {
+    return { x: Math.floor((sx - this.x) / this.tile), y: Math.floor((sy - this.y) / this.tile) };
+  }
+  center(board, vw, vh) {
+    this.x = (vw - board.w * this.tile) / 2;
+    this.y = (vh - board.h * this.tile) / 2;
+  }
+  clamp(board, vw, vh) {
+    const bw = board.w * this.tile, bh = board.h * this.tile;
+    const margin = this.tile * 2;
+    if (bw <= vw) this.x = (vw - bw) / 2; else this.x = Math.min(margin, Math.max(vw - bw - margin, this.x));
+    if (bh <= vh) this.y = (vh - bh) / 2; else this.y = Math.min(margin, Math.max(vh - bh - margin, this.y));
+  }
+}
+
+export function draw(ctx, state, now) {
+  const { board, cam, vw, vh } = state;
+  ctx.clearRect(0, 0, vw, vh);
+  ctx.fillStyle = '#0a0d14';
+  ctx.fillRect(0, 0, vw, vh);
+  const T = cam.tile;
+
+  // 可視範囲のタイルだけ描く
+  const x0 = Math.max(0, Math.floor((-cam.x) / T) - 1);
+  const y0 = Math.max(0, Math.floor((-cam.y) / T) - 1);
+  const x1 = Math.min(board.w - 1, Math.ceil((vw - cam.x) / T) + 1);
+  const y1 = Math.min(board.h - 1, Math.ceil((vh - cam.y) / T) + 1);
+
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const t = terrainOf(board.terrain.get(x, y));
+      const s = cam.worldToScreen(x, y);
+      ctx.fillStyle = t.color || '#5c7a4a';
+      ctx.fillRect(s.x, s.y, T + 1, T + 1);
+      // 地形の凹凸（簡単な陰影）
+      ctx.fillStyle = 'rgba(0,0,0,.10)';
+      ctx.fillRect(s.x, s.y + T * 0.82, T + 1, T * 0.18);
+      if (t.ch && t.ch !== '.' && t.ch !== '_') {
+        ctx.fillStyle = 'rgba(0,0,0,.30)';
+        ctx.font = `${Math.round(T * 0.5)}px serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(t.ch, s.x + T / 2, s.y + T / 2);
+      }
+      ctx.strokeStyle = 'rgba(0,0,0,.14)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(s.x + 0.5, s.y + 0.5, T, T);
+    }
+  }
+
+  // 重ね（移動＝青、攻撃＝赤、杖＝緑）
+  const pulse = 0.5 + 0.5 * Math.sin(now / 300);
+  drawOverlay(ctx, cam, state.moveTiles, `rgba(90,150,255,${0.28 + pulse * 0.12})`, T);
+  drawOverlay(ctx, cam, state.atkTiles, `rgba(255,90,90,${0.26 + pulse * 0.12})`, T);
+  drawOverlay(ctx, cam, state.staffTiles, `rgba(120,230,150,${0.26 + pulse * 0.12})`, T);
+
+  // 経路の点
+  if (state.path && state.path.length > 1) {
+    ctx.fillStyle = '#ffe08a';
+    for (const p of state.path) {
+      const s = cam.worldToScreen(p.x, p.y);
+      ctx.beginPath(); ctx.arc(s.x + T / 2, s.y + T / 2, T * 0.10, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // カーソル
+  if (state.cursor) {
+    const s = cam.worldToScreen(state.cursor.x, state.cursor.y);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+    ctx.strokeRect(s.x + 2, s.y + 2, T - 4, T - 4);
+  }
+  if (state.selected && state.selected.pos) {
+    const s = cam.worldToScreen(state.selected.pos.x, state.selected.pos.y);
+    ctx.strokeStyle = '#ffe08a'; ctx.lineWidth = 3;
+    ctx.strokeRect(s.x + 2, s.y + 2, T - 4, T - 4);
+  }
+
+  // 駒（移動アニメ中のユニットはずらして描く）
+  const anim = state.anim;
+  for (const u of board.units) {
+    if (!isAlive(u) || !u.pos) continue;
+    let px = u.pos.x, py = u.pos.y;
+    if (anim && anim.type === 'move' && anim.uid === u.uid) { px = anim.cx; py = anim.cy; }
+    const s = cam.worldToScreen(px, py);
+    const shake = (anim && anim.type === 'hit' && anim.uid === u.uid) ? Math.sin(now / 30) * 3 : 0;
+    drawToken(ctx, u, s.x + T / 2 + shake, s.y + T / 2, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
+  }
+
+  // ダメージ表示など
+  if (state.popups) {
+    for (const p of state.popups) {
+      const s = cam.worldToScreen(p.x, p.y);
+      const age = (now - p.t) / 900;
+      if (age > 1) continue;
+      ctx.globalAlpha = 1 - age;
+      ctx.fillStyle = p.color || '#fff';
+      ctx.font = `bold ${Math.round(T * (p.big ? 0.5 : 0.38))}px ui-sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, s.x + T / 2, s.y + T / 2 - age * T * 0.8);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+function drawOverlay(ctx, cam, tiles, color, T) {
+  if (!tiles) return;
+  ctx.fillStyle = color;
+  for (const p of tiles) {
+    const s = cam.worldToScreen(p.x, p.y);
+    ctx.fillRect(s.x + 2, s.y + 2, T - 4, T - 4);
+  }
+}

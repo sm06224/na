@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣**
 
 </div>
 
@@ -189,6 +189,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 `庭`・`蛍` と続く、理屈はさておき**ただ触れて眺める**ための一作。コアは DOM 非依存で、対称性・
 安定性・減衰・重ね合わせ（線形性）・**大波でも壊れないこと**を**ヘッドレス検証**・**9 tests**。
 
+### ⚔ [陣 `jin`](./works/jin/) — *a tactics RPG born from a seed*
+**種ひとつから、盤上の戦記がまるごと生まれる**タクティクスRPG。タッチで指揮する。
+グリッド戦闘・**A\* 移動**・命中/会心/**連撃**・**三すくみ**（剣>斧>槍）と魔法の三色・**地形効果**
+（森は回避、山は固く、砦は癒す）・職と技（**太陽・月光・流星・瞬殺**…）・経験と**上級転職**・
+持物と杖・**敵 AI**（到達×標的を評価し最善を選ぶ）。戦場も敵もボスも、自前のバリューノイズと
+乱数から**決定的に**組まれ、**同じ種からは一マスもちがわぬ同じ戦記**——`#s=種` で渡せる。
+`生`（神経）・`史`（経路）・`窟`（迷宮）と続く「ひとりでに生まれる」系譜の、戦の章。
+コアは DOM 非依存で、経路・戦闘・成長・AI・生成・全章の決着までを**ヘッドレス検証**・**18 tests**。
+（大作のため、以後も章・職・技・物語を積み増していく長い登り。）
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -304,10 +314,16 @@ na/
 │  │  ├─ js/core/           sha256（手づくり）· draw（封・洗牌・検証・証拠）
 │  │  ├─ js/ui/main.js
 │  │  └─ tests/
-│  └─ nami/                 🌊 波（触れると生まれる、波動方程式の水面）
+│  ├─ nami/                 🌊 波（触れると生まれる、波動方程式の水面）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/water.js   高さの場・波動方程式・反射壁・傾き
+│  │  ├─ js/ui/             render（屈折と caustics）· audio · main
+│  │  └─ tests/
+│  └─ jin/                  ⚔ 陣（種から生まれるタクティクスRPG）
 │     ├─ index.html · style.css
-│     ├─ js/core/water.js   高さの場・波動方程式・反射壁・傾き
-│     ├─ js/ui/             render（屈折と caustics）· audio · main
+│     ├─ js/core/           rng/grid/pathfind/terrain/stats · classes/items/skills/
+│     │                     unit/status/board/combat/ai · mapgen/enemies/battle/game
+│     ├─ js/ui/             render · sprites · audio · main（タッチ操作）
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -321,7 +337,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟`・`種`・`籤`・`波` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟`・`種`・`籤`・`波`・`陣` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます

@@ -1,0 +1,82 @@
+:root {
+  color-scheme: dark;
+  --bg: #0a0d14; --panel: #161b29; --line: rgba(150,175,235,.16);
+  --ink: #e7ecf6; --soft: #97a2c0; --accent: #6f8cff; --gold: #ffd86a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  user-select: none; touch-action: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
+
+/* HUD */
+#hud { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px; gap: 8px;
+  background: linear-gradient(180deg, rgba(10,13,20,.92), rgba(10,13,20,0)); pointer-events: none; }
+.hudleft { display: flex; flex-direction: column; gap: 2px; font-size: .76rem; letter-spacing: .04em; text-shadow: 0 1px 3px #000; }
+.hudleft #objInfo { color: var(--soft); font-size: .68rem; }
+.hudright { display: flex; gap: 6px; pointer-events: auto; }
+.hbtn { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 10px;
+  padding: .5em .9em; font: inherit; font-size: .8rem; cursor: pointer; }
+.hbtn.primary { background: linear-gradient(120deg, #5f7cff, #6f8cff); border: none; color: #0a0d14; font-weight: 700; }
+
+/* オーバーレイ（タイトル・幕間・結果） */
+.overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+  background: radial-gradient(120% 90% at 50% 30%, rgba(20,26,44,.7), rgba(8,10,18,.96)); }
+.card { background: rgba(18,22,36,.96); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.5rem;
+  max-width: 30em; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.card h1 { font-weight: 200; font-size: 3rem; letter-spacing: .14em;
+  background: linear-gradient(120deg, #aeb9ff, #6f8cff 60%, #ffd86a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.card h2 { font-weight: 400; font-size: 1.5rem; letter-spacing: .08em; margin-bottom: .6rem; color: var(--gold); }
+.card .en { font-size: .7rem; opacity: .4; letter-spacing: .24em; -webkit-text-fill-color: initial; color: var(--soft); }
+.lead { color: #cfd6ec; line-height: 1.9; font-weight: 300; margin: 1rem 0; white-space: pre-line; font-size: .92rem; }
+.fine { color: var(--soft); font-size: .72rem; line-height: 1.8; margin-top: 1rem; }
+.seedrow { display: flex; align-items: center; gap: .6rem; justify-content: center; color: var(--soft); font-size: .85rem; margin: .8rem 0; }
+.seedrow input { background: #0e1220; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .55em .8em; width: 9em; font: inherit; text-align: center; }
+.btnrow { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; margin-top: .4rem; }
+button.big { background: linear-gradient(120deg, #5f7cff, #6f8cff); color: #0a0d14; border: none; border-radius: 12px;
+  font: inherit; font-weight: 700; padding: .8em 2em; cursor: pointer; letter-spacing: .08em; }
+button.ghost { background: #0e1220; border: 1px solid var(--line); color: var(--ink); border-radius: 12px; padding: .8em 1.4em; font: inherit; cursor: pointer; }
+.party { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin: .6rem 0 1.1rem; }
+.pchip { font-size: .72rem; background: #0e1220; border: 1px solid var(--line); border-radius: 999px; padding: .3em .8em; color: #c7d0ea; }
+
+/* 行動メニュー */
+#actionMenu { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  z-index: 15; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
+#actionMenu button { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 12px;
+  padding: .7em 1.3em; font: inherit; font-size: .95rem; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+#actionMenu button.primary { background: linear-gradient(120deg, #5f7cff, #6f8cff); border: none; color: #0a0d14; font-weight: 700; }
+#actionMenu button.ghost { color: var(--soft); }
+
+/* 予報 */
+#forecast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  z-index: 16; width: min(360px, 92vw); background: rgba(18,22,36,.97); border: 1px solid var(--line); border-radius: 16px;
+  padding: 1rem 1.1rem; box-shadow: 0 14px 50px rgba(0,0,0,.6); }
+.fcrow { font-size: .9rem; margin-bottom: .5rem; }
+.fctbl { width: 100%; border-collapse: collapse; font-size: .84rem; margin-bottom: .7rem; }
+.fctbl th, .fctbl td { padding: .25em .4em; text-align: center; border-bottom: 1px solid rgba(150,175,235,.1); }
+.fctbl th { color: var(--soft); font-weight: 500; }
+.fctbl td:first-child { color: var(--soft); }
+
+/* ユニット詳細 */
+#info { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: 56px; z-index: 16; width: min(280px, 84vw);
+  background: rgba(18,22,36,.97); border: 1px solid var(--line); border-radius: 16px; padding: 1rem 1.1rem; box-shadow: 0 14px 50px rgba(0,0,0,.6); }
+#info h3 { font-weight: 500; font-size: 1.05rem; margin-bottom: .4rem; }
+#info h3 small { color: var(--soft); font-weight: 400; font-size: .75rem; margin-left: .3em; }
+#info .hpline { font-size: .8rem; color: var(--soft); margin-bottom: .5rem; }
+#info .statgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem .2rem; font-size: .76rem; margin-bottom: .6rem; }
+#info .statgrid span { color: var(--soft); } #info .statgrid b { color: var(--ink); }
+#info .itemline { font-size: .78rem; color: #c7d0ea; margin-bottom: .25rem; }
+#info .bio { font-size: .74rem; color: var(--soft); line-height: 1.7; margin-top: .5rem; border-top: 1px solid var(--line); padding-top: .5rem; }
+#info .x { position: absolute; top: 6px; right: 10px; background: none; border: none; color: var(--soft); font-size: 1.3rem; cursor: pointer; }
+
+#toast { position: fixed; bottom: calc(84px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 30;
+  background: rgba(18,22,36,.97); border: 1px solid var(--line); color: var(--ink); border-radius: 12px; padding: .6em 1.1em;
+  font-size: .82rem; letter-spacing: .03em; box-shadow: 0 8px 30px rgba(0,0,0,.5); max-width: 90vw; text-align: center; }
+#foot { position: fixed; bottom: 4px; right: 12px; font-size: .6rem; opacity: .3; }
+#foot a { color: var(--soft); }
