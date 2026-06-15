@@ -12,6 +12,7 @@ import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE } from '../core/items.js';
+import { playMusic, stopMusic, setMusicMuted } from './music.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('stage');
@@ -90,6 +91,7 @@ $('dialogue').addEventListener('pointerdown', advanceDlg);
 function showIntro() {
   const g = S.game;
   if (g.done) return showClear();
+  playMusic('prologue');
   const ch = g.chapter;
   $('introTitle').textContent = ch.title;
   $('introText').textContent = ch.intro;
@@ -105,6 +107,8 @@ function showIntro() {
 async function sortie() {
   $('intro').hidden = true;
   await playDialogue(chapterScript(S.game.chapterIndex).open);
+  const biome = S.game.chapter.biome || 'green';
+  playMusic('battle_' + biome);
   const { battle } = S.game.startChapter();
   S.battle = battle; S.board = battle.board;
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
@@ -337,7 +341,9 @@ function checkResult() {
 async function showOutcome() {
   $('hud').hidden = true;
   const win = S.battle.victory;
+  stopMusic();
   sfx(win ? 'victory' : 'defeat');
+  playMusic(win ? 'victory' : 'defeat');
   const ch = S.game.chapter;
   if (win) await playDialogue(chapterScript(S.game.chapterIndex).win);
   $('resultTitle').textContent = win ? '勝利' : '敗北';
@@ -357,6 +363,7 @@ async function showOutcome() {
 }
 function showClear() {
   $('result').hidden = true;
+  playMusic('ending');
   $('title').hidden = false;
   $('title').querySelector('.lead').textContent = '簒奪の王は倒れ、長い戦が終わった。——また別の種で、別の戦記を。';
 }
@@ -525,7 +532,20 @@ $('fcCancel').onclick = () => { $('forecast').hidden = true; openMenu(); S.mode 
 $('infoClose').onclick = () => { $('info').hidden = true; };
 $('nextBtn').onclick = () => { $('result').hidden = true; showIntro(); };
 $('retryBtn').onclick = () => { $('result').hidden = true; sortie(); };
-$('muteBtn').onclick = () => { setMuted(!isMuted()); $('muteBtn').textContent = isMuted() ? '♪̸' : '♪'; if (!isMuted()) sfx('select'); };
+$('muteBtn').onclick = () => { const m = !isMuted(); setMuted(m); setMusicMuted(m); $('muteBtn').textContent = m ? '♪̸' : '♪'; if (!m) { sfx('select'); resumeMusic(); } };
+
+/* 音は最初の操作で目覚める（ブラウザの制約）。タイトルでは表題曲を流す。 */
+let audioWoke = false;
+function wakeAudio() {
+  if (audioWoke) return; audioWoke = true;
+  if (!isMuted() && S.mode === 'title') playMusic('title');
+}
+function resumeMusic() {
+  // ミュート解除や画面復帰のとき、いまの場面に合う曲へ
+  if (S.mode === 'title') playMusic('title');
+  else if (S.mode === 'play' || S.mode === 'idle' || S.mode === 'selected' || S.mode === 'menu' || S.mode === 'target') playMusic('battle_' + ((S.game && S.game.chapter && S.game.chapter.biome) || 'green'));
+}
+window.addEventListener('pointerdown', wakeAudio);
 
 let toastTimer = null;
 function toast(msg, ms = 1400) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, ms); }
