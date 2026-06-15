@@ -247,11 +247,29 @@ export function resolveCombat(att, def, board, rng) {
 }
 
 /* ---- マップ攻撃（範囲・反撃なし） ---- */
-/* 着弾点 center から splash 半径内の、術者の敵すべて */
+/* 範囲の形：disk（円）/ cross（十字）/ ring（輪）/ square（角）/ x（斜め十字） */
+export function patternTiles(cx, cy, shape, r) {
+  const out = [];
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const md = Math.abs(dx) + Math.abs(dy), cd = Math.max(Math.abs(dx), Math.abs(dy));
+      let ok;
+      if (shape === 'cross') ok = (dx === 0 || dy === 0) && md <= r;
+      else if (shape === 'ring') ok = md === r;
+      else if (shape === 'square') ok = cd <= r;
+      else if (shape === 'x') ok = Math.abs(dx) === Math.abs(dy) && cd <= r;
+      else ok = md <= r;                 // disk
+      if (ok) out.push({ x: cx + dx, y: cy + dy });
+    }
+  }
+  return out;
+}
+/* 着弾点 center の範囲（形＋半径）内の、術者の敵すべて */
 export function areaTargets(caster, center, board) {
   const w = equippedWeapon(caster);
   const r = (w && w.aoe) || 0;
-  return board.enemiesOf(caster).filter(e => e.pos && manhattan(e.pos, center) <= r);
+  const set = new Set(patternTiles(center.x, center.y, w && w.shape, r).map(c => c.x + ',' + c.y));
+  return board.enemiesOf(caster).filter(e => e.pos && set.has(e.pos.x + ',' + e.pos.y));
 }
 /* 範囲攻撃を遂行（各標的へ一方的に。反撃は起きない） */
 export function resolveArea(caster, center, board, rng) {

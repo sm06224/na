@@ -13,5 +13,11 @@ def({ id: 'maelstrom', name: '災いの渦', kind: 'weapon', wtype: 'dark', rank
 def({ id: 'aura_rain', name: '光の雨', kind: 'weapon', wtype: 'light', rank: 'A', mt: 9, hit: 80, crit: 5, wt: 14, min: 2, max: 8, magic: true, aoe: 1, eff: ['undead'], price: 6200, desc: '降り注ぐ光。屍者の群れを一掃する範囲の浄化。' });
 def({ id: 'cataclysm', name: 'カタストロフ', kind: 'weapon', wtype: 'dark', rank: 'S', mt: 12, hit: 70, crit: 0, wt: 20, min: 3, max: 9, magic: true, aoe: 2, price: 12000, desc: '世界を割る終焉の理。広い範囲をまとめて飲み込む。' });
 
-export const AREA_WEAPONS = ['meteor', 'blizzard', 'maelstrom', 'aura_rain', 'cataclysm'];
+/* ---- 特殊な形の範囲 ---- */
+def({ id: 'crossfire', name: '十字砲火', kind: 'weapon', wtype: 'anima', rank: 'A', mt: 9, hit: 75, crit: 0, wt: 15, min: 2, max: 8, magic: true, aoe: 2, shape: 'cross', price: 6200, desc: '着弾点から縦横へ走る十字の炎。一列をまとめて薙ぐ。' });
+def({ id: 'ringblast', name: '環の衝撃', kind: 'weapon', wtype: 'anima', rank: 'A', mt: 8, hit: 78, crit: 0, wt: 15, min: 2, max: 7, magic: true, aoe: 2, shape: 'ring', price: 6000, desc: '着弾点の周りに輪を描いて爆ぜる。囲みを一掃する。' });
+def({ id: 'starfall', name: '星屑', kind: 'weapon', wtype: 'light', rank: 'A', mt: 8, hit: 80, crit: 5, wt: 14, min: 2, max: 8, magic: true, aoe: 2, shape: 'x', eff: ['undead'], price: 6400, desc: '斜めへ降り注ぐ光の十字。' });
+def({ id: 'quake', name: '大地の怒り', kind: 'weapon', wtype: 'dark', rank: 'S', mt: 11, hit: 75, crit: 0, wt: 18, min: 1, max: 6, magic: true, aoe: 2, shape: 'square', price: 11000, desc: '一帯（角まで）を揺るがす大震。最も広い破壊。' });
+
+export const AREA_WEAPONS = ['meteor', 'blizzard', 'maelstrom', 'aura_rain', 'cataclysm', 'crossfire', 'ringblast', 'starfall', 'quake'];
 export default true;

@@ -7,7 +7,7 @@
 import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
 import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed, gainWexp } from './unit.js';
-import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon, dirToward } from './combat.js';
+import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon, dirToward, patternTiles } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
 import { tickStatus, canAct, addStatus, clearStatus } from './status.js';
@@ -197,7 +197,7 @@ export class Battle {
   }
   areaSplashTiles(u, center) {
     const w = equippedWeapon(u);
-    return tilesInRange(center.x, center.y, 0, (w && w.aoe) || 0).filter(t => this.board.inBounds(t.x, t.y));
+    return patternTiles(center.x, center.y, w && w.shape, (w && w.aoe) || 0).filter(t => this.board.inBounds(t.x, t.y));
   }
   doAreaAttack(caster, center) {
     const res = resolveArea(caster, center, this.board, this.rng);
