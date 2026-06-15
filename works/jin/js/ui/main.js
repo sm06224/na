@@ -17,7 +17,7 @@ import { playMusic, stopMusic, setMusicMuted } from './music.js';
 import { FX } from './fx.js';
 import { drawPortrait } from './portrait.js';
 import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
-import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS } from '../core/party.js';
+import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS, hireRoster, hire, canHire, dismiss, canDismiss } from '../core/party.js';
 import { encodeSave, decodeSave } from '../core/save.js';
 import { item as itemDef2 } from '../core/items.js';
 
@@ -708,7 +708,7 @@ function renderCodex(tab) {
 function autosave() { try { localStorage.setItem(SAVE_KEY, encodeSave(S.game)); } catch { /* あふれは無視 */ } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
 let baseUnit = null;
-const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['記録', 'record']];
+const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['記録', 'record']];
 
 function openBase() {
   $('result').hidden = true;
@@ -768,6 +768,12 @@ function renderBase(tab) {
         body.appendChild(mkbtn(`★ ${classDef(to).name}へ転職`, 'buy', () => { doPromote(u, to); sfx('levelup'); autosave(); renderBase('party'); }));
       }
     }
+    if (canDismiss(S.game, u)) {
+      body.appendChild(mkbtn('この者を解雇', 'ghost', () => {
+        if (!confirm(`${u.name} を解雇しますか？（持ち物は荷駄へ戻ります）`)) return;
+        dismiss(S.game, u); baseUnit = S.game.livingParty()[0]; sfx('cancel'); autosave(); renderBase('party');
+      }));
+    }
     body.appendChild(el('div', 'subhead', '持ち物（装備・荷駄へ）'));
     u.items.forEach((st, i) => {
       const it = itemDef2(st.id); const row = el('div', 'shoprow');
@@ -788,6 +794,18 @@ function renderBase(tab) {
       else row.appendChild(mkbtn('持つ', '', () => { if (giveItem(g, u, i)) { sfx('select'); autosave(); renderBase('party'); } }, u.items.length >= MAX_ITEMS));
       body.appendChild(row);
     });
+  } else if (tab === 'hire') {
+    body.appendChild(el('div', 'subhead', '斡旋所——金で腕利きを雇える（各人ひとり一度きり）'));
+    for (const cand of hireRoster(g)) {
+      const cd = classDef(cand.classId); const row = el('div', 'shoprow');
+      const got = (g.hired || []).includes(cand.id);
+      row.appendChild(el('span', 'nm', `${cand.name}（${cd.name} Lv${cand.level}）`));
+      row.appendChild(el('span', 'pr', cand.cost + 'G'));
+      row.appendChild(mkbtn(got ? '雇用済' : '雇う', got ? '' : 'buy', () => {
+        if (hire(g, cand)) { sfx('levelup'); autosave(); renderBase('hire'); }
+      }, got || !canHire(g, cand)));
+      body.appendChild(row);
+    }
   } else if (tab === 'record') {
     body.appendChild(el('div', 'subhead', 'この符号を控えれば、どこでも続きから（自動保存もされます）'));
     const ta = el('textarea', 'codeta'); ta.readOnly = true; ta.value = encodeSave(g); body.appendChild(ta);

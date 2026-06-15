@@ -118,6 +118,7 @@ export class Game {
     this.initiative = !!opts.initiative;    // 行動順＝速さ順で戦うか
     this.chapterIndex = 0;
     this.gold = 5000;
+    this.hired = [];                        // 斡旋で雇い入れた候補id
     this.convoy = ['vulnerary', 'vulnerary', 'concoction', 'steel_sword', 'hand_axe'];
     this.party = [];
     this._buildParty();

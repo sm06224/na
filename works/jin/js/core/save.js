@@ -37,7 +37,8 @@ function deserUnit(o, uid) {
 export function serialize(game) {
   return {
     v: SAVE_VERSION, seed: game.seed, chapterIndex: game.chapterIndex,
-    gold: game.gold, useSetpiece: !!game.useSetpiece,
+    gold: game.gold, useSetpiece: !!game.useSetpiece, initiative: !!game.initiative,
+    hired: (game.hired || []).slice(),
     convoy: game.convoy.slice(),
     party: game.party.map(serUnit),
   };
@@ -45,9 +46,10 @@ export function serialize(game) {
 
 export function deserialize(data) {
   if (!data || !data.party) throw new Error('壊れた記録');
-  const g = new Game(data.seed >>> 0, { setpiece: !!data.useSetpiece });
+  const g = new Game(data.seed >>> 0, { setpiece: !!data.useSetpiece, initiative: !!data.initiative });
   g.chapterIndex = data.chapterIndex | 0;
   g.gold = data.gold | 0;
+  g.hired = (data.hired || []).slice();
   g.convoy = (data.convoy || []).slice();
   let uid = 1;
   g.party = data.party.map(o => deserUnit(o, uid++));
