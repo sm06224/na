@@ -254,6 +254,42 @@ export function throwItem(game, item, dx, dy) {
   game.endPlayerAction(100);
   return true;
 }
+/* 足元に応じてはたらきかける（買う／祈る） */
+export function interact(game) {
+  const p = game.player;
+  if (game.board.itemsAt(p.x, p.y).some(isForSale)) return buy(game);
+  if (game.level.get(p.x, p.y) === T.ALTAR) return pray(game);
+  game.message('ここには、はたらきかけるものがない。');
+  return false;
+}
+
+/* 祭壇に祈る（一度きり。恵みか、まれに祟り） */
+export function pray(game) {
+  const p = game.player;
+  const roll = game.rng.next();
+  if (roll < 0.42) {
+    const it = game.randomEnchantable();
+    if (it) { it.enchant += 1; if (it.cursed && it.enchant >= 0) { it.cursed = false; it.known.cursed = true; } game.message(`祭壇が光り、${it.displayName(game.ids)} が清められた。`, 'good'); }
+    else { game.healActor(p, game.rng.dice('2d8')); game.message('祭壇の光に癒された。', 'good'); }
+  } else if (roll < 0.66) {
+    game.gainXP(14 + game.depth * 4);
+    game.message('深き啓示が満ちる。', 'good');
+  } else if (roll < 0.82) {
+    let n = 0;
+    for (const it of [...Object.values(p.equip), ...p.inv]) if (it && it.cursed) { it.cursed = false; it.known.cursed = true; n++; }
+    game.message(n ? '黒い縛めが解けた。' : '静けさが満ちた。', 'good');
+  } else if (roll < 0.92) {
+    game.healActor(p, p.maxhp); game.message('身体じゅうが満たされた！', 'good');
+  } else {
+    game.message('祭壇が暗く濁った……', 'bad');
+    applyStatus(p, 'confuse', game.rng.range(4, 8));
+  }
+  game.level.set(p.x, p.y, T.FLOOR);
+  game.chronicle.record(p.turns, game.depth, 'find', `第 ${game.depth} 階の祭壇に祈った。`);
+  game.endPlayerAction(100);
+  return true;
+}
+
 /* 足元の売り物を買う */
 export function buy(game) {
   const p = game.player;

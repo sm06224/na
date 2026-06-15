@@ -209,5 +209,45 @@ ab('volley', {
   },
 });
 
+/* ---- 上位の技 ---- */
+ab('shieldwall', {
+  name: '盾の壁', focus: 5, targeted: false,
+  desc: '渾身で守りを固める（長く・強く）。',
+  use(game) { applyStatus(game.player, 'fortify', 20, 6); game.message('鉄壁の構え。'); return true; },
+});
+ab('icelance', {
+  name: '氷槍', focus: 6, targeted: true,
+  desc: '貫く氷の槍。当たれば凍てつく。',
+  use(game, { dx, dy }) {
+    const { actor, path } = boltTarget(game, game.player, dx, dy, 9);
+    game.flashBolt(path, 'frostbolt');
+    if (actor) { const r = rangedHit(game, game.player, actor, { damage: '3d5', element: 'frost' }); game.message(`氷槍が${actor.name}を貫いた（${r.damage}）。`, 'good'); if (!r.killed) applyStatus(actor, 'slow', 10); }
+    else game.message('氷槍は砕けた。');
+    return true;
+  },
+});
+ab('shadowstep', {
+  name: '影渡り', focus: 5, targeted: false,
+  desc: '影を渡り、姿を消す。',
+  use(game) {
+    const p = game.player;
+    for (let i = 0; i < 30; i++) { const x = p.x + game.rng.range(-6, 6), y = p.y + game.rng.range(-6, 6); if (game.board.passable(x, y) && !game.level.prop(x, y).deadly) { game.board.moveActor(p, x, y); game.recomputeDist(); game.recomputeFOV(); break; } }
+    applyStatus(p, 'invisible', 10);
+    game.message('影に溶けて、別の影から現れた。');
+    return true;
+  },
+});
+ab('snipe', {
+  name: '一矢', focus: 4, targeted: true,
+  desc: '渾身の一矢を放つ。',
+  use(game, { dx, dy }) {
+    const { actor, path } = boltTarget(game, game.player, dx, dy, 10);
+    game.flashBolt(path, 'magicmissile');
+    if (actor) { const r = rangedHit(game, game.player, actor, { damage: '3d5' }); game.message(`渾身の一矢が${actor.name}を射抜いた（${r.damage}）。`, 'good'); }
+    else game.message('一矢は虚空を切った。');
+    return true;
+  },
+});
+
 export function getAbility(key) { return AB[key]; }
 export function allAbilities() { return Object.values(AB); }

@@ -164,7 +164,7 @@ window.addEventListener('keydown', e => {
   switch (k) {
     case '.': case '5': A.wait(game); return redraw();
     case 'g': case ',': A.pickup(game); return redraw();
-    case 'p': A.buy(game); return redraw();
+    case 'p': A.interact(game); return redraw();
     case '>': { if (A.descend(game)) save(); return redraw(); }
     case '<': A.ascend(game); return redraw();
     case 's': A.search(game); return redraw();
