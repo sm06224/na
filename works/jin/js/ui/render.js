@@ -154,6 +154,49 @@ export function draw(ctx, state, now) {
       ctx.globalAlpha = 1;
     }
   }
+
+  // 空模様（全面の色被せと、降りもの）
+  if (board.weather) drawWeather(ctx, board.weather, vw, vh, now);
+}
+
+/* 天候の演出：空の色を薄く被せ、雨・雪・砂を降らせる。決定的に位置を生む。 */
+function drawWeather(ctx, wx, vw, vh, now) {
+  if (!wx || wx.id === 'clear') return;
+  // 空の色を全面に薄く被せる
+  const alpha = wx.id === 'storm' || wx.id === 'fog' || wx.id === 'sandstorm' ? 0.2 : 0.12;
+  ctx.fillStyle = hexA(wx.sky, alpha);
+  ctx.fillRect(0, 0, vw, vh);
+
+  if (wx.id === 'rain' || wx.id === 'storm') {
+    const slant = wx.id === 'storm' ? 4 : 2, speed = wx.id === 'storm' ? 1.4 : 1;
+    ctx.strokeStyle = 'rgba(200,220,255,.35)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 90; i++) {
+      const sx = (i * 6271) % vw, base = (i * 9173) % vh;
+      const y = (base + now * 0.6 * speed) % vh;
+      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx - slant, y + 10); ctx.stroke();
+    }
+  } else if (wx.id === 'snow') {
+    ctx.fillStyle = 'rgba(245,250,255,.7)';
+    for (let i = 0; i < 70; i++) {
+      const sx = ((i * 6271) % vw) + Math.sin((now / 700) + i) * 8;
+      const y = (((i * 9173) % vh) + now * 0.12) % vh;
+      ctx.beginPath(); ctx.arc(sx, y, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (wx.id === 'sandstorm') {
+    ctx.fillStyle = 'rgba(210,180,120,.4)';
+    for (let i = 0; i < 110; i++) {
+      const y = (i * 9173) % vh;
+      const x = (((i * 6271) % vw) + now * 0.5) % vw;
+      ctx.fillRect(x, y, 6, 1.4);
+    }
+  }
+}
+
+/* #rrggbb と α から rgba() 文字列を作る。 */
+function hexA(hex, a) {
+  const h = (hex || '#000000').replace('#', '');
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
 /* 地形を描き込む（木・山・水のゆらぎ・砦の旗…）。安価に。 */

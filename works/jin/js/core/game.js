@@ -8,6 +8,7 @@ import { createUnit, resetUid, isAlive } from './unit.js';
 import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
+import { weatherForChapter } from './weather.js';
 import { SETPIECES, parseMap } from './maps.js';
 import { EXTRA_SETPIECES } from './maps2.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
@@ -192,6 +193,7 @@ export class Game {
       if (ch.objective === 'defeat_boss') objective = { type: 'defeat_boss', uid: boss.uid };
     }
     board.rebuildIndex();
+    board.weather = weatherForChapter(this.seed, index, board.biome || ch.biome);   // 種と章から決まる空模様
 
     const battle = new Battle(board, {
       rng: cr.derive('fight'),
