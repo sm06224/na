@@ -14,6 +14,7 @@ import './expansion.js';            // 追加の職・素質を登録簿へ
 import './items_extra.js';          // 追加の得物を登録簿へ
 import './items_extra2.js';         // 終盤の伝説装備を登録簿へ
 import './items_status.js';         // 状態異常を与える得物を登録簿へ
+import './items_area.js';           // マップ攻撃（範囲）の得物を登録簿へ
 
 /* 全章ぶんの設置マップ（第一幕8＋第二幕8） */
 const ALL_SETPIECES = SETPIECES.concat(EXTRA_SETPIECES);
