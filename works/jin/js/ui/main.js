@@ -15,6 +15,7 @@ import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE, WRANKS } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
 import { FX } from './fx.js';
+import { drawPortrait } from './portrait.js';
 import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
 import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS } from '../core/party.js';
 import { encodeSave, decodeSave } from '../core/save.js';
@@ -96,6 +97,29 @@ function renderDlg() {
   const l = dlgState.lines[dlgState.i];
   $('dlgWho').textContent = l.who;
   $('dlgText').textContent = l.line;
+  const face = $('dlgFace');
+  if (!l.who || l.who === 'ナレーション') { face.hidden = true; }
+  else {
+    face.hidden = false;
+    const fx = face.getContext('2d'); fx.clearRect(0, 0, 96, 96);
+    const party = S.game && S.game.party.some(u => u.name === l.who);
+    drawPortrait(fx, l.who, 0, 0, 96, { color: party ? '#5f7cff' : '#c0463e' });
+  }
+}
+let cutinAt = 0;
+function showCutin(u) {
+  if (!u || !u.name) return;
+  const now = performance.now();
+  if (now - cutinAt < 1000) return;       // 連発しない（流星などで多重にならぬよう）
+  cutinAt = now;
+  const c = $('cutin'); const cx = c.getContext('2d'); cx.clearRect(0, 0, 200, 200);
+  const party = S.game && S.game.party.some(p => p.name === u.name);
+  drawPortrait(cx, u.name, 10, 10, 180, { color: party ? '#5f7cff' : '#c0463e' });
+  c.hidden = false; c.style.transition = 'none'; c.style.transform = 'translateX(-90px)'; c.style.opacity = '0';
+  requestAnimationFrame(() => { c.style.transition = ''; c.style.transform = 'translateX(0)'; c.style.opacity = '1'; });
+  clearTimeout(showCutin._t1); clearTimeout(showCutin._t2);
+  showCutin._t1 = setTimeout(() => { c.style.opacity = '0'; c.style.transform = 'translateX(-50px)'; }, 650);
+  showCutin._t2 = setTimeout(() => { c.hidden = true; }, 950);
 }
 function advanceDlg() {
   if (!dlgState) return;
@@ -381,7 +405,7 @@ async function playEvents(events) {
     const by = e.by != null ? uOf(e.by) : null;
     if (e.type === 'miss') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(340); }
     else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd0a0', 8); } sfx('hit'); await sleep(420); }
-    else if (e.type === 'crit') { if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd86a', 16, 4.5); S.fx.addShake(9); } sfx('crit'); await sleep(560); }
+    else if (e.type === 'crit') { if (by) showCutin(by); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd86a', 16, 4.5); S.fx.addShake(9); } sfx('crit'); await sleep(560); }
     else if (e.type === 'skill') { if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff'); await sleep(260); }
     else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
     else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
@@ -630,7 +654,8 @@ function showInfo(u) {
   const sk = (u.skills || []).map(s => (skillDef(s) ? skillDef(s).name : s)).join('・');
   const bond = (() => { let n = 0; for (const a of (S.board ? S.board.alliesOf(u) : [])) if (a.pos && u.pos && Math.abs(a.pos.x - u.pos.x) + Math.abs(a.pos.y - u.pos.y) === 1) n++; return Math.min(3, n); })();
   $('infoBody').innerHTML =
-    `<h3>${u.name} <small>${cd.name} Lv${u.level}</small></h3>
+    `<canvas id="infoFace" width="72" height="72" style="float:right;width:64px;height:64px;border-radius:10px;margin-left:.5rem"></canvas>
+     <h3>${u.name} <small>${cd.name} Lv${u.level}</small></h3>
      <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}${bond ? `　絆+${bond}` : ''}</div>
      <div class="statgrid">${statline}</div>
      <div class="itemline">得物：${w ? w.name : '—'}</div>
@@ -639,6 +664,8 @@ function showInfo(u) {
      ${sk ? `<div class="itemline">技：${sk}</div>` : ''}
      ${u.status && u.status.length ? `<div class="itemline">状態：${u.status.map(s => statusName(s.id)).join('・')}</div>` : ''}
      ${u.bio ? `<p class="bio">${u.bio}</p>` : ''}`;
+  const fc = $('infoFace');
+  if (fc) { const ic = fc.getContext('2d'); const party = S.game && S.game.party.some(p => p.name === u.name); drawPortrait(ic, u.name, 0, 0, 72, { color: party ? '#5f7cff' : (u.side === 'enemy' ? '#c0463e' : '#3aa06a') }); }
   $('info').hidden = false;
 }
 
