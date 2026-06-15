@@ -22,6 +22,9 @@ import { meleeAttack, rangedHit, effStats } from './combat.js';
 import { tickStatuses, applyStatus, isHelpless, statusName } from './status.js';
 import { monsterTurn } from './ai.js';
 import { addToInv } from './inventory.js';
+import { Knowledge } from './knowledge.js';
+import { monsterLore, itemInfo } from './lore.js';
+import { tileName } from './tile.js';
 
 export class Game {
   constructor(seed) {
@@ -32,6 +35,7 @@ export class Game {
     this.messages = new MessageLog();
     this.log = (m, k) => this.messages.add(m, k);
     this.chronicle = new Chronicle();
+    this.know = new Knowledge();
     this.player = makePlayer(new RNG(this.seed ^ 0xabcdef));
     this.depth = 0;
     this.levels = new Map();
@@ -67,6 +71,7 @@ export class Game {
     if (this.board) this.levels.set(this.depth, this.board);
     this.depth = depth;
     this.player.depthMax = Math.max(this.player.depthMax, depth);
+    this.know.deepest = Math.max(this.know.deepest, depth);
 
     let board = this.levels.get(depth);
     if (!board) {
@@ -123,6 +128,28 @@ export class Game {
       (x, y) => { lv.setFlag(x, y, F.VISIBLE | F.DISCOVERED | F.LIT, true); });
     // 罠は見えれば覚える
     for (const f of this.board.features) if (lv.flag(f.x, f.y, F.VISIBLE)) f.known = true;
+    // 視界の魔物を鑑識帳に記す（一体ごと一度だけ数える）
+    for (const m of this.board.monsters()) {
+      if (this.inSight(m.x, m.y) && !m.flags.counted) { this.know.see(m.defId); m.flags.counted = true; }
+    }
+  }
+
+  /* 調べる：そのマスにあるもの（魔物・品物・地形）を一言で */
+  describe(x, y) {
+    if (!this.level.inBounds(x, y)) return '';
+    if (!this.level.flag(x, y, F.DISCOVERED) && !this.level.flag(x, y, F.MAPPED)) return 'まだ見ていない闇。';
+    const parts = [];
+    const a = this.board.actorAt(x, y);
+    if (a && a.alive && (this.inSight(x, y) || (this.sensed && this.sensed.has(a.id)))) {
+      if (a.isPlayer) parts.push('あなた');
+      else parts.push(`${a.name}（${a.hp}/${a.maxhp}）—— ${monsterLore(a.defId)}`);
+    }
+    if (this.inSight(x, y) || this.level.flag(x, y, F.MAPPED)) {
+      const items = this.board.itemsAt(x, y);
+      for (const it of items) parts.push(`${it.displayName(this.ids)}：${itemInfo(it, this.ids)}`);
+    }
+    parts.push(tileName(this.level.get(x, y)));
+    return parts.join('　／　');
   }
   recomputeDist() {
     this._dist = dijkstraMap(this.level, [{ x: this.player.x, y: this.player.y }], (x, y) => this.level.walkable(x, y));
@@ -170,6 +197,7 @@ export class Game {
     if (drop) this.board.addItem(drop, actor.x, actor.y);
     if (this.inSight(actor.x, actor.y)) this.message(`${actor.name}を倒した。`);
     if (actor.boss) this.chronicle.record(this.player.turns, this.depth, 'boss', `${actor.name}を打ち倒した。`);
+    this.know.slay(actor.defId);
     this.player.kills++;
     const msgs = playerGainXP(this.player, actor.xpValue);
     for (const mm of msgs) this.message(mm, 'good');
@@ -352,7 +380,7 @@ export class Game {
   serialize() {
     return {
       seed: this.seedRaw, rng: this.rng.save(), depth: this.depth, state: this.state, flags: this.flags, cause: this.cause,
-      player: this.player.serialize(), ids: this.ids.serialize(), log: this.messages.serialize(), chronicle: this.chronicle.serialize(),
+      player: this.player.serialize(), ids: this.ids.serialize(), log: this.messages.serialize(), chronicle: this.chronicle.serialize(), know: this.know.serialize(),
       levels: [...this.levels.entries()].map(([d, b]) => [d, serializeBoard(b)]),
     };
   }
