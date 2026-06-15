@@ -6,31 +6,40 @@
 import { Actor } from './entity.js';
 import { makeItem } from './factory.js';
 import { addToInv, equipItem } from './inventory.js';
+import { getClass } from './classes.js';
 
 export const HUNGER = { FULL: 1200, HUNGRY: 150, FAINT: 0, START: 900, MAX: 1500 };
 
-export function makePlayer(rng, name = '潜る者') {
+export function makePlayer(rng, classKey = 'warrior', name = '潜る者') {
+  const cls = getClass(classKey);
   const p = new Actor({
     name, glyph: '@', color: '#ffe9a8', faction: 'player',
-    maxhp: 22, hp: 22,
-    stats: { str: 4, def: 0, acc: 4, eva: 3, speed: 100 },
+    maxhp: cls.hp, hp: cls.hp,
+    stats: { ...cls.stats },
     sight: 8, energy: 100,
   });
+  p.cls = cls.key; p.clsName = cls.name;
   p.xp = 0; p.level = 1; p.nextXP = xpForLevel(2);
   p.hunger = HUNGER.START;
   p.depthMax = 1;
-  p.gold = 0;
-  p.kills = 0;
-  p.turns = 0;
+  p.gold = 0; p.kills = 0; p.turns = 0;
+  p.maxFocus = cls.focus; p.focus = cls.focus;
+  p.abilities = cls.abilities.slice();
 
-  // 始まりの持ち物
-  const dagger = makeItem(rng, 'shortsword', { enchant: 0 });
-  const armor = makeItem(rng, 'leather', { enchant: 0 });
-  addToInv(p, dagger); equipItem(p, dagger);
-  addToInv(p, armor); equipItem(p, armor);
+  // 始まりの装備
+  for (const [key, ench] of cls.kit) {
+    const it = makeItem(rng, key, { enchant: ench });
+    addToInv(p, it); equipItem(p, it);
+  }
   const ration = makeItem(rng, 'f_ration'); ration.count = 2; addToInv(p, ration);
-  const heal = makeItem(rng, 'p_heal'); heal.count = 2; addToInv(p, heal);
+  const heal = makeItem(rng, 'p_heal'); heal.count = cls.potions || 2; addToInv(p, heal);
+  if (cls.scrolls) { const s = makeItem(rng, 's_identify'); s.count = cls.scrolls; addToInv(p, s); }
   return p;
+}
+
+/* 気力は数手ごとに少し戻る */
+export function regenFocus(p) {
+  if (p.focus < p.maxFocus && p.turns % 3 === 0) p.focus = Math.min(p.maxFocus, p.focus + 1);
 }
 
 export function xpForLevel(lvl) { return Math.round(18 * Math.pow(lvl - 1, 1.85)); }

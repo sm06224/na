@@ -14,7 +14,7 @@ import { computeFOV, hasLine } from './fov.js';
 import { dijkstraMap } from './pathfind.js';
 import { IdStore } from './identify.js';
 import { MessageLog, Chronicle } from './chronicle.js';
-import { makePlayer, gainXP as playerGainXP, tickHunger } from './player.js';
+import { makePlayer, gainXP as playerGainXP, tickHunger, regenFocus } from './player.js';
 import { populate, FINAL_DEPTH } from './spawn.js';
 import { makeMonster, rollDrop } from './factory.js';
 import { getMonster } from './monsterdb.js';
@@ -27,8 +27,9 @@ import { monsterLore, itemInfo } from './lore.js';
 import { tileName } from './tile.js';
 
 export class Game {
-  constructor(seed) {
+  constructor(seed, opts = {}) {
     this.seedRaw = seed;
+    this.opts = opts;
     this.seed = (typeof seed === 'number') ? (seed >>> 0) : hashSeed(String(seed ?? 'kutsu'));
     this.rng = new RNG(this.seed);
     this.ids = new IdStore(new RNG(this.seed ^ 0x1357bd));
@@ -36,7 +37,7 @@ export class Game {
     this.log = (m, k) => this.messages.add(m, k);
     this.chronicle = new Chronicle();
     this.know = new Knowledge();
-    this.player = makePlayer(new RNG(this.seed ^ 0xabcdef));
+    this.player = makePlayer(new RNG(this.seed ^ 0xabcdef), opts.cls || 'warrior');
     this.depth = 0;
     this.levels = new Map();
     this.board = null;
@@ -337,6 +338,7 @@ export class Game {
     // 空腹・状態・再生
     tickStatuses(this, this.player);
     this.passiveRegen(this.player);
+    regenFocus(this.player);
     const hev = tickHunger(this.player, 1);
     for (const e of hev) { if (e.msg) this.message(e.msg); if (e.starve) this.hurt(this.player, e.starve, '飢え'); }
     if (this.state !== 'play') return;
@@ -390,4 +392,4 @@ function serializeBoard(b) {
   return { level: b.level.serialize(), items: b.items.map(i => i.serialize()), features: b.features.map(f => f.serialize()) };
 }
 
-export function newGame(seed) { return new Game(seed); }
+export function newGame(seed, opts) { return new Game(seed, opts); }

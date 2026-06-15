@@ -8,6 +8,7 @@ import { F } from './level.js';
 import { applyEffect } from './effects.js';
 import { applyStatus } from './status.js';
 import { addToInv, equipItem, unequip } from './inventory.js';
+import { getAbility } from './abilities.js';
 
 /* 歩く／殴る。手番を使えば true。 */
 export function move(game, dx, dy) {
@@ -211,5 +212,18 @@ export function throwItem(game, item, dx, dy) {
   game.endPlayerAction(100);
   return true;
 }
+export function useAbility(game, key, dx, dy) {
+  const p = game.player;
+  if (!p.abilities || !p.abilities.includes(key)) { game.message('その技は使えない。'); return false; }
+  const ab = getAbility(key);
+  if (!ab) return false;
+  if (p.focus < ab.focus) { game.message(`気力が足りない（${p.focus}/${ab.focus}）。`); return false; }
+  if (ab.targeted && (dx === undefined || (dx === 0 && dy === 0))) { game.message('向きが要る。'); return false; }
+  p.focus -= ab.focus;
+  const ok = ab.use(game, { dx, dy });
+  if (ok) game.endPlayerAction(100);
+  return ok;
+}
+
 export function descend(game) { const ok = game.descend(); if (ok) game.endPlayerAction(0); return ok; }
 export function ascend(game) { const ok = game.ascend(); if (ok) game.endPlayerAction(0); return ok; }

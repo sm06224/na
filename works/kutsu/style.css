@@ -85,6 +85,15 @@ code { background: rgba(255,255,255,.08); padding: .1em .4em; border-radius: 4px
 .tcard h1 { font-weight: 200; font-size: 3.2rem; letter-spacing: .14em; background: linear-gradient(120deg, #c8a85a, #e6d6a8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .tcard .en { font-size: .7rem; opacity: .4; letter-spacing: .26em; -webkit-text-fill-color: initial; color: var(--dim); }
 .tcard .lead { line-height: 2; opacity: .82; font-weight: 300; font-size: .92rem; }
+.classrow { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: min(460px, 92vw); }
+.clsbtn { background: #0c0f17; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .6em .8em; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: .2em; }
+.clsbtn b { font-size: .92rem; color: var(--ink); }
+.clsbtn span { font-size: .68rem; color: var(--dim); line-height: 1.4; }
+.clsbtn.on { border-color: var(--accent); background: rgba(200,168,90,.1); }
+.clsbtn.on b { color: var(--accent); }
+.pbody .row.off { opacity: .4; }
+.pbody .cost { color: var(--accent); font-size: .76rem; }
+.clsname { color: var(--accent); }
 .seedrow { display: flex; gap: 8px; width: min(420px, 90vw); }
 .seedrow input { flex: 1; background: #0c0f17; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .7em .9em; font: inherit; }
 .seedrow button, .tcard .ghost { background: linear-gradient(120deg, #c8a85a, #d8bf78); color: #1a1408; border: none; border-radius: 10px; padding: .7em 1.4em; font: inherit; font-weight: 700; cursor: pointer; }

@@ -9,6 +9,8 @@ import { Renderer } from './render.js';
 import { Screens } from './screens.js';
 import { sfx, toggleSound } from './audio.js';
 import * as A from '../core/actions.js';
+import { CLASSES, classKeys } from '../core/classes.js';
+import { getAbility } from '../core/abilities.js';
 import { equipBonus } from '../core/inventory.js';
 import { hungerWord } from '../core/player.js';
 import { statusName } from '../core/status.js';
@@ -34,8 +36,22 @@ function seedFromHash() {
 }
 function setHash(seed) { history.replaceState(null, '', `${location.pathname}#s=${encodeURIComponent(seed)}`); }
 
+let selectedClass = 'warrior';
+function buildClassRow() {
+  const row = $('classrow'); if (!row) return;
+  row.innerHTML = '';
+  for (const key of classKeys()) {
+    const c = CLASSES[key];
+    const b = document.createElement('button');
+    b.className = 'clsbtn' + (key === selectedClass ? ' on' : '');
+    b.innerHTML = `<b>${c.name}</b><span>${c.desc}</span>`;
+    b.addEventListener('click', () => { selectedClass = key; buildClassRow(); });
+    row.appendChild(b);
+  }
+}
+
 function start(seed) {
-  game = new Game(seed);
+  game = new Game(seed, { cls: selectedClass });
   setHash(game.seedRaw);
   mode = 'play';
   cursor = null; exEl.hidden = true;
@@ -91,6 +107,7 @@ function drawHUD() {
     <div class="hrow"><b>${esc(p.name)}</b> <span class="lvl">Lv${p.level}</span></div>
     <div class="bar"><div class="barfill" style="width:${hpFrac * 100}%;background:${hol(hcol)}"></div><span class="barlabel">HP ${p.hp}/${p.maxhp}</span></div>
     <div class="hrow small">力${p.stats.str}　防${effDef()}　命${p.stats.acc}　回${p.stats.eva}</div>
+    <div class="hrow small">気力 ${p.focus ?? 0}/${p.maxFocus ?? 0}　<span class="clsname">${esc(p.clsName || '')}</span></div>
     <div class="hrow small">深さ <b>${game.depth}</b>　手 ${p.turns}　金 ${p.gold}</div>
     <div class="hrow small">撃破 ${p.kills}　${hungerTag()}</div>
     <div class="hrow sts">${sts}</div>`;
@@ -153,6 +170,7 @@ window.addEventListener('keydown', e => {
     case '@': case 'C': screens.character(game); return;
     case 'L': screens.bestiary(game); return;
     case 'x': mode = 'examine'; cursor = { x: game.player.x, y: game.player.y }; return redraw();
+    case 'a': return chooseAbility();
     case 'M': { const v = toggleSound(); game.message(v ? '音を出す。' : '音を消した。'); return redraw(); }
     case '?': screens.help(); return;
     case 'q': return chooseAndAct('薬を飲む', it => it.category === 'potion', it => { A.drink(game, it); sfx('quaff'); redraw(); });
@@ -174,6 +192,15 @@ function clampCursor(x, y) {
 }
 
 function chooseAndAct(title, filter, onPick) { screens.chooseItem(game, title, filter, onPick); }
+function chooseAbility() {
+  const keys = game.player.abilities || [];
+  if (!keys.length) { game.message('使える技がない。'); return redraw(); }
+  screens.chooseAbility(game, keys, key => {
+    const ab = getAbility(key);
+    if (ab.targeted) aimThen((dx, dy) => { A.useAbility(game, key, dx, dy); redraw(); });
+    else { A.useAbility(game, key); redraw(); }
+  });
+}
 function aimThen(act) { mode = 'target'; pending = act; game.message('向きは？（移動キー / Escでやめる）'); redraw(); }
 
 /* ----- 保存・新規 ----- */
@@ -200,6 +227,7 @@ $('btnPick').addEventListener('click', () => { if (game && mode === 'play') { A.
 $('btnInv').addEventListener('click', () => { if (game && mode === 'play') screens.inventory(game); });
 $('btnWait').addEventListener('click', () => { if (game && mode === 'play') { A.wait(game); redraw(); } });
 
+buildClassRow();
 const hashSeedVal = seedFromHash();
 if (hashSeedVal != null) start(hashSeedVal);
 else { mode = 'title'; $('seedin').focus?.(); }

@@ -7,6 +7,7 @@ import { slotName, SLOTS, equipBonus } from '../core/inventory.js';
 import { hungerWord, xpForLevel } from '../core/player.js';
 import { statusName } from '../core/status.js';
 import { monsterEntry } from '../core/lore.js';
+import { getAbility } from '../core/abilities.js';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 
@@ -46,6 +47,20 @@ export class Screens {
   }
 
   message(title, text) { this.panel(title, `<div class="ptext">${esc(text)}</div>`, 'Escで閉じる'); this.mode = 'msg'; }
+
+  /* 技を選ぶ（気力が足りないものは薄く） */
+  chooseAbility(game, keys, onPick) {
+    const abs = keys.map(getAbility).filter(Boolean);
+    const p = game.player;
+    this.items = abs;
+    this.onPick = ab => onPick(ab.key);
+    this.mode = 'pick';
+    const rows = abs.map((a, i) => {
+      const can = p.focus >= a.focus;
+      return `<div class="row${can ? '' : ' off'}" data-letter="${LETTERS[i]}"><span class="key">${LETTERS[i]}</span><span class="nm"><b>${esc(a.name)}</b>　<span class="cost">気${a.focus}</span>　${esc(a.desc)}</span></div>`;
+    }).join('');
+    this.panel(`技　気力 ${p.focus}/${p.maxFocus}`, rows, '字で選ぶ・Escで閉じる');
+  }
 
   inventory(game) {
     const inv = game.player.inv;
@@ -114,6 +129,7 @@ export class Screens {
       ['q', '薬を飲む（quaff）'],
       ['r', '巻物を読む'],
       ['z', '杖を振る（→ 向き）'],
+      ['a', '技を使う（型ごとの特技・気力を消費）'],
       ['w', '武器・防具を装備する'],
       ['t', '品を投げる（→ 向き）'],
       ['f', '食べる'],

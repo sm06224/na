@@ -15,6 +15,7 @@ export const STATUS = {
   haste: { name: '俊足', bad: false },
   slow: { name: '鈍足', bad: true },
   might: { name: '剛力', bad: false },
+  fortify: { name: '鉄壁', bad: false },
   levitation: { name: '浮遊', bad: false },
   telepathy: { name: '千里眼', bad: false },
   blind: { name: '盲目', bad: true },
