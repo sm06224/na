@@ -9,6 +9,9 @@ import { forecast, inAttackRange } from '../core/combat.js';
 import { manhattan, key } from '../core/grid.js';
 import { Camera, draw, BASE_TILE } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
+import { chapterScript, SUPPORTS } from '../core/script.js';
+import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
+import { WTYPE } from '../core/items.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('stage');
@@ -54,10 +57,36 @@ function loop(now) {
 
 /* ---------- ゲーム開始 ---------- */
 function startGame(seed) {
-  S.game = new Game(seed >>> 0);
+  S.game = new Game(seed >>> 0, { setpiece: $('setpieceChk').checked });
   $('title').hidden = true;
   showIntro();
 }
+
+/* ---- 台詞の再生（タップで送る） ---- */
+let dlgState = null;
+function playDialogue(lines) {
+  return new Promise(res => {
+    if (!lines || !lines.length) return res();
+    dlgState = { lines, i: 0, res };
+    $('dialogue').hidden = false;
+    renderDlg();
+  });
+}
+function renderDlg() {
+  const l = dlgState.lines[dlgState.i];
+  $('dlgWho').textContent = l.who;
+  $('dlgText').textContent = l.line;
+}
+function advanceDlg() {
+  if (!dlgState) return;
+  sfx('cursor');
+  dlgState.i++;
+  if (dlgState.i >= dlgState.lines.length) {
+    $('dialogue').hidden = true;
+    const r = dlgState.res; dlgState = null; r();
+  } else renderDlg();
+}
+$('dialogue').addEventListener('pointerdown', advanceDlg);
 function showIntro() {
   const g = S.game;
   if (g.done) return showClear();
@@ -73,8 +102,9 @@ function showIntro() {
   }
   $('intro').hidden = false;
 }
-function sortie() {
+async function sortie() {
   $('intro').hidden = true;
+  await playDialogue(chapterScript(S.game.chapterIndex).open);
   const { battle } = S.game.startChapter();
   S.battle = battle; S.board = battle.board;
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
@@ -300,12 +330,16 @@ function animateMoveAlong(u, path) {
 /* ---------- 勝敗 ---------- */
 function checkResultSilent() { S.battle.checkEnd(); }
 function checkResult() {
-  if (!S.battle || !S.battle.over) return;
+  if (!S.battle || !S.battle.over || S.mode === 'result') return;
   S.mode = 'result';
+  showOutcome();
+}
+async function showOutcome() {
   $('hud').hidden = true;
   const win = S.battle.victory;
   sfx(win ? 'victory' : 'defeat');
   const ch = S.game.chapter;
+  if (win) await playDialogue(chapterScript(S.game.chapterIndex).win);
   $('resultTitle').textContent = win ? '勝利' : '敗北';
   if (win) {
     const r = S.game.onVictory();
@@ -444,8 +478,45 @@ function showInfo(u) {
   $('info').hidden = false;
 }
 
+/* ---------- 図鑑 ---------- */
+const CODEX_TABS = [
+  ['魔物誌', 'beast'], ['世界', 'world'], ['得物', 'weapon'], ['地形', 'terrain'], ['支援', 'support'],
+];
+function openCodex() {
+  const tabs = $('codexTabs'); tabs.innerHTML = '';
+  CODEX_TABS.forEach(([label, id], i) => {
+    const b = document.createElement('button'); b.textContent = label;
+    b.onclick = () => { [...tabs.children].forEach(c => c.classList.remove('on')); b.classList.add('on'); renderCodex(id); };
+    if (i === 0) b.classList.add('on');
+    tabs.appendChild(b);
+  });
+  renderCodex('beast');
+  $('codex').hidden = false;
+}
+function renderCodex(tab) {
+  const body = $('codexBody'); body.innerHTML = '';
+  const entry = (title, sub, text, tac) => {
+    const d = document.createElement('div'); d.className = 'entry';
+    d.innerHTML = `<h4>${title}${sub ? ` <small>${sub}</small>` : ''}</h4><p>${text}</p>${tac ? `<p class="tac">▶ ${tac}</p>` : ''}`;
+    body.appendChild(d);
+  };
+  if (tab === 'beast') for (const b of BESTIARY) entry(b.name, b.classId, b.blurb, b.tactics);
+  else if (tab === 'world') for (const w of WORLD) entry(w.title, '', w.text);
+  else if (tab === 'weapon') for (const k in WEAPON_NOTES) entry(WTYPE[k] || k, '', WEAPON_NOTES[k]);
+  else if (tab === 'terrain') for (const k in TERRAIN_NOTES) entry(k, '', TERRAIN_NOTES[k]);
+  else if (tab === 'support') for (const s of SUPPORTS) {
+    const d = document.createElement('div'); d.className = 'entry';
+    const lines = s.lines.map(l => `<span class="who">${l.who}</span>「${l.line}」`).join('<br>');
+    d.innerHTML = `<h4>${s.a} & ${s.b}</h4><p class="conv">${lines}</p>`;
+    body.appendChild(d);
+  }
+  body.scrollTop = 0;
+}
+
 /* ---------- ボタン ---------- */
 $('startBtn').onclick = () => startGame(parseInt($('seedInput').value, 10) || 20260615);
+$('codexBtn').onclick = openCodex;
+$('codexClose').onclick = () => { $('codex').hidden = true; };
 $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 0; };
 $('sortieBtn').onclick = sortie;
 $('endTurn').onclick = endTurn;
