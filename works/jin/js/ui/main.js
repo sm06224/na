@@ -179,6 +179,7 @@ async function moveSelectedTo(tile) {
   const u = S.selected;
   const path = (tile.x === u.pos.x && tile.y === u.pos.y) ? [u.pos] : S.battle.pathTo(u, tile);
   if (!path) return;
+  S.mode = 'animating';                       // 移動中は入力を締める（連打での多重移動を防ぐ）
   S.moveTiles = S.atkTiles = S.path = null;
   if (path.length > 1) { sfx('move'); await animateMove(u, path); }
   S.battle.doMove(u, tile);
