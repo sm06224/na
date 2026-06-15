@@ -1,7 +1,8 @@
 /* 陣のへそ — タイトル→章の幕間→戦い→結果。タッチで指揮する。 */
 
 import { Game } from '../core/game.js';
-import { isAlive, equippedWeapon, effectiveStats, unitRank } from '../core/unit.js';
+import { isAlive, equippedWeapon, effectiveStats, unitRank, createUnit } from '../core/unit.js';
+import { makeArmy, resolveMassCombat, armyTroops } from '../core/masscombat.js';
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
@@ -164,6 +165,40 @@ async function sortie() {
   refreshHud(); refreshLog();
   if (battle.initiative) advanceInitiative();
   else maybeAuto();
+}
+/* 会戦（マスコンバット）：盤を布かず、軍と軍で一気に決する */
+function massBattle() {
+  $('intro').hidden = true;
+  const ch = S.game.chapter;
+  const cr = S.game.rng.derive('mass' + S.game.chapterIndex);
+  const partyArmy = makeArmy('自軍', S.game.livingParty());
+  const foes = [];
+  for (let i = 0; i < ch.count + 2; i++) {
+    const cls = cr.derive('p' + i).pick(['soldier', 'fighter', 'archer', 'mercenary', 'knight', 'cavalier']);
+    foes.push(createUnit({ classId: cls, level: ch.level, items: ['iron_lance'], side: 'enemy' }, cr.derive('f' + i)));
+  }
+  if (ch.boss) foes.push(createUnit({ classId: ch.boss.classId, level: ch.boss.level, items: ch.boss.items || ['iron_lance'], side: 'enemy', boss: true, statBoost: ch.boss.statBoost }, cr.derive('boss')));
+  const enemyArmy = makeArmy(ch.boss ? ch.boss.name + '軍' : '敵軍', foes);
+  const res = resolveMassCombat(partyArmy, enemyArmy, cr.derive('fight'));
+  const win = res.winner === 'a';
+  stopMusic(); sfx(win ? 'victory' : 'defeat'); playMusic(win ? 'victory' : 'defeat');
+  if (win) S.fx.confetti(60);
+  $('resultTitle').textContent = win ? '会戦・勝利' : '会戦・敗北';
+  const log = res.rounds.filter((_, i) => i % Math.ceil(res.rounds.length / 6) === 0 || i === res.rounds.length - 1).map(r => `R${r.round}　自軍 ${r.a}　敵 ${r.b}`).join('\n');
+  if (win) {
+    const rw = S.game.onVictory(); autosave();
+    $('resultText').textContent = `${ch.outro}\n自軍 ${res.survivorsA}／${enemyArmy.name} ${res.survivorsB}　を打ち破った。\n（報酬 ${rw.reward}G）\n\n${log}`;
+    $('nextBtn').style.display = ''; $('nextBtn').textContent = S.game.done ? 'おわりへ' : '拠点へ';
+    $('retryBtn').style.display = 'none';
+    S._massLost = false;
+  } else {
+    $('resultText').textContent = `自軍は敗走した……\n自軍 ${res.survivorsA}／敵 ${res.survivorsB}\n\n${log}`;
+    $('nextBtn').style.display = 'none';
+    $('retryBtn').style.display = ''; $('retryBtn').textContent = 'もう一度（章へ戻る）';
+    S._massLost = true;
+  }
+  S.mode = 'result';
+  $('result').hidden = false;
 }
 function refreshHud() {
   const b = S.battle;
@@ -902,6 +937,7 @@ $('continueBtn').onclick = () => { try { S.game = decodeSave(localStorage.getIte
 $('loadBtn').onclick = () => { const code = prompt('セーブ符号を貼ってください'); if (!code) return; try { S.game = decodeSave(code.trim()); $('title').hidden = true; openBase(); } catch { toast('符号を読めませんでした'); } };
 $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 0; };
 $('sortieBtn').onclick = sortie;
+$('massBtn').onclick = massBattle;
 $('endTurn').onclick = endTurn;
 $('view3dBtn').onclick = () => { setView3d(!isView3d()); $('view3dBtn').classList.toggle('on', isView3d()); sfx('select'); };
 $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
@@ -911,7 +947,7 @@ $('fcGo').onclick = confirmAttack;
 $('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; S._arithMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
 $('nextBtn').onclick = () => { $('result').hidden = true; openBase(); };
-$('retryBtn').onclick = () => { $('result').hidden = true; sortie(); };
+$('retryBtn').onclick = () => { $('result').hidden = true; if (S._massLost) { S._massLost = false; showIntro(); } else sortie(); };
 $('muteBtn').onclick = () => { const m = !isMuted(); setMuted(m); setMusicMuted(m); $('muteBtn').textContent = m ? '♪̸' : '♪'; if (!m) { sfx('select'); resumeMusic(); } };
 
 /* 音は最初の操作で目覚める（ブラウザの制約）。タイトルでは表題曲を流す。 */
