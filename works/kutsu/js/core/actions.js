@@ -9,6 +9,7 @@ import { applyEffect } from './effects.js';
 import { applyStatus } from './status.js';
 import { addToInv, equipItem, unequip } from './inventory.js';
 import { getAbility } from './abilities.js';
+import { isForSale, priceTag } from './shop.js';
 
 /* 歩く／殴る。手番を使えば true。 */
 export function move(game, dx, dy) {
@@ -105,6 +106,7 @@ export function pickup(game) {
   const here = game.board.itemsAt(p.x, p.y);
   if (!here.length) { game.message('ここには何もない。'); return false; }
   const it = here[0];
+  if (isForSale(it)) { game.message(`${it.displayName(game.ids)}：値札 ${priceTag(it)} 金（p で買う）。`); return false; }
   if (it.def === 'gold') { p.gold += it.count; game.board.removeItem(it); game.message(`金を ${it.count} 拾った。`, 'good'); game.endPlayerAction(0); return true; }
   if (it.def === 'amulet') {
     game.board.removeItem(it); addToInv(p, it); game.flags.hasAmulet = true;
@@ -212,6 +214,23 @@ export function throwItem(game, item, dx, dy) {
   game.endPlayerAction(100);
   return true;
 }
+/* 足元の売り物を買う */
+export function buy(game) {
+  const p = game.player;
+  const here = game.board.itemsAt(p.x, p.y).filter(isForSale);
+  if (!here.length) { game.message('ここに売り物はない。'); return false; }
+  const it = here[0]; const price = priceTag(it);
+  if (p.gold < price) { game.message(`金が足りない（${price} 金が要る）。`); return false; }
+  p.gold -= price;
+  game.board.removeItem(it);
+  it.data.shop = false; it.data.price = 0;
+  const got = addToInv(p, it);
+  if (!got) { p.gold += price; it.data.shop = true; it.data.price = price; game.board.addItem(it, p.x, p.y); game.message('鞄がいっぱいだ。'); return false; }
+  game.message(`${got.displayName(game.ids)} を ${price} 金で買った。`, 'good');
+  game.endPlayerAction(0);
+  return true;
+}
+
 export function useAbility(game, key, dx, dy) {
   const p = game.player;
   if (!p.abilities || !p.abilities.includes(key)) { game.message('その技は使えない。'); return false; }

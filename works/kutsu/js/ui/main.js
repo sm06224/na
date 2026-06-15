@@ -11,6 +11,7 @@ import { sfx, toggleSound } from './audio.js';
 import * as A from '../core/actions.js';
 import { CLASSES, classKeys } from '../core/classes.js';
 import { getAbility } from '../core/abilities.js';
+import { recordScore, scoresHTML } from './scores.js';
 import { equipBonus } from '../core/inventory.js';
 import { hungerWord } from '../core/player.js';
 import { statusName } from '../core/status.js';
@@ -94,6 +95,7 @@ function redraw() {
   else exEl.hidden = true;
   if ((game.state === 'dead' || game.state === 'won') && mode !== 'dead') {
     mode = 'dead';
+    try { recordScore(game); } catch (e) { /* localStorage 不可なら諦める */ }
     setTimeout(() => screens.death(game), 400);
   }
 }
@@ -162,6 +164,7 @@ window.addEventListener('keydown', e => {
   switch (k) {
     case '.': case '5': A.wait(game); return redraw();
     case 'g': case ',': A.pickup(game); return redraw();
+    case 'p': A.buy(game); return redraw();
     case '>': A.descend(game); return redraw();
     case '<': A.ascend(game); return redraw();
     case 's': A.search(game); return redraw();
@@ -206,7 +209,8 @@ function aimThen(act) { mode = 'target'; pending = act; game.message('向きは�
 /* ----- 保存・新規 ----- */
 const SAVEKEY = 'kutsu.save';
 function save() { try { localStorage.setItem(SAVEKEY, JSON.stringify(game.serialize())); } catch (e) {} }
-function newRun() { mode = 'title'; $('title').hidden = false; screens.hide(); $('seedin').value = ''; $('seedin').focus(); }
+function newRun() { mode = 'title'; $('title').hidden = false; screens.hide(); $('seedin').value = ''; refreshScores(); $('seedin').focus(); }
+function refreshScores() { const el = $('scores'); if (el) el.innerHTML = scoresHTML(); }
 function randomSeed() { return String(Math.floor(Math.random() * 1e9)); }
 
 /* ----- 起動 ----- */
@@ -228,6 +232,7 @@ $('btnInv').addEventListener('click', () => { if (game && mode === 'play') scree
 $('btnWait').addEventListener('click', () => { if (game && mode === 'play') { A.wait(game); redraw(); } });
 
 buildClassRow();
+refreshScores();
 const hashSeedVal = seedFromHash();
 if (hashSeedVal != null) start(hashSeedVal);
 else { mode = 'title'; $('seedin').focus?.(); }

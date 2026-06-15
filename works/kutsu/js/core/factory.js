@@ -13,7 +13,7 @@ export function makeMonster(rng, key, x, y) {
   if (!d) return null;
   const hp = Math.max(1, d.hp + rng.range(-1, 2));
   const a = new Actor({
-    x, y, name: d.name, glyph: d.glyph, color: d.color, faction: 'monster', defId: key,
+    x, y, name: d.name, glyph: d.glyph, color: d.color, faction: d.peaceful ? 'neutral' : 'monster', defId: key,
     maxhp: hp, hp,
     stats: { str: d.str, def: d.def, acc: d.acc, eva: d.eva, speed: d.speed },
     ai: d.ai, sight: d.sight, xpValue: d.xp, naturalDamage: d.damage,
@@ -29,6 +29,7 @@ export function makeMonster(rng, key, x, y) {
   a.summonKey = d.summonKey || null;
   a.regen = d.regen || 0;
   a.boss = !!d.boss;
+  a.peaceful = !!d.peaceful;
   a.packMin = d.packMin || 0; a.packMax = d.packMax || 0;
   return a;
 }

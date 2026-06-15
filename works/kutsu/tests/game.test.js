@@ -13,7 +13,7 @@ function autoStep(game) {
     if (pot) { A.drink(game, pot); return; }
   }
   if (lv.get(p.x, p.y) === T.STAIRS_DOWN) { A.descend(game); return; }
-  if (game.board.itemsAt(p.x, p.y).length) { A.pickup(game); return; }
+  if (game.board.itemsAt(p.x, p.y).length) { if (A.pickup(game)) return; }   // 拾えた時だけ手番消費（店の売り物は素通り）
   const sd = lv.stairsDown;
   // 致命の地形（溶岩・奈落）は避けて道を引く。魔物のマスは踏み込んで＝攻撃して抜ける
   const safe = (x, y) => lv.walkable(x, y) && !lv.prop(x, y).deadly && !lv.prop(x, y).chasm;

@@ -175,8 +175,15 @@ export class Game {
     if (amount <= 0 || !actor.alive) return 0;
     actor.hp -= amount;
     if (actor.flags) actor.flags.sleeping = false;
+    if (actor.peaceful && actor.faction === 'neutral') this.angerKeeper(actor);
     if (actor.hp <= 0) this.killActor(actor, source);
     return amount;
+  }
+  /* 店主を怒らせる（中立 → 敵対） */
+  angerKeeper(actor) {
+    actor.peaceful = false; actor.faction = 'monster'; actor.ai = 'melee';
+    if (actor.flags) actor.flags.sleeping = false;
+    this.message(`${actor.name}が怒り狂った！`, 'bad');
   }
   healActor(actor, amount) {
     const before = actor.hp;

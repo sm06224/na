@@ -93,6 +93,9 @@ add('eye', { name: '浮遊眼', glyph: 'e', color: '#d86a9a', hp: 26, str: 3, de
 add('death_knight', { name: '死の騎士', glyph: 'K', color: '#a06a9a', hp: 50, str: 8, def: 6, acc: 7, eva: 3, speed: 100, ai: 'melee', sight: 8, damage: '2d6+1', xp: 44, depth: [12, 15], rarity: 2, tags: ['undead'], status: { type: 'drain', turns: 1, power: 1, chance: 0.4 }, resist: { poison: 1, frost: 0.5 }, drops: 'high' });
 add('slime', { name: '溶解粘体', glyph: 'j', color: '#7ab09a', hp: 18, str: 4, def: 1, acc: 3, eva: 0, speed: 70, ai: 'melee', sight: 4, damage: '1d6', xp: 9, depth: [4, 10], rarity: 3, tags: [], special: 'corrode', resist: { poison: 1 } });
 
+/* ---- 中立：店主（襲わない。怒らせると手強い） ---- */
+add('shopkeeper', { name: '店主', glyph: '☻', color: '#ffd24a', hp: 70, str: 9, def: 7, acc: 9, eva: 5, speed: 120, ai: 'shopkeeper', sight: 9, damage: '2d6+2', xp: 0, depth: [1, 15], rarity: 0, tags: ['humanoid', 'unique'], peaceful: true });
+
 export function getMonster(key) { return DB[key]; }
 export function allMonsters() { return Object.values(DB); }
 
