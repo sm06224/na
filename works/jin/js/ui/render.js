@@ -8,6 +8,15 @@ import { key } from '../core/grid.js';
 
 export const BASE_TILE = 46;
 
+/* 色をすこし明暗（地形の立体感に） */
+function shade(hex, f) {
+  const n = parseInt((hex || '#5c7a4a').slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+  else { r *= (1 + f); g *= (1 + f); b *= (1 + f); }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+
 export class Camera {
   constructor() { this.x = 0; this.y = 0; this.scale = 1; }
   get tile() { return BASE_TILE * this.scale; }
@@ -44,15 +53,27 @@ export function draw(ctx, state, now) {
     for (let x = x0; x <= x1; x++) {
       const t = terrainOf(board.terrain.get(x, y));
       const s = cam.worldToScreen(x, y);
-      ctx.fillStyle = t.color || '#5c7a4a';
+      // 立体感：上を明るく下を暗く（縦グラデ）
+      const g2 = ctx.createLinearGradient(s.x, s.y, s.x, s.y + T);
+      g2.addColorStop(0, shade(t.color, 0.13));
+      g2.addColorStop(0.55, t.color || '#5c7a4a');
+      g2.addColorStop(1, shade(t.color, -0.2));
+      ctx.fillStyle = g2;
       ctx.fillRect(s.x, s.y, T + 1, T + 1);
-      // 地形の凹凸（簡単な陰影）
-      ctx.fillStyle = 'rgba(0,0,0,.10)';
-      ctx.fillRect(s.x, s.y + T * 0.82, T + 1, T * 0.18);
+      // ざらり（決定的な斑点）
+      const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+      ctx.fillStyle = (h & 1) ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)';
+      for (let k = 0; k < 3; k++) {
+        const px = s.x + ((h >> (k * 5)) & 31) / 31 * T;
+        const py = s.y + ((h >> (k * 4 + 2)) & 31) / 31 * T;
+        ctx.fillRect(px, py, T * 0.12, T * 0.12);
+      }
       decorate(ctx, t, s.x, s.y, T, now, x, y);
-      ctx.strokeStyle = 'rgba(0,0,0,.14)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(s.x + 0.5, s.y + 0.5, T, T);
+      // 縁の面取り（上＝光、下＝影）
+      ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(s.x + 0.5, s.y + T - 0.5); ctx.lineTo(s.x + 0.5, s.y + 0.5); ctx.lineTo(s.x + T - 0.5, s.y + 0.5); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.18)';
+      ctx.beginPath(); ctx.moveTo(s.x + T - 0.5, s.y + 0.5); ctx.lineTo(s.x + T - 0.5, s.y + T - 0.5); ctx.lineTo(s.x + 0.5, s.y + T - 0.5); ctx.stroke();
     }
   }
 
