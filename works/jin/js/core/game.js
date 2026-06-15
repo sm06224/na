@@ -115,6 +115,7 @@ export class Game {
     this.seed = (typeof seed === 'number' ? seed : (seed | 0)) >>> 0;
     this.rng = new RNG(this.seed);
     this.useSetpiece = !!opts.setpiece;     // 手作りの設置マップで戦うか
+    this.initiative = !!opts.initiative;    // 行動順＝速さ順で戦うか
     this.chapterIndex = 0;
     this.gold = 5000;
     this.convoy = ['vulnerary', 'vulnerary', 'concoction', 'steel_sword', 'hand_axe'];
@@ -194,6 +195,7 @@ export class Game {
       rng: cr.derive('fight'),
       objective,
       maxTurns: ch.objective === 'survive' ? (ch.turns || 10) : 0,
+      initiative: this.initiative,
     });
     this.battle = battle;
     return { battle, deploy, chapter: ch };

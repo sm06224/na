@@ -6,7 +6,7 @@
 
 import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
-import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip } from './unit.js';
+import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed } from './unit.js';
 import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
@@ -43,36 +43,39 @@ export class Battle {
     this.over = false;
     this.victory = false;
     this.log = [];
-    this.beginPhase('player');
+    this.initiative = !!opts.initiative;
+    if (this.initiative) this.beginInitiative();
+    else this.beginPhase('player');
   }
   get phase() { return PHASES[this.phaseIdx]; }
 
   unitsOfPhase(side = this.phase) { return this.board.unitsOf(side); }
 
-  beginPhase(side) {
+  /* ユニットひとりの手番開始処理（状態・再生・地形・バフ）。events を返す。 */
+  tickUnitStart(u) {
     const events = [];
-    for (const u of this.board.unitsOf(side)) {
-      u.hasMoved = false; u.hasActed = false;
-      // 状態異常の処理
-      const se = tickStatus(u);
-      events.push(...se);
-      // 素質「再生」：自分のターンの頭に 2 割癒える
-      if (hasSkill(u, 'renewal') && u.hp < u.maxHp && u.hp > 0) {
-        const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * 0.2));
+    u.hasMoved = false; u.hasActed = false;
+    const se = tickStatus(u);
+    events.push(...se);
+    if (hasSkill(u, 'renewal') && u.hp < u.maxHp && u.hp > 0) {
+      const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * 0.2));
+      u.hp += h; if (h) events.push({ type: 'heal', uid: u.uid, amount: h });
+    }
+    if (u.pos) {
+      const t = this.board.terrainAt(u.pos.x, u.pos.y);
+      if (t.heal && u.hp < u.maxHp) {
+        const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * t.heal / 100));
         u.hp += h; if (h) events.push({ type: 'heal', uid: u.uid, amount: h });
       }
-      // 地形回復
-      if (u.pos) {
-        const t = this.board.terrainAt(u.pos.x, u.pos.y);
-        if (t.heal && u.hp < u.maxHp) {
-          const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * t.heal / 100));
-          u.hp += h; if (h) events.push({ type: 'heal', uid: u.uid, amount: h });
-        }
-        if (t.burns && u.mode !== 'fly') { u.hp = Math.max(1, u.hp - t.burns); events.push({ type: 'burn', uid: u.uid }); }
-      }
-      // バフの残り
-      for (const k in u.buffs) { u.buffs[k].turns--; if (u.buffs[k].turns <= 0) delete u.buffs[k]; }
+      if (t.burns && u.mode !== 'fly') { u.hp = Math.max(1, u.hp - t.burns); events.push({ type: 'burn', uid: u.uid }); }
     }
+    for (const k in u.buffs) { u.buffs[k].turns--; if (u.buffs[k].turns <= 0) delete u.buffs[k]; }
+    return events;
+  }
+
+  beginPhase(side) {
+    const events = [];
+    for (const u of this.board.unitsOf(side)) events.push(...this.tickUnitStart(u));
     return events;
   }
 
@@ -222,6 +225,26 @@ export class Battle {
     return this.runSide('enemy');
   }
 
+  /* AI ひとり分の一手を実行し、演出用の記録を返す */
+  aiActOnce(u) {
+    const rec = { uid: u.uid, from: u.pos ? { ...u.pos } : null, path: null, attack: null, area: null, events: [] };
+    if (!isAlive(u) || !u.pos || !canAct(u)) { u.hasActed = true; return rec; }
+    const plan = planTurn(this.board, u, this.rng);
+    if (plan.move && (plan.move.x !== u.pos.x || plan.move.y !== u.pos.y)) {
+      rec.path = this.pathTo(u, plan.move) || [u.pos, plan.move];
+      this.doMove(u, plan.move);
+    }
+    if (plan.target != null) {
+      const def = this.board.units.find(x => x.uid === plan.target);
+      if (def && isAlive(def) && inAttackRange(u, def)) {
+        const res = this.doAttack(u, def);
+        rec.attack = def.uid; rec.events = res.events;
+      }
+    }
+    u.hasActed = true;
+    return rec;
+  }
+
   /* AI 側のフェイズを実行し、演出用の手番列を返す */
   runSide(side, skipBegin = false) {
     this.phaseIdx = PHASES.indexOf(side);
@@ -230,26 +253,10 @@ export class Battle {
     const actors = this.board.unitsOf(side).slice().sort((a, b) => a.uid - b.uid);
     for (const u of actors) {
       if (this.over) break;
-      if (!isAlive(u) || !u.pos) continue;
-      if (!canAct(u)) continue;
-      const plan = planTurn(this.board, u, this.rng);
-      const rec = { uid: u.uid, from: { ...u.pos }, path: null, attack: null, events: [] };
-      if (plan.move && (plan.move.x !== u.pos.x || plan.move.y !== u.pos.y)) {
-        rec.path = this.pathTo(u, plan.move) || [u.pos, plan.move];
-        this.doMove(u, plan.move);
-      }
-      if (plan.target != null) {
-        const def = this.board.units.find(x => x.uid === plan.target);
-        if (def && isAlive(def) && inAttackRange(u, def)) {
-          const res = this.doAttack(u, def);
-          rec.attack = def.uid; rec.events = res.events;
-        }
-      }
-      u.hasActed = true;
-      turns.push(rec);
+      if (!isAlive(u) || !u.pos || !canAct(u)) continue;
+      turns.push(this.aiActOnce(u));
       if (this.over) break;
     }
-    // 次のフェイズへ
     if (!this.over) this.advancePhase(side);
     return turns;
   }
@@ -295,6 +302,48 @@ export class Battle {
     }
   }
   win(reason) { this.over = true; this.victory = true; this.reason = reason; }
+
+  /* ============ 行動順モード（イニシアチブ＝速さ順） ============ */
+  beginInitiative() { this.rebuildOrder(); this._started = false; }
+  rebuildOrder() {
+    this.order = this.board.units.filter(u => isAlive(u) && u.pos)
+      .sort((a, b) => (attackSpeed(b) - attackSpeed(a)) || ((b.spd | 0) - (a.spd | 0)) || (a.uid - b.uid));
+    this.orderIdx = 0;
+  }
+  /* いま手番のユニット（倒れた者は飛ばす） */
+  activeUnit() {
+    if (!this.order) return null;
+    while (this.orderIdx < this.order.length) {
+      const u = this.order[this.orderIdx];
+      if (isAlive(u) && u.pos) return u;
+      this.orderIdx++;
+    }
+    return null;
+  }
+  /* 手番開始：その者だけ状態・地形・再生を処理 */
+  startUnitTurn(u) { return this.tickUnitStart(u); }
+  /* 手番終了：次へ。一巡したら新しいラウンド（速さ順を組み直す） */
+  endUnitTurn() {
+    this.orderIdx++;
+    this.checkEnd();
+    if (this.over) return;
+    if (this.orderIdx >= this.order.length) { this.turn++; this.rebuildOrder(); }
+  }
+
+  /* ---- テスト・自動進行：行動順モードで両軍 AI ---- */
+  autoResolveInitiative(maxRounds = 150) {
+    this.beginInitiative();
+    let guard = 0;
+    while (!this.over && this.turn <= maxRounds && guard++ < 12000) {
+      const u = this.activeUnit();
+      if (!u) { this.turn++; this.rebuildOrder(); continue; }
+      this.startUnitTurn(u);
+      if (canAct(u)) this.aiActOnce(u);
+      this.endUnitTurn();
+    }
+    if (!this.over) { this.over = true; this.victory = false; this.reason = 'timeout'; }
+    return { over: this.over, victory: this.victory, reason: this.reason, turn: this.turn };
+  }
 
   /* ---- テスト・自動進行：両軍 AI で決着まで ---- */
   autoResolve(maxTurns = 80) {

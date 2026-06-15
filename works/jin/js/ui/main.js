@@ -77,7 +77,7 @@ function loop(now) {
 
 /* ---------- ゲーム開始 ---------- */
 function startGame(seed) {
-  S.game = new Game(seed >>> 0, { setpiece: $('setpieceChk').checked });
+  S.game = new Game(seed >>> 0, { setpiece: $('setpieceChk').checked, initiative: $('initChk').checked });
   $('title').hidden = true;
   showIntro();
 }
@@ -134,12 +134,20 @@ async function sortie() {
   clearSel(); S.mode = 'idle';
   $('hud').hidden = false;
   $('autoBtn').classList.toggle('on', S.auto);
+  $('endTurn').style.display = battle.initiative ? 'none' : '';
   refreshHud(); refreshLog();
-  maybeAuto();
+  if (battle.initiative) advanceInitiative();
+  else maybeAuto();
 }
 function refreshHud() {
   const b = S.battle;
-  $('turnInfo').textContent = `第${S.game.chapterIndex + 1}章　${b.phase === 'player' ? '自軍' : '敵軍'}　ターン${b.turn}`;
+  if (b.initiative) {
+    const act = b.activeUnit();
+    const who = act ? `${act.name}${act.side === 'player' ? '（自軍）' : '（敵）'}の手番` : '—';
+    $('turnInfo').textContent = `第${S.game.chapterIndex + 1}章　${who}　R${b.turn}`;
+  } else {
+    $('turnInfo').textContent = `第${S.game.chapterIndex + 1}章　${b.phase === 'player' ? '自軍' : '敵軍'}　ターン${b.turn}`;
+  }
   const o = b.objective;
   const objText = o.type === 'rout' ? '目標：敵の殲滅' : o.type === 'seize' ? '目標：玉座の制圧' : o.type === 'defeat_boss' ? '目標：敵将の撃破' : o.type === 'survive' ? `目標：${o.turns}ターン生存` : '目標：制圧';
   $('objInfo').textContent = objText + `　味方${b.board.unitsOf('player').length}／敵${b.board.unitsOf('enemy').length}`;
@@ -322,7 +330,45 @@ function endAction() {
   S.mode = 'idle';
   refreshHud();
   checkResult();
-  // 自軍が全員行動済みなら、ターン終了をうながす
+  if (S.battle && S.battle.initiative && !S.battle.over) {
+    S.battle.endUnitTurn();              // 行動順：その者の手番を閉じ、次へ
+    if (S.battle.over) checkResult(); else advanceInitiative();
+  }
+}
+
+/* 行動順モードの進行：AI は自動で、自軍は手番が来たら操作できる */
+async function advanceInitiative() {
+  if (S.busy || !S.battle || !S.battle.initiative) return;
+  for (let guard = 0; guard < 400; guard++) {
+    if (S.battle.over) { checkResult(); return; }
+    const u = S.battle.activeUnit();
+    if (!u) { S.battle.endUnitTurn(); continue; }
+    if (S._initStartedFor !== u.uid) {       // 手番開始処理は一度だけ
+      S._initStartedFor = u.uid;
+      const ev = S.battle.startUnitTurn(u);
+      if (ev && ev.length) { S.busy = true; S.mode = 'animating'; await playEvents(ev); S.busy = false; refreshLog(); }
+    }
+    if (S.battle.over) { checkResult(); return; }
+    if (u.side === 'player' && !S.auto) {
+      S.activeInit = u;
+      S.cam_focus = u.pos;
+      selectUnit(u);                     // 操作を委ねる
+      refreshHud();
+      return;
+    }
+    // AI（または自軍オート）が一手指す
+    S.busy = true; S.mode = 'animating';
+    const rec = S.battle.aiActOnce(u);
+    S.cursor = rec.path ? rec.path[rec.path.length - 1] : rec.from;
+    if (rec.path && rec.path.length > 1) { sfx('move'); await animateMoveAlong(uOf(rec.uid), rec.path); }
+    if (rec.events && rec.events.length) await playEvents(rec.events);
+    refreshLog(); checkResultSilent();
+    S.busy = false; S.cursor = null;
+    S.battle.endUnitTurn();
+    refreshHud();
+    if (S.battle.over) { checkResult(); return; }
+    await sleep(60);
+  }
 }
 
 /* ---------- 演出（戦闘イベント） ---------- */
@@ -552,13 +598,18 @@ function onTap(px, py) {
     return;
   }
   if (S.mode === 'selected') {
-    // 移動先 or 別ユニット選択 or 取消
     const inMove = S.moveTiles && S.moveTiles.some(m => m.x === tile.x && m.y === tile.y);
+    if (S.battle.initiative) {                 // 手番の者だけ動かせる
+      if (inMove || u === S.selected) { moveSelectedTo(tile); return; }
+      if (u) showInfo(u);
+      return;
+    }
     if (u && u.side === 'player' && u !== S.selected && !u.hasActed) { selectUnit(u); return; }
     if (inMove || (u === S.selected)) { moveSelectedTo(tile); return; }
     clearSel(); S.mode = 'idle'; sfx('cancel'); return;
   }
   // idle
+  if (S.battle.initiative) { if (u) showInfo(u); return; }
   if (u && u.side === 'player' && !u.hasActed) { selectUnit(u); }
   else if (u) { showInfo(u); }
 }
@@ -731,7 +782,7 @@ $('sortieBtn').onclick = sortie;
 $('endTurn').onclick = endTurn;
 $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
 $('logClose').onclick = () => { $('log').hidden = true; };
-$('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) maybeAuto(); };
+$('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) { if (S.battle && S.battle.initiative) advanceInitiative(); else maybeAuto(); } };
 $('fcGo').onclick = confirmAttack;
 $('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
