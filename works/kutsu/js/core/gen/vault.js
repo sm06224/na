@@ -12,7 +12,7 @@ import { Rect } from '../util.js';
 const SYM = {
   '#': T.WALL, 'x': T.WALL, '.': T.FLOOR, ',': T.GRASS, '+': T.DOOR_CLOSED, "'": T.DOOR_OPEN,
   '~': T.WATER, '≈': T.DEEP_WATER, 'L': T.LAVA, 'T': T.TRAP, '&': T.STATUE, '_': T.ALTAR,
-  'F': T.FOUNTAIN, '|': T.BARS, '=': T.FLOOR, '%': T.RUBBLE, '<': T.STAIRS_UP,
+  'F': T.FOUNTAIN, '|': T.BARS, '=': T.BRIDGE, '%': T.RUBBLE, '<': T.STAIRS_UP, '"': T.CHASM,
 };
 /* 記号 → 湧き（タイルは床にしてから上に乗せる） */
 const SPAWN = {
@@ -388,6 +388,85 @@ export const VAULTS = [
       '#~M,$*?,m~#',
       '#~~,,,,,~~#',
       '#####+#####',
+    ],
+  },
+  {
+    id: 'crossfire', rarity: 2, depth: [7, 15], tags: ['lava', 'monsters'],
+    rows: [
+      '###########',
+      '#L.M...M.L#',
+      '#.LL.$.LL.#',
+      '#..L.*.L..#',
+      '#.LL.?.LL.#',
+      '#L.M...M.L#',
+      '#####+#####',
+    ],
+  },
+  {
+    id: 'cells', rarity: 3, depth: [3, 11], tags: ['monsters'],
+    rows: [
+      '#############',
+      '#+#+#+#+#+#+#',
+      '#m#m#m#M#m#m#',
+      '#...........#',
+      '#..$..*..?..#',
+      '######+######',
+    ],
+  },
+  {
+    id: 'fane', rarity: 2, depth: [5, 15], tags: ['altar', 'loot'],
+    rows: [
+      '###########',
+      '#&.._.._.&#',
+      '#.._/=/_..#',
+      '#&.._.._.&#',
+      '#....M....#',
+      '#####+#####',
+    ],
+  },
+  {
+    id: 'bridge', rarity: 2, depth: [6, 15], tags: ['hall'],
+    rows: [
+      '#############',
+      '#"""""""""""#',
+      '+...=====...+',
+      '#"""$*?"""""#',
+      '#############',
+    ],
+  },
+  {
+    id: 'apse', rarity: 3, depth: [3, 12], tags: ['hall'],
+    rows: [
+      '###+###',
+      '#.....#',
+      '#.&$&.#',
+      '#..*..#',
+      '#.&?&.#',
+      '#.....#',
+      '###+###',
+    ],
+  },
+  {
+    id: 'larder', rarity: 3, depth: [2, 9], tags: ['loot'],
+    rows: [
+      '#########',
+      '#%%.*.%%#',
+      '#%.....%#',
+      '#..$m$..#',
+      '#%.....%#',
+      '#%%.?.%%#',
+      '####+####',
+    ],
+  },
+  {
+    id: 'menagerie', rarity: 2, depth: [6, 14], tags: ['monsters', 'boss'],
+    rows: [
+      '#############',
+      '#m|M|m|M|m|.#',
+      "#.'.'.'.'.'.#",
+      '#.....B.....#',
+      '#.$.*.?./.=.#',
+      '######+######',
     ],
   },
 ];

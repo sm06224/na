@@ -121,6 +121,18 @@ add('revenant', { name: '亡執', glyph: 'W', color: '#b0a0c8', hp: 34, str: 7, 
 add('behemoth', { name: '巨獣', glyph: 'B', color: '#8a6a4a', hp: 90, str: 11, def: 5, acc: 5, eva: 0, speed: 90, ai: 'melee', sight: 6, damage: '3d6', xp: 60, depth: [13, 15], rarity: 1, tags: ['giant'], drops: 'high' });
 add('siren', { name: '海妖', glyph: 'S', color: '#5ac8b0', hp: 26, str: 4, def: 2, acc: 7, eva: 5, speed: 110, ai: 'caster', sight: 9, damage: '1d6', xp: 22, depth: [8, 13], rarity: 2, tags: ['humanoid'], spell: 'frostbolt', spellPower: '2d5', spellRange: 8, status: { type: 'confuse', turns: 5, chance: 0.35 } });
 
+/* ---- なおいやましの住人 ---- */
+add('slug', { name: '岩蛞蝓', glyph: 'j', color: '#9a9a7a', hp: 12, str: 3, def: 2, acc: 2, eva: 0, speed: 50, ai: 'melee', sight: 3, damage: '1d5', xp: 5, depth: [1, 6], rarity: 4, tags: ['animal'], special: 'corrode' });
+add('hawk', { name: '岩鷹', glyph: 'B', color: '#b8a070', hp: 9, str: 3, def: 0, acc: 6, eva: 6, speed: 150, ai: 'erratic', sight: 9, damage: '1d5', xp: 6, depth: [2, 7], rarity: 3, tags: ['animal', 'flying'] });
+add('hobgoblin', { name: '大鬼ゴブリン', glyph: 'g', color: '#7a9a3a', hp: 16, str: 5, def: 2, acc: 5, eva: 2, speed: 100, ai: 'melee', sight: 7, damage: '1d8', xp: 11, depth: [4, 9], rarity: 5, tags: ['humanoid'], drops: 'mid', packMin: 1, packMax: 3 });
+add('wererat', { name: '鼠人', glyph: 'r', color: '#9a8a8a', hp: 18, str: 5, def: 2, acc: 6, eva: 4, speed: 120, ai: 'pack', sight: 8, damage: '1d6', xp: 13, depth: [5, 10], rarity: 3, tags: ['humanoid'], status: { type: 'poison', turns: 4, power: 1, chance: 0.3 }, packMin: 2, packMax: 3 });
+add('ooze', { name: '酸泥', glyph: 'j', color: '#8ab06a', hp: 22, str: 4, def: 1, acc: 3, eva: 0, speed: 60, ai: 'melee', sight: 4, damage: '1d6', xp: 10, depth: [4, 10], rarity: 3, tags: [], special: 'corrode', resist: { poison: 1, fire: 0.5 } });
+add('dervish', { name: '旋風士', glyph: 'c', color: '#c8a86a', hp: 20, str: 5, def: 2, acc: 7, eva: 6, speed: 140, ai: 'melee', sight: 8, damage: '1d7', xp: 18, depth: [7, 12], rarity: 3, tags: ['humanoid'] });
+add('ettin', { name: '双頭鬼', glyph: 'O', color: '#9a7a5a', hp: 48, str: 9, def: 3, acc: 5, eva: 0, speed: 90, ai: 'melee', sight: 6, damage: '2d6+1', xp: 32, depth: [9, 14], rarity: 2, tags: ['giant'], drops: 'high' });
+add('cockatrice', { name: '鶏蛇', glyph: 'c', color: '#b89a4a', hp: 24, str: 5, def: 3, acc: 6, eva: 3, speed: 100, ai: 'melee', sight: 7, damage: '1d6', xp: 22, depth: [8, 13], rarity: 2, tags: ['animal'], status: { type: 'paralyze', turns: 3, chance: 0.3 } });
+add('efreet', { name: '炎魔', glyph: '&', color: '#e0702a', hp: 38, str: 7, def: 4, acc: 7, eva: 3, speed: 110, ai: 'caster', sight: 9, damage: '1d10', xp: 36, depth: [11, 15], rarity: 2, tags: ['demon'], spell: 'firebolt', spellPower: '3d4', spellRange: 7, resist: { fire: 0.8 }, drops: 'high' });
+add('shoggoth', { name: '蠢く塊', glyph: 'O', color: '#7a8a9a', hp: 80, str: 9, def: 4, acc: 5, eva: 0, speed: 80, ai: 'melee', sight: 6, damage: '2d7', xp: 54, depth: [13, 15], rarity: 1, tags: [], special: 'corrode', resist: { poison: 1, frost: 0.5, fire: 0.5 }, regen: 2, drops: 'high' });
+
 /* ---- 中立：店主（襲わない。怒らせると手強い） ---- */
 add('shopkeeper', { name: '店主', glyph: '☻', color: '#ffd24a', hp: 70, str: 9, def: 7, acc: 9, eva: 5, speed: 120, ai: 'shopkeeper', sight: 9, damage: '2d6+2', xp: 0, depth: [1, 15], rarity: 0, tags: ['humanoid', 'unique'], peaceful: true });
 

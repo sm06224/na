@@ -133,6 +133,16 @@ add('lamellar', { category: 'armor', name: '小札鎧', glyph: '[', color: '#a08
 add('hood', { category: 'armor', name: '頭巾', glyph: '[', color: '#6a6a5a', slot: 'helm', defense: 1, eva: 1, weight: 1, enchantable: true, depth: 3, rarity: 3 });
 add('r_warding', { category: 'ring', name: '結界の指輪', glyph: '=', slot: 'ring', passive: { def: 1, eva: 1 }, enchantable: true, depth: 4, rarity: 3 });
 add('p_clairvoyance', { category: 'potion', name: '透視の薬', glyph: '!', effect: 'magicmap', stackable: true, depth: 4, rarity: 2, good: true });
+add('falchion', { category: 'weapon', name: '青龍刀', glyph: ')', color: '#dde2ee', slot: 'weapon', damage: '1d8', acc: 1, weight: 3, enchantable: true, depth: 4, rarity: 4 });
+add('estoc', { category: 'weapon', name: '刺突剣', glyph: ')', color: '#e6ecf6', slot: 'weapon', damage: '1d8', acc: 3, weight: 2, enchantable: true, depth: 6, rarity: 3 });
+add('warpick', { category: 'weapon', name: '戦鶴嘴', glyph: ')', color: '#bcb4a0', slot: 'weapon', damage: '1d8+1', acc: 0, weight: 4, enchantable: true, depth: 5, rarity: 3 });
+add('fieldplate', { category: 'armor', name: '騎士鎧', glyph: '[', color: '#c2c8d4', slot: 'armor', defense: 7, weight: 8, eva: -2, enchantable: true, depth: 8, rarity: 2 });
+add('roundshield', { category: 'armor', name: '円盾', glyph: '[', color: '#b08040', slot: 'shield', defense: 2, weight: 3, enchantable: true, depth: 3, rarity: 4 });
+add('sandals', { category: 'armor', name: '韋駄天の沓', glyph: '[', color: '#b89a6a', slot: 'boots', defense: 1, eva: 2, weight: 1, enchantable: true, depth: 4, rarity: 2 });
+add('f_honey', { category: 'food', name: '蜂蜜', glyph: '%', color: '#e0b040', nutrition: 250, stackable: true, depth: 2, rarity: 3 });
+add('f_roast', { category: 'food', name: '焼き肉', glyph: '%', color: '#b05a3a', nutrition: 600, stackable: true, depth: 4, rarity: 3 });
+add('r_haleness', { category: 'ring', name: '健勝の指輪', glyph: '=', slot: 'ring', passive: { regen: 1, def: 1 }, depth: 6, rarity: 2 });
+add('p_clarity2', { category: 'potion', name: '明察の薬', glyph: '!', effect: 'telepathy', power: 40, stackable: true, depth: 5, rarity: 2, good: true });
 
 /* ===== 遺物（artifact・唯一・名のある品。見た目は隠さない） ===== */
 add('art_yosuzume', { category: 'weapon', name: '銘刀「夜雀」', glyph: ')', color: '#bcd0ff', slot: 'weapon', damage: '1d8+1', acc: 3, weight: 2, artifact: true, unique: true, rarity: 0, depth: 6, passive: { eva: 2 }, brand: { status: { type: 'slow', turns: 6 }, chance: 0.4, element: 'frost' } });
