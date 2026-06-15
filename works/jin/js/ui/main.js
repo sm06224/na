@@ -10,6 +10,7 @@ import { manhattan, key } from '../core/grid.js';
 import { Camera, draw, BASE_TILE } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
+import { skill as skillDef } from '../core/skills.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
@@ -303,6 +304,7 @@ async function playEvents(events) {
     else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
     else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
     else if (e.type === 'poison' || e.type === 'burn') { if (tgt && tgt.pos) popup(tgt.pos, String(e.dmg), '#b6e07c'); await sleep(220); }
+    else if (e.type === 'status') { if (tgt && tgt.pos) { popup(tgt.pos, statusName(e.id), '#b6e07c'); S.fx.burst(tgt.pos.x, tgt.pos.y, '#9cd06a'); } await sleep(260); }
     else if (e.type === 'restore' || e.type === 'buff' || e.type === 'debuff') { await sleep(120); }
     // 死亡
     if (tgt && !isAlive(tgt)) { if (tgt.pos) popup(tgt.pos, '×', '#ff6a5a', true); sfx('die'); }
@@ -319,7 +321,8 @@ function attackFx(by, tgt, crit) {
   else if (dist > 1) S.fx.shoot(by.pos, tgt.pos, { kind: 'arrow', dur: 0.16 });
   else S.fx.slash(by.pos, tgt.pos, crit ? '#ffd86a' : '#ffffff');
 }
-function skillName(id) { const m = { sol: '太陽', luna: '月光', astra: '流星', pierce: '貫通', colossus: '剛撃', lethality: '瞬殺！', aether: '天空', aegis: '盾防', pavise: '大盾', miracle: '祈り' }; return m[id] || id; }
+function skillName(id) { const m = { sol: '太陽', luna: '月光', astra: '流星', pierce: '貫通', colossus: '剛撃', lethality: '瞬殺！', aether: '天空', aegis: '盾防', pavise: '大盾', miracle: '祈り', ignis: 'イグニス', adept: '連撃', wrath: '憤怒', vantage: '先制', lifetaker: '命奪' }; return m[id] || id; }
+function statusName(id) { return ({ poison: '毒', sleep: '眠り', silence: '沈黙', freeze: '凍結', berserk: '狂乱' })[id] || id; }
 
 async function showLevelUps(u, ups) {
   for (const up of ups) {
@@ -503,13 +506,16 @@ function showInfo(u) {
   const es = effectiveStats(u);
   const statline = STAT_KEYS.map(k => `<span>${STAT_NAMES[k]} <b>${es[k]}</b></span>`).join('');
   const items = u.items.map(it => itemDef(it.id) ? itemDef(it.id).name + (it.uses ? `×${it.uses}` : '') : '').filter(Boolean).join('、');
-  const sk = (u.skills || []).map(s => s).join(' ');
+  const sk = (u.skills || []).map(s => (skillDef(s) ? skillDef(s).name : s)).join('・');
+  const bond = (() => { let n = 0; for (const a of (S.board ? S.board.alliesOf(u) : [])) if (a.pos && u.pos && Math.abs(a.pos.x - u.pos.x) + Math.abs(a.pos.y - u.pos.y) === 1) n++; return Math.min(3, n); })();
   $('infoBody').innerHTML =
     `<h3>${u.name} <small>${cd.name} Lv${u.level}</small></h3>
-     <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}</div>
+     <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}${bond ? `　絆+${bond}` : ''}</div>
      <div class="statgrid">${statline}</div>
      <div class="itemline">得物：${w ? w.name : '—'}</div>
      <div class="itemline">持物：${items || '—'}</div>
+     ${sk ? `<div class="itemline">技：${sk}</div>` : ''}
+     ${u.status && u.status.length ? `<div class="itemline">状態：${u.status.map(s => statusName(s.id)).join('・')}</div>` : ''}
      ${u.bio ? `<p class="bio">${u.bio}</p>` : ''}`;
   $('info').hidden = false;
 }
