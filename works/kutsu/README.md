@@ -41,12 +41,12 @@ works/kutsu/js/
 ├─ core/                          ★ ぜんぶ Node で動く
 │  ├─ rng util tile level         決定的乱数・幾何・タイル・階層と覚え
 │  ├─ fov pathfind                視界（シャドウキャスト）・A*・匂い地図
-│  ├─ gen/                        部屋/洞窟/BSP/迷路・連結・装飾・建て分け
+│  ├─ gen/                        部屋/洞窟/BSP/迷路・連結・装飾・特殊部屋(vault)・建て分け
 │  ├─ entity board factory        実体・盤・鋳型
-│  ├─ item itemdb inventory       品物（約60種）・鞄・装備・呪い・付呪
+│  ├─ item itemdb inventory       品物（80種超）・鞄・装備・呪い・付呪
 │  ├─ identify                    見た目の入れ替え
-│  ├─ monsterdb combat status ai  魔物（約40体）・戦い・状態異常・知恵
-│  ├─ effects                     薬12・巻物10・杖8 の効能
+│  ├─ monsterdb combat status ai  魔物（50体超）・戦い・状態異常・知恵
+│  ├─ effects                     薬14・巻物12・杖10 の効能
 │  ├─ player spawn chronicle      成長と空腹・配置・年代記と墓碑銘
 │  └─ game actions                エンジン（エネルギー制の手番）と一手
 └─ ui/  render screens main       格子の描画・重なる札・操作
