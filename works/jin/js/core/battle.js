@@ -16,6 +16,22 @@ import { rateOf } from './skills.js';
 
 export const PHASES = ['player', 'enemy', 'ally'];
 
+/* 交戦の一行（履歴ウィンドウ用） */
+function dmgTo(events, uid) {
+  let d = 0, crit = false;
+  for (const e of events) if ((e.type === 'hit' || e.type === 'crit') && e.tgt === uid) { d += e.dmg; if (e.type === 'crit') crit = true; }
+  return { d, crit };
+}
+export function combatLine(att, def, events) {
+  const a = dmgTo(events, def.uid), b = dmgTo(events, att.uid);
+  let s = `${att.name} → ${def.name}　${a.d}${a.crit ? '!' : ''}`;
+  if (!isAlive(def)) s += '　撃破';
+  if (b.d > 0) s += `（反撃 ${b.d}${b.crit ? '!' : ''}${!isAlive(att) ? ' 被撃破' : ''}）`;
+  const sk = [...new Set(events.filter(e => e.type === 'skill').map(e => e.id))];
+  if (sk.length) s += ` 〈${sk.join('・')}〉`;
+  return s;
+}
+
 export class Battle {
   constructor(board, opts = {}) {
     this.board = board;
@@ -119,6 +135,7 @@ export class Battle {
       const cHit = res.events.some(e => (e.type === 'hit' || e.type === 'crit') && e.by === def.uid);
       if (cHit) { res.defLevelUps = gainExp(def, battleExp(def, att, !isAlive(att)), this.rng); }
     }
+    this.record(combatLine(att, def, res.events));
     this.cleanupDead();
     this.checkEnd();
     return res;
@@ -135,6 +152,7 @@ export class Battle {
       if (u.side === 'player') gainExp(u, 12, this.rng);
     }
     u.hasActed = true; u.hasMoved = true;
+    this.record(`${u.name} → ${target.name}　${w.staff === 'heal' ? '回復' : '状態回復'}`);
     return { events };
   }
   doItem(u, idx) {
@@ -147,13 +165,24 @@ export class Battle {
     else if (it.use === 'buffRes') { u.buffs.res = { amt: it.power, turns: 3 }; events.push({ type: 'buff', uid: u.uid }); }
     if (it.uses) { stack.uses--; if (stack.uses <= 0) { u.items.splice(idx, 1); if (u.equipped >= idx) autoEquip(u); } }
     u.hasActed = true; u.hasMoved = true;
+    this.record(`${u.name}　${it.name}`);
     return { events };
   }
   doWait(u) { u.hasActed = true; u.hasMoved = true; }
 
+  /* 履歴に一行を残す */
+  record(text) {
+    if (!text) return;
+    this.log.push({ turn: this.turn, side: this.phase, text });
+    if (this.log.length > 240) this.log.shift();
+  }
+
   cleanupDead() {
     for (const u of this.board.units) if (!isAlive(u) && u.pos) { this.board.remove(u); u.pos = null; }
   }
+
+  /* オート：自軍を AI が指す（演出用の手番列を返す。敵フェイズへは UI が送る） */
+  autoPlayerTurn() { return this.runSide('player', true); }
 
   /* ---- フェイズ送り ---- */
   endPlayerPhase() {

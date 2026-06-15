@@ -24,6 +24,17 @@ body {
 .hbtn { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 10px;
   padding: .5em .9em; font: inherit; font-size: .8rem; cursor: pointer; }
 .hbtn.primary { background: linear-gradient(120deg, #5f7cff, #6f8cff); border: none; color: #0a0d14; font-weight: 700; }
+.hbtn.on { background: linear-gradient(120deg, #e8c44a, #ffd86a); border: none; color: #0a0d14; font-weight: 700; }
+
+#log { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: 56px; z-index: 16; width: min(300px, 86vw);
+  max-height: 60vh; display: flex; flex-direction: column; background: rgba(18,22,36,.97); border: 1px solid var(--line);
+  border-radius: 16px; padding: .9rem 1rem; box-shadow: 0 14px 50px rgba(0,0,0,.6); }
+#log h3 { font-size: .9rem; margin-bottom: .5rem; color: var(--gold); }
+#log .x { position: absolute; top: 6px; right: 10px; background: none; border: none; color: var(--soft); font-size: 1.2rem; cursor: pointer; }
+#logBody { overflow-y: auto; font-size: .76rem; line-height: 1.8; color: #cdd6ea; }
+#logBody .lg { padding: .12rem 0; border-bottom: 1px solid rgba(150,175,235,.08); }
+#logBody .lg .tn { color: var(--soft); font-size: .68rem; margin-right: .4em; }
+#logBody .lg.enemy { color: #ffc0b8; }
 
 /* オーバーレイ（タイトル・幕間・結果） */
 .overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
