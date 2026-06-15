@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="波 (nami) — 触れると生まれ、ひろがり、岸で跳ね返り、重なって、しずまる水面。誰も波形を描かない、波動方程式の水。待てば雨が落ちてくる。依存ゼロ・オフライン。">
+<meta name="theme-color" content="#06141d">
+<title>波 — a pond you can touch</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="pond"></canvas>
+
+<div id="hud">
+  <h1>波 <span class="en">/ nami</span></h1>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>はじめに、水は凪いでいた。<br>
+       触れると、そこから波紋が生まれてひろがり、<br>
+       岸で跳ね返り、ほかの波と重なって、やがてしずまる。<br>
+       誰も、波のかたちを描いてはいない。</p>
+    <button id="bOpen">水にふれる</button>
+    <p class="fine">なぞれば航跡。待てば、雨が落ちてくる。</p>
+  </div>
+</div>
+
+<nav id="bar" hidden>
+  <button id="bStill" class="ghost">凪にする</button>
+  <button id="bMute" class="ghost">音を消す</button>
+</nav>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

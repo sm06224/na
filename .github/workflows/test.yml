@@ -240,6 +240,18 @@ jobs:
         working-directory: works/kuji
         run: node --test tests/*.test.js
 
+  nami:
+    name: nami — a pond you can touch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Drop a ripple and check the water stays stable and symmetric
+        working-directory: works/nami
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
