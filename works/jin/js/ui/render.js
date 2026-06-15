@@ -129,7 +129,15 @@ export function draw(ctx, state, now) {
     const s = cam.worldToScreen(px, py);
     const e = VIEW3D ? elevOf(board.terrainAt(Math.round(px), Math.round(py)).id, T) : 0;
     const shake = (anim && anim.type === 'hit' && anim.uid === u.uid) ? Math.sin(now / 30) * 3 : 0;
-    drawToken(ctx, u, s.x + T / 2 + shake, s.y + T / 2 - e, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
+    const ucx = s.x + T / 2 + shake, ucy = s.y + T / 2 - e;
+    drawToken(ctx, u, ucx, ucy, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
+    // 向きの小印
+    if (u.facing != null) {
+      const dv = [[0, -1], [1, 0], [0, 1], [-1, 0]][u.facing];
+      const fxp = ucx + dv[0] * T * 0.34, fyp = ucy + dv[1] * T * 0.34 - T * 0.05;
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.beginPath(); ctx.arc(fxp, fyp, T * 0.06, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   // ダメージ表示など

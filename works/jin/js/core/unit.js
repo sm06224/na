@@ -53,6 +53,7 @@ export function createUnit(spec, rng) {
     status: [],            // [{ id, turns }]
     buffs: {},             // { str: {amt, turns}, ... }
     pos: spec.pos ? { ...spec.pos } : null,
+    facing: spec.facing ?? (spec.side === 'enemy' ? 3 : 1),   // 0北 1東 2南 3西
     hasMoved: false,
     hasActed: false,
     boss: !!spec.boss,

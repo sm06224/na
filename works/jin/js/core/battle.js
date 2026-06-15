@@ -7,7 +7,7 @@
 import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
 import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed, gainWexp } from './unit.js';
-import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon } from './combat.js';
+import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon, dirToward } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
 import { tickStatus, canAct, addStatus, clearStatus } from './status.js';
@@ -121,10 +121,13 @@ export class Battle {
 
   /* ---- 行動 ---- */
   doMove(u, tile) {
+    const dx = tile.x - u.pos.x, dy = tile.y - u.pos.y;
+    if (dx || dy) u.facing = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 1 : 3) : (dy >= 0 ? 2 : 0);
     this.board.moveUnit(u, tile.x, tile.y);
     u.hasMoved = true;
   }
   doAttack(att, def) {
+    att.facing = dirToward(att.pos, def.pos);     // 攻め手は標的へ向き直る
     const res = resolveCombat(att, def, this.board, this.rng);
     att.hasActed = true; att.hasMoved = true;
     // 命中したか（経験）
