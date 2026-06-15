@@ -57,7 +57,7 @@ works/kutsu/js/
 
 ```bash
 cd works/kutsu
-node --test tests/*.test.js   # 100 tests（決定性・連結・視界・経路・自動潜行・戦闘・効果・型と技・遺物・店・保存と再開…）
+node --test tests/*.test.js   # 101 tests（決定性・連結・視界・経路・自動潜行・戦闘・効果・型と技・遺物・店・祭壇・保存と再開…）
 ```
 
 死ぬと、この潜行の**墓碑銘**が立つ（`史` の血を引く年代記から）。種は墓標に刻まれる
