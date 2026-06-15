@@ -6,9 +6,11 @@
 
 import { RNG, hashSeed } from './rng.js';
 import { Board } from './board.js';
+import { Actor, Feature, resetIds } from './entity.js';
+import { Item } from './item.js';
 import { buildLevel } from './gen/build.js';
 import { T, isStairs, isDiggable, isDoor } from './tile.js';
-import { F } from './level.js';
+import { Level, F } from './level.js';
 import { DIR8, chebyshev, line } from './util.js';
 import { computeFOV, hasLine } from './fov.js';
 import { dijkstraMap } from './pathfind.js';
@@ -385,18 +387,99 @@ export class Game {
     }
   }
 
-  /* ----- セーブ／ロード ----- */
+  /* ----- セーブ／ロード（続きから） ----- */
   serialize() {
+    this.levels.set(this.depth, this.board);
     return {
-      seed: this.seedRaw, rng: this.rng.save(), depth: this.depth, state: this.state, flags: this.flags, cause: this.cause,
-      player: this.player.serialize(), ids: this.ids.serialize(), log: this.messages.serialize(), chronicle: this.chronicle.serialize(), know: this.know.serialize(),
-      levels: [...this.levels.entries()].map(([d, b]) => [d, serializeBoard(b)]),
+      v: 1, seed: this.seedRaw, rng: this.rng.save(), depth: this.depth, state: this.state, flags: this.flags, cause: this.cause,
+      player: serializePlayer(this.player), ids: this.ids.serialize(), log: this.messages.serialize(),
+      chronicle: this.chronicle.serialize(), know: this.know.serialize(),
+      levels: [...this.levels.entries()].map(([d, b]) => [d, b.serialize()]),
     };
+  }
+
+  static deserialize(obj) {
+    const g = Object.create(Game.prototype);
+    g.seedRaw = obj.seed;
+    g.seed = (typeof obj.seed === 'number') ? (obj.seed >>> 0) : hashSeed(String(obj.seed ?? 'kutsu'));
+    g.rng = new RNG(0).restore(obj.rng);
+    g.opts = {};
+    g.ids = IdStore.deserialize(obj.ids);
+    g.messages = MessageLog.deserialize(obj.log);
+    g.log = (m, k) => g.messages.add(m, k);
+    g.chronicle = Chronicle.deserialize(obj.chronicle);
+    g.know = Knowledge.deserialize(obj.know);
+    g.flags = obj.flags || { amuletPlaced: false, hasAmulet: false, artifacts: {} };
+    g.cause = obj.cause || '力尽きた';
+    g.state = obj.state || 'play';
+    g.depth = obj.depth;
+    g.sensed = new Set();
+    g._dist = null;
+    g.player = revivePlayer(obj.player);
+
+    g.levels = new Map();
+    let maxId = g.player.id;
+    for (const it of g.player.inv) maxId = Math.max(maxId, it.id);
+    for (const [d, data] of obj.levels) {
+      const board = reviveBoard(data);
+      g.levels.set(Number(d), board);
+      for (const a of board.actors) maxId = Math.max(maxId, a.id);
+      for (const it of board.items) maxId = Math.max(maxId, it.id);
+    }
+    resetIds(maxId + 1);
+
+    g.board = g.levels.get(g.depth);
+    g.board.player = g.player;
+    if (!g.board.actors.includes(g.player)) g.board.addActor(g.player);
+    g.board.reindex();
+    g.recomputeDist();
+    g.recomputeFOV();
+    return g;
   }
 }
 
-function serializeBoard(b) {
-  return { level: b.level.serialize(), items: b.items.map(i => i.serialize()), features: b.features.map(f => f.serialize()) };
+function serializePlayer(p) {
+  return {
+    ...p.serialize(),
+    xp: p.xp, level: p.level, nextXP: p.nextXP, hunger: p.hunger, focus: p.focus, maxFocus: p.maxFocus,
+    abilities: p.abilities, cls: p.cls, clsName: p.clsName, gold: p.gold, kills: p.kills, turns: p.turns, depthMax: p.depthMax,
+  };
+}
+function revivePlayer(o) {
+  const p = Actor.deserialize(o, Item);
+  Object.assign(p, {
+    xp: o.xp || 0, level: o.level || 1, nextXP: o.nextXP || 100, hunger: o.hunger ?? 900,
+    focus: o.focus ?? 0, maxFocus: o.maxFocus ?? 0, abilities: o.abilities || [],
+    cls: o.cls, clsName: o.clsName, gold: o.gold || 0, kills: o.kills || 0, turns: o.turns || 0, depthMax: o.depthMax || 1,
+  });
+  return p;
+}
+
+const REVIVE_RNG = new RNG(1);
+function reviveBoard(data) {
+  const level = Level.deserialize(data.level);
+  const board = new Board(level);
+  board.items = (data.items || []).map(Item.deserialize);
+  board.features = (data.features || []).map(Feature.deserialize);
+  for (const md of data.monsters || []) { const m = reviveMonster(md); if (m) board.addActor(m); }
+  return board;
+}
+function reviveMonster(md) {
+  const m = makeMonster(REVIVE_RNG, md.defId, md.x, md.y);
+  if (!m) return null;
+  m.id = md.id; m.hp = md.hp; m.maxhp = md.maxhp; m.energy = md.energy;
+  m.statuses = (md.statuses || []).map(s => ({ ...s }));
+  m.flags = Object.assign(m.flags, md.flags || {});
+  m.faction = md.faction || m.faction; m.ai = md.ai || m.ai; m.peaceful = md.peaceful;
+  m.aiState = reviveAiState(md.aiState);
+  return m;
+}
+function reviveAiState(st) {
+  if (!st) return {};
+  const out = { ...st };
+  if (st.loot && st.loot.__item) out.loot = Item.deserialize(st.loot.__item);
+  return out;
 }
 
 export function newGame(seed, opts) { return new Game(seed, opts); }
+export function loadGame(obj) { return Game.deserialize(obj); }

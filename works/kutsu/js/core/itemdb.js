@@ -127,6 +127,22 @@ add('banded', { category: 'armor', name: '帯金鎧', glyph: '[', color: '#a6acb
 add('p_antidote', { category: 'potion', name: '解毒の薬', glyph: '!', effect: 'cure', stackable: true, depth: 2, rarity: 4, good: true });
 add('s_holyword', { category: 'scroll', name: '聖句の巻物', glyph: '?', effect: 'aggravate_or_fear', stackable: true, depth: 5, rarity: 2, good: true });
 add('f_cheese', { category: 'food', name: '乾酪', glyph: '%', color: '#d8c060', nutrition: 300, stackable: true, depth: 1, rarity: 4 });
+add('handaxe', { category: 'weapon', name: '手斧', glyph: ')', color: '#c9c2b0', slot: 'weapon', damage: '1d6', acc: 1, weight: 2, enchantable: true, depth: 2, rarity: 5 });
+add('trident', { category: 'weapon', name: '三叉', glyph: ')', color: '#cbd2dd', slot: 'weapon', damage: '1d9', acc: 1, weight: 4, reach: true, enchantable: true, depth: 6, rarity: 3 });
+add('lamellar', { category: 'armor', name: '小札鎧', glyph: '[', color: '#a08a6a', slot: 'armor', defense: 4, weight: 4, enchantable: true, depth: 4, rarity: 4 });
+add('hood', { category: 'armor', name: '頭巾', glyph: '[', color: '#6a6a5a', slot: 'helm', defense: 1, eva: 1, weight: 1, enchantable: true, depth: 3, rarity: 3 });
+add('r_warding', { category: 'ring', name: '結界の指輪', glyph: '=', slot: 'ring', passive: { def: 1, eva: 1 }, enchantable: true, depth: 4, rarity: 3 });
+add('p_clairvoyance', { category: 'potion', name: '透視の薬', glyph: '!', effect: 'magicmap', stackable: true, depth: 4, rarity: 2, good: true });
+add('falchion', { category: 'weapon', name: '青龍刀', glyph: ')', color: '#dde2ee', slot: 'weapon', damage: '1d8', acc: 1, weight: 3, enchantable: true, depth: 4, rarity: 4 });
+add('estoc', { category: 'weapon', name: '刺突剣', glyph: ')', color: '#e6ecf6', slot: 'weapon', damage: '1d8', acc: 3, weight: 2, enchantable: true, depth: 6, rarity: 3 });
+add('warpick', { category: 'weapon', name: '戦鶴嘴', glyph: ')', color: '#bcb4a0', slot: 'weapon', damage: '1d8+1', acc: 0, weight: 4, enchantable: true, depth: 5, rarity: 3 });
+add('fieldplate', { category: 'armor', name: '騎士鎧', glyph: '[', color: '#c2c8d4', slot: 'armor', defense: 7, weight: 8, eva: -2, enchantable: true, depth: 8, rarity: 2 });
+add('roundshield', { category: 'armor', name: '円盾', glyph: '[', color: '#b08040', slot: 'shield', defense: 2, weight: 3, enchantable: true, depth: 3, rarity: 4 });
+add('sandals', { category: 'armor', name: '韋駄天の沓', glyph: '[', color: '#b89a6a', slot: 'boots', defense: 1, eva: 2, weight: 1, enchantable: true, depth: 4, rarity: 2 });
+add('f_honey', { category: 'food', name: '蜂蜜', glyph: '%', color: '#e0b040', nutrition: 250, stackable: true, depth: 2, rarity: 3 });
+add('f_roast', { category: 'food', name: '焼き肉', glyph: '%', color: '#b05a3a', nutrition: 600, stackable: true, depth: 4, rarity: 3 });
+add('r_haleness', { category: 'ring', name: '健勝の指輪', glyph: '=', slot: 'ring', passive: { regen: 1, def: 1 }, depth: 6, rarity: 2 });
+add('p_clarity2', { category: 'potion', name: '明察の薬', glyph: '!', effect: 'telepathy', power: 40, stackable: true, depth: 5, rarity: 2, good: true });
 
 /* ===== 遺物（artifact・唯一・名のある品。見た目は隠さない） ===== */
 add('art_yosuzume', { category: 'weapon', name: '銘刀「夜雀」', glyph: ')', color: '#bcd0ff', slot: 'weapon', damage: '1d8+1', acc: 3, weight: 2, artifact: true, unique: true, rarity: 0, depth: 6, passive: { eva: 2 }, brand: { status: { type: 'slow', turns: 6 }, chance: 0.4, element: 'frost' } });
@@ -144,10 +160,10 @@ export function artifactsForDepth(depth) { return artifactDefs().filter(d => (d.
 
 /* ----- 見た目（未鑑定の素材）。idStore が種でこれを役職に割り当てる ----- */
 export const APPEARANCE = {
-  potion: ['青', '赤', '緑', '黄', '紫', '橙', '桃', '黒', '白', '銀', '金', '濁った', '泡立つ', '光る', '澄んだ', '油状の'],
+  potion: ['青', '赤', '緑', '黄', '紫', '橙', '桃', '黒', '白', '銀', '金', '濁った', '泡立つ', '光る', '澄んだ', '油状の', '虹色の', '灰の'],
   scroll: ['ゾフ', 'クネ', 'ガリ', 'ムベ', 'トロン', 'ヤヌ', 'ペシ', 'ウルカ', 'ネブ', 'ザザ', 'フム', 'リエン', 'ダグ', 'コホ'],
   wand: ['樫の', '鉄の', '骨の', '硝子の', '銀の', '黒檀の', '水晶の', '錆びた', '捻れた', '象牙の'],
-  ring: ['翡翠の', '紅玉の', '鋼の', '真鍮の', '黒曜の', '瑪瑙の', '琥珀の', '真珠の', '青玉の'],
+  ring: ['翡翠の', '紅玉の', '鋼の', '真鍮の', '黒曜の', '瑪瑙の', '琥珀の', '真珠の', '青玉の', '金剛の', '紫水晶の'],
 };
 
 export function getItemDef(key) { return DB[key]; }

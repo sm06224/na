@@ -47,6 +47,16 @@ test('罠外し：隣の見つけた罠を外せる', () => {
   assert.ok(cleared, '罠を一度も外せなかった');
 });
 
+test('祭壇：祈ると何かが起き、祭壇は消える（一度きり）', () => {
+  const g = new Game(7); arena(g);
+  const p = g.player;
+  g.level.set(p.x, p.y, T.ALTAR);
+  const t0 = p.turns;
+  assert.ok(A.interact(g));               // 足元が祭壇 → 祈る
+  assert.equal(g.level.get(p.x, p.y), T.FLOOR, '祭壇が残っている');
+  assert.ok(p.turns > t0, '手番が進んでいない');
+});
+
 test('新しい効能：英雄の薬で剛力と俊足、瞬きで移動', () => {
   const g = new Game(4); arena(g);
   applyEffect(g, 'heroism', { user: g.player, item: makeItem(g.rng, 'p_heroism') });
