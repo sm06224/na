@@ -4,10 +4,10 @@
    UI はこの API を叩くだけ。コアは DOM を知らない。
    ============================================================ */
 
-import { manhattan, key } from './grid.js';
+import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
 import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip } from './unit.js';
-import { resolveCombat, forecast, inAttackRange } from './combat.js';
+import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
 import { tickStatus, canAct, addStatus, clearStatus } from './status.js';
@@ -167,6 +167,38 @@ export class Battle {
     u.hasActed = true; u.hasMoved = true;
     this.record(`${u.name}　${it.name}`);
     return { events };
+  }
+  /* マップ攻撃：撃てる着弾点（射程内で、巻き込める敵が1体以上） */
+  areaCentersFrom(u, tile) {
+    const w = equippedWeapon(u);
+    if (!w || !w.aoe) return [];
+    const saved = u.pos; u.pos = tile;
+    const out = [];
+    for (const c of tilesInRange(tile.x, tile.y, w.min, w.max)) {
+      if (!this.board.inBounds(c.x, c.y)) continue;
+      if (areaTargets(u, c, this.board).length > 0) out.push(c);
+    }
+    u.pos = saved;
+    return out;
+  }
+  areaSplashTiles(u, center) {
+    const w = equippedWeapon(u);
+    return tilesInRange(center.x, center.y, 0, (w && w.aoe) || 0).filter(t => this.board.inBounds(t.x, t.y));
+  }
+  doAreaAttack(caster, center) {
+    const res = resolveArea(caster, center, this.board, this.rng);
+    caster.hasActed = true; caster.hasMoved = true;
+    if ((caster.side === 'player' || caster.side === 'ally') && res.targets.length) {
+      let kills = 0;
+      for (const t of res.targets) if (!isAlive(t)) kills++;
+      let exp = Math.min(100, 14 + res.targets.length * 4 + kills * 20);
+      if (hasSkill(caster, 'paragon')) exp *= 2;
+      res.levelUps = gainExp(caster, exp, this.rng);
+    }
+    this.record(`${caster.name}　範囲攻撃 → ${res.targets.length}体${res.fallen.length ? `（${res.fallen.length}撃破）` : ''}`);
+    this.cleanupDead();
+    this.checkEnd();
+    return res;
   }
   doWait(u) { u.hasActed = true; u.hasMoved = true; }
 

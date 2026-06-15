@@ -5,7 +5,7 @@ import { isAlive, equippedWeapon, effectiveStats } from '../core/unit.js';
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
-import { forecast, inAttackRange } from '../core/combat.js';
+import { forecast, inAttackRange, isAreaWeapon, areaTargets } from '../core/combat.js';
 import { manhattan, key } from '../core/grid.js';
 import { Camera, draw, BASE_TILE } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
@@ -203,7 +203,10 @@ function openMenu() {
   const consum = u.items.map((it, i) => ({ it: itemDef(it.id), i })).filter(o => o.it && (o.it.kind === 'consumable'));
   const menu = $('actionMenu'); menu.innerHTML = '';
   const add = (label, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.onclick = fn; menu.appendChild(b); };
-  if (targets.length) add('攻撃', () => beginTarget(targets), 'primary');
+  if (isAreaWeapon(u)) {
+    const centers = S.battle.areaCentersFrom(u, u.pos);
+    if (centers.length) add('範囲攻撃', () => beginAoe(centers), 'primary');
+  } else if (targets.length) add('攻撃', () => beginTarget(targets), 'primary');
   if (staffT.length) add('杖', () => beginStaff(staffT), 'primary');
   if (consum.length) add('道具', () => openItems(consum));
   add('待機', () => { sfx('select2'); S.battle.doWait(u); endAction(); });
@@ -255,7 +258,38 @@ function showForecast(def) {
   S._pendingDef = def;
   $('forecast').hidden = false;
 }
+/* ---------- マップ攻撃（範囲） ---------- */
+function beginAoe(centers) {
+  S.mode = 'aoe'; hideMenu();
+  S._aoeCenters = centers;
+  S.atkTiles = centers.map(c => ({ x: c.x, y: c.y }));
+  toast('着弾点をタップ');
+}
+function showAoeForecast(center) {
+  const u = S.selected;
+  S._aoeCenter = center; S._aoeMode = true;
+  S.atkTiles = S.battle.areaSplashTiles(u, center);
+  const tgts = areaTargets(u, center, S.board);
+  $('fcBody').innerHTML =
+    `<div class="fcrow"><b>${u.name}</b> 範囲攻撃　巻き込み <b>${tgts.length}</b>体</div>`
+    + tgts.map(t => `<div class="fcrow">${t.name}（${classDef(t.classId).name} HP${t.hp}/${t.maxHp}）</div>`).join('');
+  $('forecast').hidden = false;
+}
+async function confirmAoe() {
+  const u = S.selected, center = S._aoeCenter;
+  $('forecast').hidden = true; S._aoeMode = false; S.atkTiles = null;
+  S.busy = true; S.mode = 'animating';
+  const res = S.battle.doAreaAttack(u, center);
+  S.fx.burst(center.x, center.y, '#ff9c6a'); S.fx.addShake(8);
+  for (const t of res.targets) if (t.pos) S.fx.burst(t.pos.x, t.pos.y, '#ffb070');
+  await playEvents(res.events);
+  if (res.levelUps && res.levelUps.length) await showLevelUps(u, res.levelUps);
+  refreshLog();
+  S.busy = false;
+  endAction();
+}
 async function confirmAttack() {
+  if (S._aoeMode) return confirmAoe();
   const u = S.selected, def = S._pendingDef;
   $('forecast').hidden = true;
   S.atkTiles = null;
@@ -506,6 +540,12 @@ function onTap(px, py) {
     else { /* キャンセル */ S.atkTiles = null; openMenu(); S.mode = 'menu'; }
     return;
   }
+  if (S.mode === 'aoe') {
+    const c = (S._aoeCenters || []).find(t => t.x === tile.x && t.y === tile.y);
+    if (c) showAoeForecast(c);
+    else { S.atkTiles = null; openMenu(); S.mode = 'menu'; }
+    return;
+  }
   if (S.mode === 'staff') {
     const t = (S._staffTargets || []).find(t => t.pos.x === tile.x && t.pos.y === tile.y);
     if (t) doStaffOn(t); else { S.staffTiles = null; openMenu(); S.mode = 'menu'; }
@@ -693,7 +733,7 @@ $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').
 $('logClose').onclick = () => { $('log').hidden = true; };
 $('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) maybeAuto(); };
 $('fcGo').onclick = confirmAttack;
-$('fcCancel').onclick = () => { $('forecast').hidden = true; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
+$('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
 $('nextBtn').onclick = () => { $('result').hidden = true; openBase(); };
 $('retryBtn').onclick = () => { $('result').hidden = true; sortie(); };

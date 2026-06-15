@@ -228,3 +228,23 @@ export function resolveCombat(att, def, board, rng) {
   if (!isAlive(def)) fallen.push(def.uid);
   return { events, fallen };
 }
+
+/* ---- マップ攻撃（範囲・反撃なし） ---- */
+/* 着弾点 center から splash 半径内の、術者の敵すべて */
+export function areaTargets(caster, center, board) {
+  const w = equippedWeapon(caster);
+  const r = (w && w.aoe) || 0;
+  return board.enemiesOf(caster).filter(e => e.pos && manhattan(e.pos, center) <= r);
+}
+/* 範囲攻撃を遂行（各標的へ一方的に。反撃は起きない） */
+export function resolveArea(caster, center, board, rng) {
+  const events = [];
+  const targets = areaTargets(caster, center, board);
+  for (const t of targets) if (isAlive(t)) performStrike(caster, t, board, rng, events);
+  const fallen = targets.filter(t => !isAlive(t)).map(t => t.uid);
+  return { events, fallen, targets };
+}
+export function isAreaWeapon(u) {
+  const w = equippedWeapon(u);
+  return !!(w && w.aoe);
+}
