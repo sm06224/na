@@ -34,7 +34,7 @@ const S = {
   selected: null, cursor: null, preMovePos: null,
   moveTiles: null, atkTiles: null, staffTiles: null, path: null,
   anim: null, popups: [], busy: false,
-  fx: new FX(), lastNow: 0,
+  fx: new FX(), lastNow: 0, auto: false,
 };
 
 /* ---------- 画面 ---------- */
@@ -133,7 +133,9 @@ async function sortie() {
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
   clearSel(); S.mode = 'idle';
   $('hud').hidden = false;
-  refreshHud();
+  $('autoBtn').classList.toggle('on', S.auto);
+  refreshHud(); refreshLog();
+  maybeAuto();
 }
 function refreshHud() {
   const b = S.battle;
@@ -334,25 +336,53 @@ async function showLevelUps(u, ups) {
   }
 }
 
-/* ---------- ターン終了・敵フェイズ ---------- */
-async function endTurn() {
-  if (S.busy || S.mode === 'animating') return;
-  clearSel(); S.mode = 'animating'; S.busy = true;
-  const turns = S.battle.endPlayerPhase();
+/* ---------- ターン終了・敵フェイズ・オート ---------- */
+async function animateTurns(turns) {
   for (const rec of turns) {
     const u = uOf(rec.uid);
     if (!u) continue;
     S.cursor = rec.path ? rec.path[rec.path.length - 1] : rec.from;
-    if (rec.path && rec.path.length > 1) { sfx('move'); await animateMoveAlong(u, rec.path); await sleep(60); }
+    if (rec.path && rec.path.length > 1) { sfx('move'); await animateMoveAlong(u, rec.path); await sleep(50); }
     if (rec.events && rec.events.length) await playEvents(rec.events);
+    refreshLog();
     checkResultSilent();
     if (S.battle.over) break;
-    await sleep(80);
+    await sleep(70);
   }
   S.cursor = null;
+}
+async function endTurn() {
+  if (S.busy || S.mode === 'animating') return;
+  clearSel(); S.mode = 'animating'; S.busy = true;
+  const turns = S.battle.endPlayerPhase();
+  await animateTurns(turns);
   S.busy = false; S.mode = 'idle';
-  refreshHud();
+  refreshHud(); refreshLog();
   checkResult();
+  maybeAuto();
+}
+/* オート：自軍を AI に任せる */
+async function autoPlayerPhase() {
+  if (S.busy || S.mode === 'animating' || !S.battle || S.battle.over) return;
+  clearSel(); S.mode = 'animating'; S.busy = true;
+  const turns = S.battle.autoPlayerTurn();
+  await animateTurns(turns);
+  S.busy = false; S.mode = 'idle';
+  refreshHud(); refreshLog();
+  checkResult();
+  if (!S.battle.over) endTurn();          // 続けて敵フェイズへ
+}
+function maybeAuto() {
+  if (S.auto && S.battle && !S.battle.over && S.battle.phase === 'player' && !S.busy && S.mode === 'idle') {
+    setTimeout(autoPlayerPhase, 250);
+  }
+}
+function refreshLog() {
+  if ($('log').hidden || !S.battle) return;
+  const body = $('logBody');
+  body.innerHTML = S.battle.log.slice(-80).map(e =>
+    `<div class="lg ${e.side}"><span class="tn">T${e.turn}</span>${e.text}</div>`).join('');
+  body.scrollTop = body.scrollHeight;
 }
 function animateMoveAlong(u, path) {
   // 演出用：すでに doMove 済みなので、見た目だけ from→to を滑らせる
@@ -659,6 +689,9 @@ $('loadBtn').onclick = () => { const code = prompt('セーブ符号を貼って�
 $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 0; };
 $('sortieBtn').onclick = sortie;
 $('endTurn').onclick = endTurn;
+$('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
+$('logClose').onclick = () => { $('log').hidden = true; };
+$('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) maybeAuto(); };
 $('fcGo').onclick = confirmAttack;
 $('fcCancel').onclick = () => { $('forecast').hidden = true; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
