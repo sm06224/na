@@ -9,8 +9,13 @@ import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { SETPIECES, parseMap } from './maps.js';
+import { EXTRA_SETPIECES } from './maps2.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
 import './items_extra.js';          // 追加の得物を登録簿へ
+import './items_extra2.js';         // 終盤の伝説装備を登録簿へ
+
+/* 全章ぶんの設置マップ（第一幕8＋第二幕8） */
+const ALL_SETPIECES = SETPIECES.concat(EXTRA_SETPIECES);
 
 /* ---- 旗下の者たち（種で初期能力が決まる） ---- */
 export const ROSTER = [
@@ -145,8 +150,8 @@ export class Game {
 
     // 戦場：手作りの設置マップ、または種からの生成
     let board, deployTiles, spawns, objective, bossSeat = null;
-    if (this.useSetpiece && SETPIECES[index]) {
-      const parsed = parseMap(SETPIECES[index]);
+    if (this.useSetpiece && ALL_SETPIECES[index]) {
+      const parsed = parseMap(ALL_SETPIECES[index]);
       board = parsed.board; deployTiles = parsed.deploy.slice(); spawns = parsed.spawns.slice(0, ch.count);
       bossSeat = parsed.boss;
       if (ch.objective === 'seize') {
