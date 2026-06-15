@@ -119,6 +119,7 @@ export class Game {
     this.chapterIndex = 0;
     this.gold = 5000;
     this.hired = [];                        // 斡旋で雇い入れた候補id
+    this.tradeGoods = [];                   // 交易品（土地差で利ざやを取る）
     this.convoy = ['vulnerary', 'vulnerary', 'concoction', 'steel_sword', 'hand_axe'];
     this.party = [];
     this._buildParty();

@@ -20,6 +20,7 @@ import { drawPortrait } from './portrait.js';
 import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
 import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS, hireRoster, hire, canHire, dismiss, canDismiss, jobChoices, reclass, canReclass, RECLASS_COST } from '../core/party.js';
 import { encodeSave, decodeSave } from '../core/save.js';
+import { TRADE_GOODS, tradePrice, buyGood, sellGood, holdings, canBuyGood } from '../core/trade.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -753,7 +754,7 @@ function renderCodex(tab) {
 function autosave() { try { localStorage.setItem(SAVE_KEY, encodeSave(S.game)); } catch { /* あふれは無視 */ } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
 let baseUnit = null;
-const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['記録', 'record']];
+const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['交易', 'trade'], ['記録', 'record']];
 
 function openBase() {
   $('result').hidden = true;
@@ -866,6 +867,20 @@ function renderBase(tab) {
       row.appendChild(mkbtn(got ? '雇用済' : '雇う', got ? '' : 'buy', () => {
         if (hire(g, cand)) { sfx('levelup'); autosave(); renderBase('hire'); }
       }, got || !canHire(g, cand)));
+      body.appendChild(row);
+    }
+  } else if (tab === 'trade') {
+    const biome = (g.chapter && g.chapter.biome) || 'green';
+    const bn = { green: '緑野', desert: '砂漠', snow: '雪原', ruins: '廃都', volcano: '火山' }[biome] || biome;
+    body.appendChild(el('div', 'subhead', `いまの相場：${bn}　安く仕入れ、別の土地で高く売る`));
+    const hold = holdings(g);
+    for (const good of TRADE_GOODS) {
+      const row = el('div', 'shoprow');
+      const have = hold[good.id] || 0;
+      row.appendChild(el('span', 'nm', good.name + (have ? `（所持${have}）` : '')));
+      row.appendChild(el('span', 'pr', tradePrice(good.id, biome) + 'G'));
+      row.appendChild(mkbtn('買', 'buy', () => { if (buyGood(g, good.id, biome)) { sfx('select'); autosave(); renderBase('trade'); } }, !canBuyGood(g, good.id, biome)));
+      row.appendChild(mkbtn('売', '', () => { if (sellGood(g, good.id, biome)) { sfx('cancel'); autosave(); renderBase('trade'); } }, !have));
       body.appendChild(row);
     }
   } else if (tab === 'record') {
