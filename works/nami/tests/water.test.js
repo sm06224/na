@@ -79,6 +79,14 @@ test('傾き：平らな水面の傾きは 0、波があれば 0 でない所が
   assert.ok(any, '波があれば傾く所がある');
 });
 
+test('大波（長押し）でも壊れない — 大きく落としても発散せず、やがて凪ぐ', () => {
+  const w = new Water(240, 150);
+  w.drop(120, 75, 16, 2.5);                 // 長押しの大波（大きい振幅・広い半径）
+  for (let i = 0; i < 900; i++) w.step();
+  for (const v of w.cur) assert.ok(Number.isFinite(v), '大波でも値は有限');
+  assert.ok(w.maxAmplitude() < 1, '大波でも反射壁で発散せず、減衰していく');
+});
+
 test('reset で凪に戻る', () => {
   const w = new Water(30, 30);
   w.drop(15, 15, 5, 1); for (let i = 0; i < 10; i++) w.step();
