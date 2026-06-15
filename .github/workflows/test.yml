@@ -252,6 +252,18 @@ jobs:
         working-directory: works/nami
         run: node --test tests/*.test.js
 
+  jin:
+    name: jin — a tactics RPG born from a seed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generate a campaign from a seed and fight every chapter headless
+        working-directory: works/jin
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

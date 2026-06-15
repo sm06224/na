@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="陣 (jin) — 種ひとつから生まれる、盤上の戦記。タッチ操作のタクティクスRPG。グリッド戦闘・命中/会心/連撃・武器相性・地形・職と技・敵AI。同じ種からは同じ戦場。依存ゼロ・オフライン。">
+<meta name="theme-color" content="#0a0d14">
+<title>陣 — a tactics RPG born from a seed</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<!-- 上の帯 -->
+<div id="hud" hidden>
+  <div class="hudleft">
+    <span id="turnInfo"></span>
+    <span id="objInfo"></span>
+  </div>
+  <div class="hudright">
+    <button id="muteBtn" class="hbtn" title="音">♪</button>
+    <button id="endTurn" class="hbtn primary">ターン終了</button>
+  </div>
+</div>
+
+<!-- タイトル -->
+<div id="title" class="overlay">
+  <div class="card">
+    <h1>陣 <span class="en">/ jin</span></h1>
+    <p class="lead">種ひとつから生まれる、盤上の戦記。<br>同じ種からは、一マスもちがわぬ同じ戦場。</p>
+    <label class="seedrow">種 <input id="seedInput" inputmode="numeric" placeholder="20260615"></label>
+    <div class="btnrow">
+      <button id="startBtn" class="big">出陣する</button>
+      <button id="randBtn" class="ghost">種をふる</button>
+    </div>
+    <p class="fine">タップで選んで動かす。二本指で拡大、ドラッグで見回す。長押しで詳細。</p>
+  </div>
+</div>
+
+<!-- 章の幕間 -->
+<div id="intro" class="overlay" hidden>
+  <div class="card">
+    <h2 id="introTitle"></h2>
+    <p id="introText" class="lead"></p>
+    <div class="party" id="introParty"></div>
+    <button id="sortieBtn" class="big">出撃</button>
+  </div>
+</div>
+
+<!-- 結果 -->
+<div id="result" class="overlay" hidden>
+  <div class="card">
+    <h2 id="resultTitle"></h2>
+    <p id="resultText" class="lead"></p>
+    <div class="btnrow">
+      <button id="nextBtn" class="big">次へ</button>
+      <button id="retryBtn" class="ghost">この章を再戦</button>
+    </div>
+  </div>
+</div>
+
+<!-- 行動メニュー -->
+<nav id="actionMenu" hidden></nav>
+
+<!-- 戦闘予報 -->
+<aside id="forecast" hidden>
+  <div id="fcBody"></div>
+  <div class="btnrow">
+    <button id="fcGo" class="big">攻撃</button>
+    <button id="fcCancel" class="ghost">やめる</button>
+  </div>
+</aside>
+
+<!-- ユニット詳細 -->
+<aside id="info" hidden>
+  <button id="infoClose" class="x">×</button>
+  <div id="infoBody"></div>
+</aside>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
