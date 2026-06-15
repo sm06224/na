@@ -49,12 +49,7 @@ export function draw(ctx, state, now) {
       // 地形の凹凸（簡単な陰影）
       ctx.fillStyle = 'rgba(0,0,0,.10)';
       ctx.fillRect(s.x, s.y + T * 0.82, T + 1, T * 0.18);
-      if (t.ch && t.ch !== '.' && t.ch !== '_') {
-        ctx.fillStyle = 'rgba(0,0,0,.30)';
-        ctx.font = `${Math.round(T * 0.5)}px serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(t.ch, s.x + T / 2, s.y + T / 2);
-      }
+      decorate(ctx, t, s.x, s.y, T, now, x, y);
       ctx.strokeStyle = 'rgba(0,0,0,.14)';
       ctx.lineWidth = 1;
       ctx.strokeRect(s.x + 0.5, s.y + 0.5, T, T);
@@ -112,6 +107,42 @@ export function draw(ctx, state, now) {
       ctx.fillText(p.text, s.x + T / 2, s.y + T / 2 - age * T * 0.8);
       ctx.globalAlpha = 1;
     }
+  }
+}
+
+/* 地形を描き込む（木・山・水のゆらぎ・砦の旗…）。安価に。 */
+function decorate(ctx, t, x, y, T, now, gx, gy) {
+  const id = t.id;
+  const hash = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+  if (id === 'forest' || id === 'thicket') {
+    const n = id === 'thicket' ? 3 : 2;
+    ctx.fillStyle = id === 'thicket' ? '#16331c' : '#1f4a26';
+    for (let i = 0; i < n; i++) {
+      const ox = T * (0.28 + 0.44 * ((hash >> (i * 3)) & 7) / 7), oy = T * (0.4 + 0.4 * ((hash >> (i * 4)) & 3) / 3);
+      const tw = T * 0.2;
+      ctx.beginPath(); ctx.moveTo(x + ox, y + oy - tw); ctx.lineTo(x + ox - tw * 0.7, y + oy + tw * 0.6); ctx.lineTo(x + ox + tw * 0.7, y + oy + tw * 0.6); ctx.closePath(); ctx.fill();
+    }
+  } else if (id === 'mountain' || id === 'peak' || id === 'hill') {
+    ctx.fillStyle = id === 'hill' ? 'rgba(0,0,0,.16)' : '#5b5346';
+    ctx.beginPath(); ctx.moveTo(x + T * 0.5, y + T * 0.2); ctx.lineTo(x + T * 0.16, y + T * 0.82); ctx.lineTo(x + T * 0.84, y + T * 0.82); ctx.closePath(); ctx.fill();
+    if (id === 'peak') { ctx.fillStyle = '#e9eef4'; ctx.beginPath(); ctx.moveTo(x + T * 0.5, y + T * 0.2); ctx.lineTo(x + T * 0.4, y + T * 0.4); ctx.lineTo(x + T * 0.6, y + T * 0.4); ctx.closePath(); ctx.fill(); }
+  } else if (id === 'water' || id === 'shallow' || id === 'lava' || id === 'ice') {
+    const ph = now / (id === 'lava' ? 700 : 1100) + (gx + gy) * 0.7;
+    ctx.strokeStyle = id === 'lava' ? 'rgba(255,200,120,.5)' : id === 'ice' ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.22)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 2; i++) {
+      const yy = y + T * (0.4 + i * 0.3) + Math.sin(ph + i) * T * 0.05;
+      ctx.beginPath(); ctx.moveTo(x + T * 0.15, yy); ctx.quadraticCurveTo(x + T * 0.5, yy + Math.sin(ph + i * 2) * T * 0.08, x + T * 0.85, yy); ctx.stroke();
+    }
+  } else if (id === 'fort' || id === 'throne' || id === 'gate') {
+    ctx.fillStyle = id === 'throne' ? '#ffd86a' : '#cdd6ea';
+    ctx.fillRect(x + T * 0.46, y + T * 0.2, T * 0.06, T * 0.5);
+    ctx.beginPath(); ctx.moveTo(x + T * 0.52, y + T * 0.22); ctx.lineTo(x + T * 0.74, y + T * 0.3); ctx.lineTo(x + T * 0.52, y + T * 0.38); ctx.closePath(); ctx.fill();
+  } else if (id === 'wall') {
+    ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, y + T * 0.5); ctx.lineTo(x + T, y + T * 0.5); ctx.moveTo(x + T * 0.5, y); ctx.lineTo(x + T * 0.5, y + T * 0.5); ctx.moveTo(x + T * 0.25, y + T * 0.5); ctx.lineTo(x + T * 0.25, y + T); ctx.moveTo(x + T * 0.75, y + T * 0.5); ctx.lineTo(x + T * 0.75, y + T); ctx.stroke();
+  } else if (id === 'ruins') {
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x + T * 0.2, y + T * 0.3, T * 0.18, T * 0.4); ctx.fillRect(x + T * 0.55, y + T * 0.25, T * 0.16, T * 0.45);
   }
 }
 

@@ -13,6 +13,7 @@ import { chapterScript, SUPPORTS } from '../core/script.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
+import { FX } from './fx.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('stage');
@@ -26,6 +27,7 @@ const S = {
   selected: null, cursor: null, preMovePos: null,
   moveTiles: null, atkTiles: null, staffTiles: null, path: null,
   anim: null, popups: [], busy: false,
+  fx: new FX(), lastNow: 0,
 };
 
 /* ---------- 画面 ---------- */
@@ -53,7 +55,17 @@ function loop(now) {
     if (p >= 1 && S.anim.resolve) { const r = S.anim.resolve; S.anim = null; r(); }
   }
   if (S.popups.length) S.popups = S.popups.filter(pp => now - pp.t < 900);
-  if (S.board) draw(ctx, S, now);
+  const dt = Math.min(0.05, (now - (S.lastNow || now)) / 1000); S.lastNow = now;
+  S.fx.update(dt);
+  S.cam._vw = S.vw; S.cam._vh = S.vh;
+  if (S.board) {
+    const sh = S.fx.shake;
+    ctx.save();
+    if (sh) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+    draw(ctx, S, now);
+    S.fx.draw(ctx, S.cam);
+    ctx.restore();
+  }
 }
 
 /* ---------- ゲーム開始 ---------- */
@@ -277,12 +289,12 @@ async function playEvents(events) {
   for (const e of events) {
     const tgt = e.tgt != null ? uOf(e.tgt) : (e.uid != null ? uOf(e.uid) : null);
     const by = e.by != null ? uOf(e.by) : null;
-    if (e.type === 'miss') { if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(350); }
-    else if (e.type === 'hit') { if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); } sfx('hit'); await sleep(420); }
-    else if (e.type === 'crit') { if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); } sfx('crit'); await sleep(560); }
+    if (e.type === 'miss') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(340); }
+    else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd0a0', 8); } sfx('hit'); await sleep(420); }
+    else if (e.type === 'crit') { if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd86a', 16, 4.5); S.fx.addShake(9); } sfx('crit'); await sleep(560); }
     else if (e.type === 'skill') { if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff'); await sleep(260); }
-    else if (e.type === 'drain') { if (by && by.pos) popup(by.pos, '+' + e.amount, '#9cf0c0'); await sleep(220); }
-    else if (e.type === 'heal') { if (tgt && tgt.pos) popup(tgt.pos, '+' + e.amount, '#9cf0c0'); await sleep(220); }
+    else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
+    else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
     else if (e.type === 'poison' || e.type === 'burn') { if (tgt && tgt.pos) popup(tgt.pos, String(e.dmg), '#b6e07c'); await sleep(220); }
     else if (e.type === 'restore' || e.type === 'buff' || e.type === 'debuff') { await sleep(120); }
     // 死亡
@@ -292,6 +304,14 @@ async function playEvents(events) {
   for (const u of S.board.units) if (!isAlive(u) && u.pos) { S.board.remove(u); u.pos = null; }
 }
 function flashHit(u) { S.anim = { type: 'hit', uid: u.uid, until: performance.now() + 260 }; setTimeout(() => { if (S.anim && S.anim.type === 'hit') S.anim = null; }, 280); }
+function attackFx(by, tgt, crit) {
+  if (!by.pos || !tgt.pos) return;
+  const w = equippedWeapon(by);
+  const dist = manhattan(by.pos, tgt.pos);
+  if (w && w.magic) S.fx.shoot(by.pos, tgt.pos, { kind: 'bolt', color: '#c9b3ff', dur: 0.18, onArrive: () => S.fx.burst(tgt.pos.x, tgt.pos.y, '#b79bff') });
+  else if (dist > 1) S.fx.shoot(by.pos, tgt.pos, { kind: 'arrow', dur: 0.16 });
+  else S.fx.slash(by.pos, tgt.pos, crit ? '#ffd86a' : '#ffffff');
+}
 function skillName(id) { const m = { sol: '太陽', luna: '月光', astra: '流星', pierce: '貫通', colossus: '剛撃', lethality: '瞬殺！', aether: '天空', aegis: '盾防', pavise: '大盾', miracle: '祈り' }; return m[id] || id; }
 
 async function showLevelUps(u, ups) {
@@ -343,6 +363,7 @@ async function showOutcome() {
   const win = S.battle.victory;
   stopMusic();
   sfx(win ? 'victory' : 'defeat');
+  if (win) S.fx.confetti(70);
   playMusic(win ? 'victory' : 'defeat');
   const ch = S.game.chapter;
   if (win) await playDialogue(chapterScript(S.game.chapterIndex).win);
