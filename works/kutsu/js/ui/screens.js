@@ -6,6 +6,7 @@
 import { slotName, SLOTS, equipBonus } from '../core/inventory.js';
 import { hungerWord, xpForLevel } from '../core/player.js';
 import { statusName } from '../core/status.js';
+import { monsterEntry } from '../core/lore.js';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 
@@ -89,6 +90,20 @@ export class Screens {
     this.mode = 'msg';
   }
 
+  bestiary(game) {
+    const keys = game.know.encountered();
+    if (!keys.length) { this.message('鑑識帳', 'まだ何も見ていない。窟で出会ったものが、ここに記される。'); return; }
+    const entries = keys.map(k => monsterEntry(k, game.know)).sort((a, b) => a.depth[0] - b.depth[0] || b.slain - a.slain);
+    let html = '';
+    for (const e of entries) {
+      html += `<div class="brow"><span class="glyph" style="color:${e.color}">${e.glyph}</span><span class="bn">${esc(e.name)}</span><span class="bk">見 ${e.seen}・倒 ${e.slain}　第${e.depth[0]}–${e.depth[1]}階</span></div>
+        <div class="blore">${esc(e.lore)}</div>`;
+    }
+    const t = game.know.total();
+    this.panel(`鑑識帳　${t.kinds} 種・${t.slain} 体`, html, 'Escで閉じる');
+    this.mode = 'msg';
+  }
+
   help() {
     const rows = [
       ['移動', '矢印 / hjkl / yubn（斜め）/ テンキー'],
@@ -105,6 +120,9 @@ export class Screens {
       ['d', '置く（drop）'],
       ['s', '周りを調べる（隠し扉・罠）'],
       ['@ / C', '人物を見る'],
+      ['x', '調べる（カーソルで見回す）'],
+      ['L', '鑑識帳（出会った魔物）'],
+      ['M', '音の入切'],
       ['S', 'この潜行を保存（自動でも保存）'],
       ['? ', 'この一覧'],
     ];

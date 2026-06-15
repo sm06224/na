@@ -96,6 +96,15 @@ export class Renderer {
 
     // 直近の魔法の筋
     this.drawBolt(game, cx, cy);
+
+    // 「調べる」のカーソル
+    if (this.cursor) {
+      const s = this.toScreen(this.cursor.x, this.cursor.y, cx, cy);
+      if (s) {
+        ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 2;
+        ctx.strokeRect(s.x - cell / 2 + 1.5, s.y - cell / 2 + 1.5, cell - 3, cell - 3);
+      }
+    }
   }
 
   toScreen(x, y, cx, cy) {

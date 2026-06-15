@@ -65,6 +65,19 @@ body {
 .grave.won { color: #ffd24a; }
 code { background: rgba(255,255,255,.08); padding: .1em .4em; border-radius: 4px; font-size: .85em; }
 
+/* 鑑識帳 */
+.brow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.brow .glyph { font-family: ui-monospace, monospace; width: 1.2em; text-align: center; }
+.brow .bn { font-size: .9rem; }
+.brow .bk { margin-left: auto; font-size: .68rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.blore { font-size: .76rem; color: #b2b8c8; line-height: 1.6; padding: 2px 0 4px 1.9em; }
+
+/* 「調べる」札 */
+#examine { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 18;
+  background: rgba(10,12,18,.92); border: 1px solid rgba(200,168,90,.4); color: var(--ink);
+  border-radius: 10px; padding: .55em 1em; font-size: .82rem; max-width: 90vw; text-align: center;
+  pointer-events: none; }
+
 /* 表紙 */
 #title { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 2rem;
   background: radial-gradient(120% 90% at 50% 16%, rgba(20,18,28,.7), rgba(5,6,10,.97)); }
