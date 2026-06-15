@@ -204,6 +204,18 @@ jobs:
         working-directory: works/wari
         run: node --test tests/*.test.js
 
+  kutsu:
+    name: kutsu — a labyrinth no one designs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dig a dungeon from a seed and walk it headless
+        working-directory: works/kutsu
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

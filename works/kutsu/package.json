@@ -1,0 +1,10 @@
+{
+  "name": "kutsu",
+  "version": "0.1.0",
+  "description": "窟 — a labyrinth no one designs. From a single seed, a whole roguelike is born: caves and corridors, monsters and treasure, and a chronicle of the descent. Same seed, same dungeon. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
