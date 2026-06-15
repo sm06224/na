@@ -6,7 +6,7 @@
 
 import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
-import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed } from './unit.js';
+import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed, gainWexp } from './unit.js';
 import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
@@ -138,6 +138,11 @@ export class Battle {
       const cHit = res.events.some(e => (e.type === 'hit' || e.type === 'crit') && e.by === def.uid);
       if (cHit) { res.defLevelUps = gainExp(def, battleExp(def, att, !isAlive(att)), this.rng); }
     }
+    // 武器熟練度：使えば上がる（攻め手・反撃した受け手とも）
+    const aw = equippedWeapon(att);
+    if (aw && aw.wtype !== 'staff') { const up = gainWexp(att, aw.wtype, 2); if (up) this.record(`${att.name}　${aw.wtype} 熟練 ${up}`); }
+    const dw = equippedWeapon(def);
+    if (isAlive(def) && dw && dw.wtype !== 'staff' && res.events.some(e => e.by === def.uid)) gainWexp(def, dw.wtype, 1);
     this.record(combatLine(att, def, res.events));
     this.cleanupDead();
     this.checkEnd();
@@ -155,6 +160,7 @@ export class Battle {
       if (u.side === 'player') gainExp(u, 12, this.rng);
     }
     u.hasActed = true; u.hasMoved = true;
+    gainWexp(u, 'staff', 2);
     this.record(`${u.name} → ${target.name}　${w.staff === 'heal' ? '回復' : '状態回復'}`);
     return { events };
   }
@@ -191,6 +197,7 @@ export class Battle {
   doAreaAttack(caster, center) {
     const res = resolveArea(caster, center, this.board, this.rng);
     caster.hasActed = true; caster.hasMoved = true;
+    const aw = equippedWeapon(caster); if (aw) gainWexp(caster, aw.wtype, 2);
     if ((caster.side === 'player' || caster.side === 'ally') && res.targets.length) {
       let kills = 0;
       for (const t of res.targets) if (!isAlive(t)) kills++;
