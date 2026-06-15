@@ -18,7 +18,7 @@ import { playMusic, stopMusic, setMusicMuted } from './music.js';
 import { FX } from './fx.js';
 import { drawPortrait } from './portrait.js';
 import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
-import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS, hireRoster, hire, canHire, dismiss, canDismiss } from '../core/party.js';
+import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS, hireRoster, hire, canHire, dismiss, canDismiss, jobChoices, reclass, canReclass, RECLASS_COST } from '../core/party.js';
 import { encodeSave, decodeSave } from '../core/save.js';
 import { item as itemDef2 } from '../core/items.js';
 
@@ -776,6 +776,20 @@ function baseGold() { $('baseGold').textContent = `所持金 ${S.game.gold} G`; 
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 function mkbtn(label, cls, fn, disabled) { const b = el('button', 'minibtn ' + (cls || ''), label); b.disabled = !!disabled; b.onclick = fn; return b; }
 
+function renderJobPicker(u) {
+  baseGold();
+  const body = $('baseBody'); body.innerHTML = '';
+  body.appendChild(el('div', 'subhead', `${u.name} のジョブを選ぶ（${RECLASS_COST}G・能力は引き継ぐ）`));
+  for (const id of jobChoices(u)) {
+    const row = el('div', 'shoprow');
+    row.appendChild(el('span', 'nm', classDef(id).name));
+    row.appendChild(mkbtn('就く', 'buy', () => {
+      if (reclass(S.game, u, id)) { sfx('levelup'); autosave(); renderBase('party'); }
+    }, !canReclass(S.game, u, id)));
+    body.appendChild(row);
+  }
+  body.appendChild(mkbtn('もどる', 'ghost', () => renderBase('party')));
+}
 function renderBase(tab) {
   baseGold();
   const body = $('baseBody'); body.innerHTML = '';
@@ -812,6 +826,9 @@ function renderBase(tab) {
       for (const to of promotionOptions(u)) {
         body.appendChild(mkbtn(`★ ${classDef(to).name}へ転職`, 'buy', () => { doPromote(u, to); sfx('levelup'); autosave(); renderBase('party'); }));
       }
+    }
+    if (!u.isLord && jobChoices(u).length) {
+      body.appendChild(mkbtn(`ジョブ転職（${RECLASS_COST}G）`, '', () => renderJobPicker(u)));
     }
     if (canDismiss(S.game, u)) {
       body.appendChild(mkbtn('この者を解雇', 'ghost', () => {

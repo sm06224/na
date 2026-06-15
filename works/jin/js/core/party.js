@@ -4,9 +4,10 @@
    ============================================================ */
 
 import { item as itemDef } from './items.js';
-import { classDef, classCaps } from './classes.js';
-import { canUse, autoEquip, promote, createUnit, isAlive } from './unit.js';
-import { capStats } from './stats.js';
+import { classDef, classCaps, CLASS_LIST } from './classes.js';
+import { canUse, autoEquip, createUnit, isAlive, seedWexp } from './unit.js';
+import { promote } from './unit.js';
+import { capStats, STAT_KEYS } from './stats.js';
 import { RNG } from './rng.js';
 
 export const MAX_ITEMS = 5;
@@ -110,6 +111,39 @@ export function dismiss(game, unit) {
   if (i < 0) return false;
   for (const it of unit.items) game.convoy.push(it.id);   // 持ち物は荷駄へ返す
   game.party.splice(i, 1);
+  return true;
+}
+
+/* ---- ジョブ（自由な再クラス） ---- */
+export const RECLASS_COST = 2000;
+const RECLASS_BLOCK = ['lord', 'greatlord', 'villager'];
+/* この者が転職できる同じ段の職（敵専用・特殊は除く） */
+export function jobChoices(unit) {
+  const tier = classDef(unit.classId).tier;
+  return CLASS_LIST.filter(c => c.tier === tier && !c.enemyOnly && !RECLASS_BLOCK.includes(c.id) && c.id !== unit.classId).map(c => c.id);
+}
+export function canReclass(game, unit, toId) {
+  if (unit.isLord) return false;
+  if (!jobChoices(unit).includes(toId)) return false;
+  return game.gold >= RECLASS_COST;
+}
+export function reclass(game, unit, toId) {
+  if (!canReclass(game, unit, toId)) return false;
+  const cd = classDef(unit.classId), to = classDef(toId);
+  game.gold -= RECLASS_COST;
+  // 能力は本人のもの。職の素質差ぶんを少し調整（転職の作法）
+  for (const k of STAT_KEYS) {
+    const diff = Math.round(((to.bases[k] || 0) - (cd.bases[k] || 0)) * 0.5);
+    unit.statsBase[k] += diff;
+  }
+  unit.classId = toId; unit.mov = to.mov; unit.mode = to.mode;
+  unit.skills = [...new Set([...unit.skills, ...(to.skills || [])])];
+  unit.statsBase = capStats(unit.statsBase, classCaps(toId));
+  unit.maxHp = unit.statsBase.hp; unit.hp = Math.min(unit.hp, unit.maxHp);
+  const rs = seedWexp(to, Math.max(1, unit.level), unit.items);
+  unit.wexp = unit.wexp || {};
+  for (const t in rs) unit.wexp[t] = Math.max(unit.wexp[t] || 0, rs[t]);
+  autoEquip(unit);
   return true;
 }
 
