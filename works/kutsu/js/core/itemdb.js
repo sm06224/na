@@ -114,6 +114,20 @@ add('r_keen', { category: 'ring', name: '冴えの指輪', glyph: '=', slot: 'ri
 add('f_jerky', { category: 'food', name: '干物', glyph: '%', color: '#a86b3a', nutrition: 350, stackable: true, depth: 2, rarity: 4 });
 add('f_bread', { category: 'food', name: '堅麺麭', glyph: '%', color: '#c8a060', nutrition: 400, stackable: true, depth: 1, rarity: 5 });
 
+/* ===== 遺物（artifact・唯一・名のある品。見た目は隠さない） ===== */
+add('art_yosuzume', { category: 'weapon', name: '銘刀「夜雀」', glyph: ')', color: '#bcd0ff', slot: 'weapon', damage: '1d8+1', acc: 3, weight: 2, artifact: true, unique: true, rarity: 0, depth: 6, passive: { eva: 2 }, brand: { status: { type: 'slow', turns: 6 }, chance: 0.4, element: 'frost' } });
+add('art_kagutsuchi', { category: 'weapon', name: '火刀「カグツチ」', glyph: ')', color: '#ff9a4a', slot: 'weapon', damage: '1d9+1', acc: 2, weight: 3, artifact: true, unique: true, rarity: 0, depth: 9, passive: { str: 1 }, brand: { status: { type: 'burning', turns: 3, power: 2 }, chance: 0.45, element: 'fire' } });
+add('art_kubikiri', { category: 'weapon', name: '大太刀「首切」', glyph: ')', color: '#eef2fb', slot: 'weapon', damage: '2d7', acc: 1, weight: 6, twoHanded: true, artifact: true, unique: true, rarity: 0, depth: 12, passive: { str: 2, acc: 1 } });
+add('art_aegis', { category: 'armor', name: '古盾「アイギス」', glyph: '[', color: '#d8c878', slot: 'shield', defense: 5, weight: 4, artifact: true, unique: true, rarity: 0, depth: 8, passive: { def: 2, resistFire: 0.3 } });
+add('art_oitamashii', { category: 'armor', name: '老鎧「負魂」', glyph: '[', color: '#9a8a6a', slot: 'armor', defense: 7, weight: 6, artifact: true, unique: true, rarity: 0, depth: 10, passive: { regen: 1, def: 1 } });
+add('art_tsukikage', { category: 'armor', name: '月影の外套', glyph: '[', color: '#9aa0d8', slot: 'cloak', defense: 2, weight: 1, artifact: true, unique: true, rarity: 0, depth: 7, passive: { eva: 3 } });
+add('art_homura', { category: 'ring', name: '焔石の指輪', glyph: '=', color: '#ff7a4a', slot: 'ring', artifact: true, unique: true, rarity: 0, depth: 8, passive: { resistFire: 0.6, str: 1 } });
+add('art_inori', { category: 'ring', name: '祈りの指輪', glyph: '=', color: '#d8e0ff', slot: 'ring', artifact: true, unique: true, rarity: 0, depth: 9, passive: { regen: 2, def: 1 } });
+add('art_kazeori', { category: 'ring', name: '風折の指輪', glyph: '=', color: '#9af0c0', slot: 'ring', artifact: true, unique: true, rarity: 0, depth: 7, passive: { eva: 3, acc: 2 } });
+
+export function artifactDefs() { return Object.values(DB).filter(d => d.artifact); }
+export function artifactsForDepth(depth) { return artifactDefs().filter(d => (d.depth || 1) <= depth); }
+
 /* ----- 見た目（未鑑定の素材）。idStore が種でこれを役職に割り当てる ----- */
 export const APPEARANCE = {
   potion: ['青', '赤', '緑', '黄', '紫', '橙', '桃', '黒', '白', '銀', '金', '濁った', '泡立つ', '光る', '澄んだ', '油状の'],
@@ -124,7 +138,7 @@ export const APPEARANCE = {
 
 export function getItemDef(key) { return DB[key]; }
 export function allItemDefs() { return Object.values(DB); }
-export function itemKeysByCategory(cat) { return Object.values(DB).filter(d => d.category === cat).map(d => d.key); }
+export function itemKeysByCategory(cat) { return Object.values(DB).filter(d => d.category === cat && !d.artifact).map(d => d.key); }
 
 /* ある深さで出うる品（落とし物テーブル用） */
 export function itemsForDepth(depth) {
