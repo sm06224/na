@@ -1,0 +1,10 @@
+{
+  "name": "tane",
+  "version": "1.0.0",
+  "description": "種 — plants grown from a seed. A stochastic L-system unfolds from a single seed and a turtle traces it into stems, leaves and blossoms; gravity and light (tropism) bend the way it grows. Same seed, same plant — down to the last leaf. Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

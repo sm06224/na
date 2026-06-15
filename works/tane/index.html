@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="種 (tane) — 種ひとつから、草木がひとりでに芽ぐむ。一文字の書き換え規則（L-システム）が種からほどけ、亀がなぞって茎と葉になる。重力と陽が育つ向きを曲げる。同じ種からは、葉の一枚まで同じ草木。">
+<meta name="theme-color" content="#070d0b">
+<title>種 — plants grown from a seed</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="field"></canvas>
+
+<div id="hud">
+  <h1>種 <span class="en">/ tane</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>はじめに、土はからっぽだった。<br>
+       種をひとつ蒔くと、一文字の規則がほどけるように同じ文字を書き換えつづけ、<br>
+       亀がそれをなぞって茎になり、枝を分け、葉をひらく。<br>
+       育つ向きは、重力と陽（屈性）がそっと曲げる。<br>
+       誰も、枝ぶりを描いてはいない。</p>
+    <button id="bOpen">土に蒔く</button>
+    <p class="fine">同じ種からは、葉の一枚までちがわぬ同じ草木。画面にふれると、別の種が芽ぐむ。</p>
+  </div>
+</div>
+
+<aside id="card" hidden>
+  <button id="cardClose" class="x">×</button>
+  <h2 id="cName"></h2>
+  <p id="cKind"></p>
+  <p id="cLine"></p>
+  <p id="cTale"></p>
+</aside>
+
+<nav id="bar" hidden>
+  <button id="bAgain" class="ghost">もう一度</button>
+  <button id="bLetter" class="ghost">最初の種</button>
+  <button id="bShare" class="ghost">この草木を送る</button>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
