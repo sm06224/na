@@ -17,6 +17,13 @@ function shade(hex, f) {
   return `rgb(${r | 0},${g | 0},${b | 0})`;
 }
 
+/* 立体（疑似クォータービュー）モード：地形を高さのある積み木として描く */
+let VIEW3D = false;
+export function setView3d(v) { VIEW3D = !!v; }
+export function isView3d() { return VIEW3D; }
+const ELEV = { peak: 16, mountain: 13, wall: 14, hill: 7, forest: 4, thicket: 5, fort: 5, gate: 5, throne: 6, ruins: 4, water: -4, shallow: -2, lava: -2, ice: -1, swamp: -2 };
+export function elevOf(id, T) { return (ELEV[id] || 0) * (T / 46); }
+
 export class Camera {
   constructor() { this.x = 0; this.y = 0; this.scale = 1; }
   get tile() { return BASE_TILE * this.scale; }
@@ -53,27 +60,36 @@ export function draw(ctx, state, now) {
     for (let x = x0; x <= x1; x++) {
       const t = terrainOf(board.terrain.get(x, y));
       const s = cam.worldToScreen(x, y);
-      // 立体感：上を明るく下を暗く（縦グラデ）
-      const g2 = ctx.createLinearGradient(s.x, s.y, s.x, s.y + T);
+      const e = VIEW3D ? elevOf(t.id, T) : 0;
+      const ty = s.y - e;                          // 立体：高さぶん上へ持ち上げた天面
+      if (e > 0) {                                 // 側面（積み木の壁）
+        ctx.fillStyle = shade(t.color, -0.42);
+        ctx.fillRect(s.x, ty + T - 1, T + 1, e + 2);
+      } else if (e < 0) {                          // 窪み（水・溶岩）
+        ctx.fillStyle = shade(t.color, -0.5);
+        ctx.fillRect(s.x, s.y, T + 1, T + 1);
+      }
+      // 天面：上を明るく下を暗く（縦グラデ）
+      const g2 = ctx.createLinearGradient(s.x, ty, s.x, ty + T);
       g2.addColorStop(0, shade(t.color, 0.13));
       g2.addColorStop(0.55, t.color || '#5c7a4a');
       g2.addColorStop(1, shade(t.color, -0.2));
       ctx.fillStyle = g2;
-      ctx.fillRect(s.x, s.y, T + 1, T + 1);
+      ctx.fillRect(s.x, ty, T + 1, T + 1);
       // ざらり（決定的な斑点）
       const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
       ctx.fillStyle = (h & 1) ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)';
       for (let k = 0; k < 3; k++) {
         const px = s.x + ((h >> (k * 5)) & 31) / 31 * T;
-        const py = s.y + ((h >> (k * 4 + 2)) & 31) / 31 * T;
+        const py = ty + ((h >> (k * 4 + 2)) & 31) / 31 * T;
         ctx.fillRect(px, py, T * 0.12, T * 0.12);
       }
-      decorate(ctx, t, s.x, s.y, T, now, x, y);
+      decorate(ctx, t, s.x, ty, T, now, x, y);
       // 縁の面取り（上＝光、下＝影）
       ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(s.x + 0.5, s.y + T - 0.5); ctx.lineTo(s.x + 0.5, s.y + 0.5); ctx.lineTo(s.x + T - 0.5, s.y + 0.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x + 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + 0.5); ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.18)';
-      ctx.beginPath(); ctx.moveTo(s.x + T - 0.5, s.y + 0.5); ctx.lineTo(s.x + T - 0.5, s.y + T - 0.5); ctx.lineTo(s.x + 0.5, s.y + T - 0.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x + T - 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + T - 0.5); ctx.stroke();
     }
   }
 
@@ -111,8 +127,9 @@ export function draw(ctx, state, now) {
     let px = u.pos.x, py = u.pos.y;
     if (anim && anim.type === 'move' && anim.uid === u.uid) { px = anim.cx; py = anim.cy; }
     const s = cam.worldToScreen(px, py);
+    const e = VIEW3D ? elevOf(board.terrainAt(Math.round(px), Math.round(py)).id, T) : 0;
     const shake = (anim && anim.type === 'hit' && anim.uid === u.uid) ? Math.sin(now / 30) * 3 : 0;
-    drawToken(ctx, u, s.x + T / 2 + shake, s.y + T / 2, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
+    drawToken(ctx, u, s.x + T / 2 + shake, s.y + T / 2 - e, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
   }
 
   // ダメージ表示など
