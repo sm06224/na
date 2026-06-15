@@ -6,6 +6,14 @@
 import { keyOf } from './util.js';
 import { isWalkable, isClear, T } from './tile.js';
 
+/* aiState の中の盗品（Item）だけ畳む */
+function serializeAiState(st) {
+  if (!st) return {};
+  const out = { ...st };
+  if (st.loot && typeof st.loot.serialize === 'function') out.loot = { __item: st.loot.serialize() };
+  return out;
+}
+
 export class Board {
   constructor(level) {
     this.level = level;
@@ -54,6 +62,20 @@ export class Board {
   /* 仕掛け */
   featureAt(x, y) { return this.features.find(f => f.x === x && f.y === y) || null; }
   addFeature(f) { this.features.push(f); return f; }
+
+  /* 保存：地形・床の品・仕掛け・魔物（プレイヤーは別途） */
+  serialize() {
+    return {
+      level: this.level.serialize(),
+      items: this.items.map(i => i.serialize()),
+      features: this.features.map(f => f.serialize()),
+      monsters: this.actors.filter(a => a.faction !== 'player').map(a => ({
+        defId: a.defId, id: a.id, x: a.x, y: a.y, hp: a.hp, maxhp: a.maxhp,
+        energy: a.energy, statuses: a.statuses, flags: a.flags,
+        aiState: serializeAiState(a.aiState), faction: a.faction, ai: a.ai, peaceful: a.peaceful,
+      })),
+    };
+  }
 
   /* 近くの空いた歩けるマス（召喚・落とし物の押し出しに） */
   freeNear(x, y, rng, maxR = 4) {
