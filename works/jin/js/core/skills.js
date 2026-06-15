@@ -4,11 +4,13 @@
    rate(unit) は発動率(%)を返す（多くは技%）。
    ============================================================ */
 
+import { effectiveStats } from './unit.js';
+
 export const SKILLS = {};
 function sk(o) { SKILLS[o.id] = o; return o; }
 
-const sklRate = u => (u.stats.skl | 0);
-const halfSkl = u => Math.floor((u.stats.skl | 0) / 2);
+const sklRate = u => (effectiveStats(u).skl | 0);
+const halfSkl = u => Math.floor((effectiveStats(u).skl | 0) / 2);
 
 /* ---- 戦闘で発動する閃き（攻撃時） ---- */
 sk({ id: 'sol', name: '太陽', kind: 'battle', trigger: 'attack', rate: halfSkl,
@@ -33,7 +35,7 @@ sk({ id: 'aegis', name: '盾防', kind: 'battle', trigger: 'defend', rate: halfS
   effect: 'halveRanged', desc: '遠隔の傷を半分に（技/2 %）。' });
 sk({ id: 'pavise', name: '大盾', kind: 'battle', trigger: 'defend', rate: halfSkl,
   effect: 'halveMelee', desc: '近接の傷を半分に（技/2 %）。' });
-sk({ id: 'miracle', name: '祈り', kind: 'battle', trigger: 'defend', rate: u => (u.stats.lck | 0),
+sk({ id: 'miracle', name: '祈り', kind: 'battle', trigger: 'defend', rate: u => (effectiveStats(u).lck | 0),
   effect: 'survive', desc: '致命の一撃を HP1 で耐える（運 %）。' });
 
 /* ---- 常時の素質 ---- */

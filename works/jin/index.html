@@ -33,8 +33,29 @@
     <div class="btnrow">
       <button id="startBtn" class="big">出陣する</button>
       <button id="randBtn" class="ghost">種をふる</button>
+      <button id="codexBtn" class="ghost">図鑑</button>
     </div>
+    <label class="optrow"><input type="checkbox" id="setpieceChk"> 手作りの設置マップで戦う（種の生成ではなく）</label>
     <p class="fine">タップで選んで動かす。二本指で拡大、ドラッグで見回す。長押しで詳細。</p>
+  </div>
+</div>
+
+<!-- 台詞 -->
+<div id="dialogue" class="overlay dlg" hidden>
+  <div class="dlgbox">
+    <div id="dlgWho" class="dlgwho"></div>
+    <div id="dlgText" class="dlgtext"></div>
+    <div class="dlgmore">▼ タップで送る</div>
+  </div>
+</div>
+
+<!-- 図鑑 -->
+<div id="codex" class="overlay" hidden>
+  <div class="card codexcard">
+    <button id="codexClose" class="x">×</button>
+    <h2>図鑑</h2>
+    <nav id="codexTabs" class="codextabs"></nav>
+    <div id="codexBody" class="codexbody"></div>
   </div>
 </div>
 

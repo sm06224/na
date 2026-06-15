@@ -8,6 +8,9 @@ import { createUnit, resetUid, isAlive } from './unit.js';
 import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
+import { SETPIECES, parseMap } from './maps.js';
+import './expansion.js';            // 追加の職・素質を登録簿へ
+import './items_extra.js';          // 追加の得物を登録簿へ
 
 /* ---- 旗下の者たち（種で初期能力が決まる） ---- */
 export const ROSTER = [
@@ -59,9 +62,10 @@ export const CHAPTERS = [
 ];
 
 export class Game {
-  constructor(seed) {
+  constructor(seed, opts = {}) {
     this.seed = (typeof seed === 'number' ? seed : (seed | 0)) >>> 0;
     this.rng = new RNG(this.seed);
+    this.useSetpiece = !!opts.setpiece;     // 手作りの設置マップで戦うか
     this.chapterIndex = 0;
     this.gold = 5000;
     this.convoy = ['vulnerary', 'vulnerary', 'concoction', 'steel_sword', 'hand_axe'];
@@ -85,28 +89,41 @@ export class Game {
   startChapter(index = this.chapterIndex) {
     const ch = CHAPTERS[index];
     const cr = this.rng.derive('ch' + index);
-    const gen = generateMap(cr.derive('map'), {
-      w: ch.w, h: ch.h, biome: ch.biome, objective: ch.objective, enemyCount: ch.count,
-    });
-    const board = gen.board;
+
+    // 戦場：手作りの設置マップ、または種からの生成
+    let board, deployTiles, spawns, objective, bossSeat = null;
+    if (this.useSetpiece && SETPIECES[index]) {
+      const parsed = parseMap(SETPIECES[index]);
+      board = parsed.board; deployTiles = parsed.deploy.slice(); spawns = parsed.spawns.slice(0, ch.count);
+      bossSeat = parsed.boss;
+      if (ch.objective === 'seize') {
+        let tx, ty, hasThrone = false;
+        board.terrain.forEach((x, y, v) => { if (v === 'throne') { tx = x; ty = y; hasThrone = true; } });
+        if (!hasThrone) { const p = bossSeat || spawns[spawns.length - 1] || { x: board.w - 2, y: (board.h / 2) | 0 }; board.setTerrain(p.x, p.y, 'throne'); tx = p.x; ty = p.y; }
+        objective = { type: 'seize', x: tx, y: ty };
+      } else {
+        objective = { type: ch.objective === 'defeat_boss' ? 'rout' : ch.objective };
+      }
+    } else {
+      const gen = generateMap(cr.derive('map'), { w: ch.w, h: ch.h, biome: ch.biome, objective: ch.objective, enemyCount: ch.count });
+      board = gen.board; deployTiles = gen.deploy; spawns = gen.spawns; objective = gen.objective;
+    }
 
     // 味方を布陣マスに置く（生存者のみ）
     const living = this.livingParty();
-    const deploy = gen.deploy.slice(0, Math.max(living.length, 1));
+    const deploy = deployTiles.slice(0, Math.max(living.length, 1));
     living.forEach((u, i) => {
-      const tile = deploy[i % deploy.length] || gen.deploy[0];
+      const tile = deploy[i % deploy.length] || deployTiles[0];
       u.hp = u.maxHp; u.status = []; u.buffs = {};
       u.hasMoved = false; u.hasActed = false;
       board.add(u, tile.x, tile.y);
     });
 
     // 敵とボス
-    generateEnemies(cr, board, gen.spawns, { chapter: index + 1, level: ch.level, monster: ch.monster });
-    let objective = gen.objective;
+    generateEnemies(cr, board, spawns, { chapter: index + 1, level: ch.level, monster: ch.monster });
     if (ch.boss) {
-      const bossPos = (objective.type === 'seize') ? { x: objective.x, y: objective.y }
-        : gen.spawns[gen.spawns.length - 1] || { x: ch.w - 2, y: (ch.h / 2) | 0 };
-      // ボスの足元を確保
+      const bossPos = bossSeat || (objective.type === 'seize' ? { x: objective.x, y: objective.y }
+        : spawns[spawns.length - 1] || { x: board.w - 2, y: (board.h / 2) | 0 });
       if (board.unitAt(bossPos.x, bossPos.y)) board.remove(board.unitAt(bossPos.x, bossPos.y));
       const boss = placeBoss(cr, board, { ...ch.boss, pos: bossPos });
       if (ch.objective === 'defeat_boss') objective = { type: 'defeat_boss', uid: boss.uid };
@@ -119,7 +136,7 @@ export class Game {
       maxTurns: ch.objective === 'survive' ? (ch.turns || 10) : 0,
     });
     this.battle = battle;
-    return { battle, deploy, gen, chapter: ch };
+    return { battle, deploy, chapter: ch };
   }
 
   /* 勝利時：金を得て次章へ */
