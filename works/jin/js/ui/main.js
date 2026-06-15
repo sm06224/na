@@ -7,7 +7,7 @@ import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
 import { forecast, inAttackRange, isAreaWeapon, areaTargets } from '../core/combat.js';
 import { manhattan, key } from '../core/grid.js';
-import { Camera, draw, BASE_TILE } from './render.js';
+import { Camera, draw, BASE_TILE, setView3d, isView3d } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
 import { skill as skillDef } from '../core/skills.js';
@@ -808,6 +808,7 @@ $('loadBtn').onclick = () => { const code = prompt('セーブ符号を貼って�
 $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 0; };
 $('sortieBtn').onclick = sortie;
 $('endTurn').onclick = endTurn;
+$('view3dBtn').onclick = () => { setView3d(!isView3d()); $('view3dBtn').classList.toggle('on', isView3d()); sfx('select'); };
 $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
 $('logClose').onclick = () => { $('log').hidden = true; };
 $('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) { if (S.battle && S.battle.initiative) advanceInitiative(); else maybeAuto(); } };
