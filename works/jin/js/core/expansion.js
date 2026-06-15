@@ -18,6 +18,8 @@ sk({ id: 'paragon', name: '天稟', kind: 'passive', effect: 'paragon',
   desc: '得られる経験が二倍。才ある者の伸び。' });
 sk({ id: 'charm', name: '魅力', kind: 'passive', effect: 'charm',
   desc: '周囲三マスの味方の命中・回避がわずかに上がる（旗印）。' });
+sk({ id: 'arithmetic', name: '算術', kind: 'command', effect: 'arithmetic',
+  desc: '能力値（Lv/HP/守/魔防/速）が「ある数の倍数」の敵を、間合いを問わず全員撃つ。' });
 
 /* ---- 追加の職 ---- */
 cls({
@@ -94,6 +96,14 @@ cls({
   desc: '長射程の理を操る敵の魔道長。', enemyOnly: true,
 });
 
-export const EXPANSION_CLASSES = ['dancer', 'villager', 'bard', 'darkflier', 'dread', 'trueblade', 'necromancer', 'wightlord', 'firedrake', 'archmage_foe'];
+cls({
+  id: 'calculator', name: '算術士', tier: 2, mode: 'mage', mov: 6,
+  weapons: { anima: 'B', staff: 'C' }, skills: ['arithmetic', 'focus'],
+  bases: { hp: 24, str: 0, mag: 10, skl: 9, spd: 7, lck: 5, def: 5, res: 9 },
+  growths: { hp: 60, str: 5, mag: 55, skl: 55, spd: 45, lck: 40, def: 18, res: 45 },
+  desc: '数の理で戦場を読む者。倍数の敵をまとめて討つ。',
+});
+
+export const EXPANSION_CLASSES = ['dancer', 'villager', 'bard', 'darkflier', 'dread', 'trueblade', 'necromancer', 'wightlord', 'firedrake', 'archmage_foe', 'calculator'];
 export const EXPANSION_SKILLS = ['renewal', 'paragon', 'charm'];
 export default true;

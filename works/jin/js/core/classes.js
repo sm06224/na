@@ -75,7 +75,7 @@ cls({
   weapons: { anima: 'C' }, skills: [],
   bases: { hp: 16, str: 0, mag: 5, skl: 4, spd: 5, lck: 3, def: 2, res: 4 },
   growths: { hp: 60, str: 5, mag: 60, skl: 50, spd: 50, lck: 35, def: 15, res: 40 },
-  promotesTo: ['sage', 'mortalsavant'], desc: '理（アニマ）を操る。遠近を打つ炎雷。',
+  promotesTo: ['sage', 'mortalsavant', 'calculator'], desc: '理（アニマ）を操る。遠近を打つ炎雷。',
 });
 cls({
   id: 'monk', name: '修道士', tier: 1, mode: 'mage', mov: 5,
