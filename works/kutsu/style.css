@@ -99,4 +99,11 @@ code { background: rgba(255,255,255,.08); padding: .1em .4em; border-radius: 4px
 .seedrow button, .tcard .ghost { background: linear-gradient(120deg, #c8a85a, #d8bf78); color: #1a1408; border: none; border-radius: 10px; padding: .7em 1.4em; font: inherit; font-weight: 700; cursor: pointer; }
 .tcard .ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); font-weight: 400; }
 .tcard .fine { font-size: .72rem; color: var(--dim); line-height: 1.9; }
+#scores { width: min(460px, 92vw); }
+.scores { border-top: 1px solid var(--line); padding-top: .7rem; margin-top: .3rem; }
+.scap { font-size: .68rem; color: var(--dim); letter-spacing: .08em; margin-bottom: .4rem; }
+.scrow { display: flex; gap: .6rem; align-items: center; font-size: .74rem; padding: .12em 0; color: #b8bdcc; }
+.scrow .sm { width: 1.1em; } .scrow .sc { width: 3em; color: var(--accent); }
+.scrow .sd { width: 4em; } .scrow .sk { width: 3.5em; color: var(--dim); }
+.scrow .ss { margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
 .tcard a { color: var(--accent); }

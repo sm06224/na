@@ -10,6 +10,7 @@ import { isStairs } from './tile.js';
 import { chebyshev } from './util.js';
 import { vaultsForDepth, stampVault } from './gen/vault.js';
 import { ensureConnected } from './gen/connect.js';
+import { tagForSale } from './shop.js';
 
 export const FINAL_DEPTH = 15;
 
@@ -61,6 +62,14 @@ function spawnVaultContents(game, board, rng, depth, result) {
       const m = makeMonster(rng, vaultMonster(rng, depth, s.tier), s.x, s.y);
       m.flags.sleeping = true;
       board.addActor(m);
+    } else if (s.type === 'keeper') {
+      if (board.actorAt(s.x, s.y)) continue;
+      const m = makeMonster(rng, 'shopkeeper', s.x, s.y);
+      m.flags.sleeping = false;
+      board.addActor(m);
+    } else if (s.type === 'shopitem') {
+      const it = randomItemForDepth(rng, depth + 1);
+      if (it) { tagForSale(it, depth); board.addItem(it, s.x, s.y); }
     }
   }
 }

@@ -73,6 +73,7 @@ export const MONSTER_LORE = {
   eye: '宙を漂う大きな眼。睨まれると雷が落ち、身が固まる。',
   death_knight: '呪われた騎士。重い一撃と、生気を奪う剣。',
   slime: '酸の粘体。鈍いが、武具を溶かし毒も効かぬ。',
+  shopkeeper: '地の底の商人。金を出せば品を売る。盗めば——ただでは済まない。',
 };
 
 export function monsterLore(key) {

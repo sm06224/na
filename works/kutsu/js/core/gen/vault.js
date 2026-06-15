@@ -19,6 +19,7 @@ const SPAWN = {
   '$': { type: 'gold' }, '*': { type: 'item' }, '!': { type: 'item', cat: 'potion' },
   '?': { type: 'item', cat: 'scroll' }, '/': { type: 'item', cat: 'wand' }, '○': { type: 'item', cat: 'ring' },
   'm': { type: 'monster', tier: 'weak' }, 'M': { type: 'monster', tier: 'tough' }, 'B': { type: 'monster', tier: 'boss' },
+  'K': { type: 'keeper' }, 'S': { type: 'shopitem' },
 };
 
 /* ---- テンプレート群 ---- */
@@ -195,6 +196,17 @@ export const VAULTS = [
       '#m,,B,,m#',
       '#mm,$,mm#',
       '###+#####',
+    ],
+  },
+  {
+    id: 'shop', rarity: 3, depth: [2, 14], tags: ['shop'],
+    rows: [
+      '###########',
+      '#SSSSSSSSS#',
+      '#.........#',
+      '#....K....#',
+      '#.........#',
+      '#####+#####',
     ],
   },
   {

@@ -7,7 +7,7 @@ import { Rect } from '../js/core/util.js';
 import { VAULTS, vaultsForDepth, stampVault } from '../js/core/gen/vault.js';
 
 test('vault のテンプレートはどれも矩形で、既知の記号だけ', () => {
-  const known = new Set('#x.,+\'~≈LT&_F|=%<$*!?/○mMB '.split(''));
+  const known = new Set('#x.,+\'~≈LT&_F|=%<$*!?/○mMBKS '.split(''));
   for (const v of VAULTS) {
     assert.ok(v.rows.length >= 3, `${v.id} が小さすぎる`);
     const w = v.rows[0].length;

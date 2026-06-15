@@ -9,6 +9,7 @@ import { isHelpless } from './status.js';
 /* 一体ぶんの手番。game の道具を使って動く。 */
 export function monsterTurn(game, m) {
   if (!m.alive) return;
+  if (m.ai === 'shopkeeper') return;         // 店主は怒るまで動かない
   if (isHelpless(m)) return;                 // 麻痺・気絶は動けない
   const player = game.player;
 
