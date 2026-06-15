@@ -38,8 +38,18 @@ sk({ id: 'pavise', name: '大盾', kind: 'battle', trigger: 'defend', rate: half
 sk({ id: 'miracle', name: '祈り', kind: 'battle', trigger: 'defend', rate: u => (effectiveStats(u).lck | 0),
   effect: 'survive', desc: '致命の一撃を HP1 で耐える（運 %）。' });
 
+/* ---- さらなる攻撃の閃き ---- */
+sk({ id: 'ignis', name: 'イグニス', kind: 'battle', trigger: 'attack', rate: halfSkl,
+  effect: 'ignis', desc: '魔か力の半分を、追加の傷として上乗せ（技/2 %）。' });
+sk({ id: 'adept', name: '連撃', kind: 'battle', trigger: 'attack', rate: u => (effectiveStats(u).spd | 0),
+  effect: 'adept', desc: 'もう一撃、続けて打つ（速さ %）。' });
+
 /* ---- 常時の素質 ---- */
 sk({ id: 'quickblade', name: '速駆け', kind: 'passive', effect: 'easyDouble', desc: '追撃に必要な速さ差が緩む（−1）。' });
+sk({ id: 'wrath', name: '憤怒', kind: 'passive', effect: 'wrath', desc: 'HPが半分を切ると、会心が大きく上がる。' });
+sk({ id: 'vantage', name: '先制', kind: 'passive', effect: 'vantage', desc: 'HPが半分以下なら、攻められても先に反撃する。' });
+sk({ id: 'lifetaker', name: '命奪', kind: 'passive', effect: 'lifetaker', desc: '敵を倒すと、最大HPの半分が癒える。' });
+sk({ id: 'bond', name: '絆', kind: 'passive', effect: 'bond', desc: '隣に味方がいるほど、命中・会心・回避が上がる（全員つねに）。' });
 sk({ id: 'wary', name: '待ち伏せ', kind: 'passive', effect: 'noEnemyDouble', desc: '相手に追撃されない。' });
 sk({ id: 'nihil', name: '無効化', kind: 'passive', effect: 'nihil', desc: '相手の閃き（技）を打ち消す。' });
 sk({ id: 'wing', name: '翼', kind: 'passive', effect: 'flyTerrain', desc: '地形を越えて飛ぶ（移動コスト1）。' });

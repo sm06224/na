@@ -123,14 +123,14 @@ cls({
 });
 cls({
   id: 'hero', name: '勇者', tier: 2, mode: 'foot', mov: 6,
-  weapons: { sword: 'A', axe: 'B' }, skills: ['quickblade', 'sol'],
+  weapons: { sword: 'A', axe: 'B' }, skills: ['quickblade', 'sol', 'adept'],
   bases: { hp: 30, str: 8, mag: 0, skl: 9, spd: 9, lck: 5, def: 6, res: 3 },
   growths: { hp: 80, str: 50, mag: 5, skl: 55, spd: 50, lck: 35, def: 30, res: 25 },
   desc: '傭兵の到達点。剣と斧をふるう英雄。',
 });
 cls({
   id: 'swordmaster', name: '剣聖', tier: 2, mode: 'foot', mov: 6,
-  weapons: { sword: 'S' }, skills: ['quickblade', 'astra'],
+  weapons: { sword: 'S' }, skills: ['quickblade', 'astra', 'vantage'],
   bases: { hp: 26, str: 7, mag: 0, skl: 12, spd: 12, lck: 6, def: 5, res: 4 },
   growths: { hp: 75, str: 45, mag: 5, skl: 60, spd: 60, lck: 40, def: 25, res: 25 },
   caps: { skl: 30, spd: 30 },
@@ -145,7 +145,7 @@ cls({
 });
 cls({
   id: 'berserker', name: '狂戦士', tier: 2, mode: 'foot', mov: 6,
-  weapons: { axe: 'S' }, skills: ['colossus'],
+  weapons: { axe: 'S' }, skills: ['colossus', 'wrath'],
   bases: { hp: 35, str: 12, mag: 0, skl: 7, spd: 8, lck: 3, def: 5, res: 1 },
   growths: { hp: 85, str: 65, mag: 0, skl: 50, spd: 45, lck: 25, def: 22, res: 12 },
   critBonus: 15,
@@ -209,14 +209,14 @@ cls({
 });
 cls({
   id: 'sage', name: '賢者', tier: 2, mode: 'mage', mov: 6,
-  weapons: { anima: 'S', staff: 'B' }, skills: ['focus'],
+  weapons: { anima: 'S', staff: 'B' }, skills: ['focus', 'ignis'],
   bases: { hp: 24, str: 0, mag: 11, skl: 8, spd: 8, lck: 5, def: 5, res: 9 },
   growths: { hp: 65, str: 5, mag: 60, skl: 50, spd: 50, lck: 35, def: 18, res: 45 },
   desc: '理を究め、杖も握る知の極み。',
 });
 cls({
   id: 'mortalsavant', name: '魔剣士', tier: 2, mode: 'foot', mov: 6,
-  weapons: { sword: 'A', anima: 'B' }, skills: [],
+  weapons: { sword: 'A', anima: 'B' }, skills: ['ignis'],
   bases: { hp: 28, str: 7, mag: 8, skl: 9, spd: 8, lck: 4, def: 6, res: 6 },
   growths: { hp: 70, str: 40, mag: 40, skl: 50, spd: 45, lck: 30, def: 28, res: 30 },
   desc: '剣と理、両の道を歩む者。',
@@ -237,7 +237,7 @@ cls({
 });
 cls({
   id: 'sorcerer', name: '魔導将', tier: 2, mode: 'mage', mov: 6,
-  weapons: { dark: 'S', anima: 'B' }, skills: ['nihil'],
+  weapons: { dark: 'S', anima: 'B' }, skills: ['nihil', 'lifetaker'],
   bases: { hp: 30, str: 0, mag: 11, skl: 7, spd: 6, lck: 4, def: 8, res: 9 },
   growths: { hp: 75, str: 5, mag: 55, skl: 40, spd: 38, lck: 28, def: 30, res: 42 },
   desc: '生命を吸う闇の権化。固く、しぶとい。',

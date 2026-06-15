@@ -30,6 +30,14 @@ function loneBonus(u, board) {
   return Math.max(0, 3 - near) * 8;
 }
 
+/* 絆（隣り合う味方の数、最大3）— 布陣そのものが力になる */
+export function bondOf(u, board) {
+  if (!board || !u.pos) return 0;
+  let n = 0;
+  for (const a of board.alliesOf(u)) if (a.pos && manhattan(a.pos, u.pos) === 1) n++;
+  return Math.min(3, n);
+}
+
 /* 片側の一撃ぶんの数値（src が tgt を打つ） */
 export function strikeInfo(src, tgt, board) {
   const w = equippedWeapon(src);
@@ -54,12 +62,14 @@ export function strikeInfo(src, tgt, board) {
   const defStat = (magic ? sd.res : sd.def) + terrDef;
   const dmg = Math.max(0, atk - defStat);
 
-  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit;
-  const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo;
+  const sBond = bondOf(src, board), tBond = bondOf(tgt, board);
+  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5;
+  const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
   const hit = clamp(Math.round(hitStat - avo), 0, 100);
 
-  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0);
+  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2;
   if (hasSkill(src, 'focus')) critStat += loneBonus(src, board);
+  if (hasSkill(src, 'wrath') && src.hp * 2 <= src.maxHp) critStat += 30;     // 憤怒
   const crit = clamp(critStat - sd.lck, 0, 100);
 
   return { atk, dmg, hit, crit, magic, defStat, weapon: w, eff };
@@ -112,16 +122,18 @@ function performStrike(src, tgt, board, rng, events) {
   let hits = 1;
 
   if (!nihil) {
-    const order = ['lethality', 'astra', 'aether', 'luna', 'sol', 'pierce', 'colossus'];
+    const order = ['lethality', 'astra', 'adept', 'aether', 'luna', 'sol', 'ignis', 'pierce', 'colossus'];
     for (const id of order) {
       if (!hasSkill(src, id)) continue;
       if (!rng.roll(rateOf(id, src))) continue;
       procId = id;
       if (id === 'lethality') { if (!tgt.boss) lethal = true; }
       else if (id === 'astra') { hits = 5; dmg = Math.max(1, Math.floor(info.dmg * 0.5)); }
+      else if (id === 'adept') { hits = 2; }                                  // もう一撃、満幅
       else if (id === 'aether') { dmg = Math.max(0, info.atk - Math.floor(info.defStat / 2)); drainFactor = 0.5; }
       else if (id === 'luna') { dmg = Math.max(0, info.atk - Math.floor(info.defStat / 2)); }
       else if (id === 'sol') { drainFactor = 0.5; }
+      else if (id === 'ignis') { const es = effectiveStats(src); dmg = info.dmg + Math.floor(Math.max(es.mag, es.str) / 2); }
       else if (id === 'pierce') { dmg = info.atk; }
       else if (id === 'colossus') { dmg = Math.round(info.dmg * 1.5); }
       break;
@@ -170,6 +182,16 @@ function performStrike(src, tgt, board, rng, events) {
     src.hp = Math.max(0, src.hp - Math.floor(self / 2));
     events.push({ type: 'backfire', by: src.uid, dmg: Math.floor(self / 2) });
   }
+  // 命奪：敵を倒すと癒える
+  if (!isAlive(tgt) && hasSkill(src, 'lifetaker')) {
+    const h = Math.min(src.maxHp - src.hp, Math.floor(src.maxHp * 0.5));
+    if (h > 0) { src.hp += h; events.push({ type: 'drain', by: src.uid, amount: h }); }
+  }
+  // 得物による状態異常（眠り・毒・沈黙など）
+  if (isAlive(tgt) && info.weapon.inflict && rng.roll(info.weapon.inflict.chance)) {
+    addStatus(tgt, info.weapon.inflict.id, info.weapon.inflict.turns || 3);
+    events.push({ type: 'status', tgt: tgt.uid, id: info.weapon.inflict.id });
+  }
   // 射抜きの眠り
   if (procId === 'deadeye' && isAlive(tgt)) addStatus(tgt, 'sleep', 2);
   // 短剣の弱体
@@ -185,8 +207,12 @@ function performStrike(src, tgt, board, rng, events) {
 export function resolveCombat(att, def, board, rng) {
   const events = [];
   const dist = manhattan(att.pos, def.pos);
+  // 先制（vantage）：手負いの守り手は、攻められる前に反撃する
+  const vantage = hasSkill(def, 'vantage') && def.hp * 2 <= def.maxHp && canCounter(def, att, dist);
+  let countered = false;
+  if (vantage) { performStrike(def, att, board, rng, events); countered = true; }
   performStrike(att, def, board, rng, events);
-  if (isAlive(def) && canCounter(def, att, manhattan(att.pos, def.pos))) {
+  if (!countered && isAlive(def) && canCounter(def, att, manhattan(att.pos, def.pos))) {
     performStrike(def, att, board, rng, events);
   }
   if (isAlive(att) && isAlive(def)) {
