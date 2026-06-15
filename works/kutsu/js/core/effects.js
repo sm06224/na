@@ -101,6 +101,25 @@ function boltPathDig(g, user, dx, dy, range) {
   return path;
 }
 
+/* ---- 追補の効能 ---- */
+eff('invisible', (g, c) => { applyStatus(c.user, 'invisible', c.item.d.power || 24); g.log(c.user.isPlayer ? '身体が透きとおった。' : `${c.user.name}が消えた。`); return { id: true }; });
+eff('recharge', (g, c) => {
+  const wands = g.player.inv.filter(i => i.category === 'wand');
+  if (!wands.length) { g.log('充填する杖がない。'); return { id: true }; }
+  const w = c.targetItem && c.targetItem.category === 'wand' ? c.targetItem : g.rng.pick(wands);
+  w.charges += g.rng.range(2, 4);
+  g.log(`${w.displayName(g.ids)} に力が戻った。`);
+  return { id: true };
+});
+eff('deep_descent', (g, c) => {
+  if (g.depth >= 15) { g.log('これより下はない。'); return { id: true }; }
+  g.log('床が抜け、一気に深みへ落ちた！');
+  g.descendTo(g.depth + 1, 'down');
+  return { id: true };
+});
+eff('wand_confuse', (g, c) => bolt(g, c, t => { applyStatus(t, 'confuse', c.item.d.power || 12); g.log(`${t.name}が惑乱した。`); }));
+eff('wand_drain', (g, c) => bolt(g, c, t => { const r = rangedHit(g, c.user, t, { damage: c.item.d.power }); g.healActor(c.user, Math.ceil(r.damage / 2)); g.log(`${t.name}の生気を吸った（${r.damage}）。`); }));
+
 export function applyEffect(game, key, ctx) {
   const fn = E[key];
   if (!fn) { game.log('……何も起きなかった。'); return { id: false }; }

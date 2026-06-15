@@ -85,6 +85,35 @@ add('f_mushroom', { category: 'food', name: '茸', glyph: '%', color: '#c8b0c8',
 /* ===== 護符（amulet・ゴール） ===== */
 add('amulet', { category: 'amulet', name: '窟の護符', glyph: '"', color: '#ffd24a', goal: true, depth: 99, rarity: 0 });
 
+/* ===== 追補：武器 ===== */
+add('club', { category: 'weapon', name: '棍棒', glyph: ')', color: '#9a7a4a', slot: 'weapon', damage: '1d5', acc: 0, weight: 2, enchantable: true, depth: 1, rarity: 5 });
+add('flail', { category: 'weapon', name: '連接棍', glyph: ')', color: '#bcb4a0', slot: 'weapon', damage: '1d8+1', acc: -1, weight: 4, enchantable: true, depth: 4, rarity: 4 });
+add('katana', { category: 'weapon', name: '打刀', glyph: ')', color: '#e8eef8', slot: 'weapon', damage: '1d9', acc: 3, weight: 2, enchantable: true, depth: 6, rarity: 2 });
+add('halberd', { category: 'weapon', name: '矛槍', glyph: ')', color: '#cabf9a', slot: 'weapon', damage: '1d10+1', acc: 0, weight: 6, twoHanded: true, reach: true, enchantable: true, depth: 6, rarity: 3 });
+add('whip', { category: 'weapon', name: '鞭', glyph: ')', color: '#a06a3a', slot: 'weapon', damage: '1d4', acc: 3, weight: 1, reach: true, enchantable: true, depth: 3, rarity: 3 });
+add('morningstar', { category: 'weapon', name: '星球棍', glyph: ')', color: '#c2bca8', slot: 'weapon', damage: '1d9', acc: -1, weight: 4, enchantable: true, depth: 5, rarity: 3 });
+
+/* ===== 追補：防具 ===== */
+add('studded', { category: 'armor', name: '鋲革鎧', glyph: '[', color: '#9a6f44', slot: 'armor', defense: 3, weight: 3, enchantable: true, depth: 2, rarity: 5 });
+add('scalemail', { category: 'armor', name: '鱗鎧', glyph: '[', color: '#9aa6a0', slot: 'armor', defense: 6, weight: 6, eva: -1, enchantable: true, depth: 6, rarity: 3 });
+add('splintmail', { category: 'armor', name: '札鎧', glyph: '[', color: '#b2b8c2', slot: 'armor', defense: 7, weight: 8, eva: -2, enchantable: true, depth: 7, rarity: 2 });
+add('towershield', { category: 'armor', name: '大盾', glyph: '[', color: '#b8a070', slot: 'shield', defense: 4, weight: 6, eva: -2, enchantable: true, depth: 7, rarity: 2 });
+add('greathelm', { category: 'armor', name: '大兜', glyph: '[', color: '#b2b8c2', slot: 'helm', defense: 3, weight: 3, eva: -1, enchantable: true, depth: 7, rarity: 2 });
+add('greaves', { category: 'armor', name: '具足', glyph: '[', color: '#aab0bb', slot: 'boots', defense: 2, weight: 2, enchantable: true, depth: 5, rarity: 3 });
+
+/* ===== 追補：薬・巻物・杖・指輪・食料 ===== */
+add('p_invisible', { category: 'potion', name: '透明の薬', glyph: '!', effect: 'invisible', power: 24, stackable: true, depth: 5, rarity: 3, good: true });
+add('p_clarity', { category: 'potion', name: '澄明の薬', glyph: '!', effect: 'cure', stackable: true, depth: 3, rarity: 4, good: true });
+add('s_recharge', { category: 'scroll', name: '充填の巻物', glyph: '?', effect: 'recharge', stackable: true, depth: 4, rarity: 3, good: true });
+add('s_deepdescent', { category: 'scroll', name: '転落の巻物', glyph: '?', effect: 'deep_descent', stackable: true, depth: 4, rarity: 2, good: true });
+add('w_confuse', { category: 'wand', name: '惑乱の杖', glyph: '/', effect: 'wand_confuse', power: 12, range: 7, charges: [3, 6], depth: 3, rarity: 3 });
+add('w_drain', { category: 'wand', name: '吸命の杖', glyph: '/', effect: 'wand_drain', power: '2d5', range: 7, charges: [2, 5], depth: 6, rarity: 2 });
+add('r_might', { category: 'ring', name: '剛力の指輪', glyph: '=', slot: 'ring', passive: { str: 3 }, enchantable: true, depth: 6, rarity: 2 });
+add('r_guard', { category: 'ring', name: '堅守の指輪', glyph: '=', slot: 'ring', passive: { def: 3 }, enchantable: true, depth: 6, rarity: 2 });
+add('r_keen', { category: 'ring', name: '冴えの指輪', glyph: '=', slot: 'ring', passive: { acc: 2, eva: 2 }, enchantable: true, depth: 5, rarity: 2 });
+add('f_jerky', { category: 'food', name: '干物', glyph: '%', color: '#a86b3a', nutrition: 350, stackable: true, depth: 2, rarity: 4 });
+add('f_bread', { category: 'food', name: '堅麺麭', glyph: '%', color: '#c8a060', nutrition: 400, stackable: true, depth: 1, rarity: 5 });
+
 /* ----- 見た目（未鑑定の素材）。idStore が種でこれを役職に割り当てる ----- */
 export const APPEARANCE = {
   potion: ['青', '赤', '緑', '黄', '紫', '橙', '桃', '黒', '白', '銀', '金', '濁った', '泡立つ', '光る', '澄んだ', '油状の'],
