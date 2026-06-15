@@ -23,6 +23,7 @@ import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, 
 import { encodeSave, decodeSave } from '../core/save.js';
 import { TRADE_GOODS, tradePrice, buyGood, sellGood, holdings, canBuyGood } from '../core/trade.js';
 import { weatherForChapter } from '../core/weather.js';
+import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -793,7 +794,7 @@ function renderCodex(tab) {
 function autosave() { try { localStorage.setItem(SAVE_KEY, encodeSave(S.game)); } catch { /* あふれは無視 */ } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
 let baseUnit = null;
-const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['交易', 'trade'], ['記録', 'record']];
+const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['闘技', 'arena'], ['交易', 'trade'], ['記録', 'record']];
 
 function openBase() {
   $('result').hidden = true;
@@ -906,6 +907,38 @@ function renderBase(tab) {
       row.appendChild(mkbtn(got ? '雇用済' : '雇う', got ? '' : 'buy', () => {
         if (hire(g, cand)) { sfx('levelup'); autosave(); renderBase('hire'); }
       }, got || !canHire(g, cand)));
+      body.appendChild(row);
+    }
+  } else if (tab === 'arena') {
+    const party = g.livingParty();
+    if (!baseUnit || !party.includes(baseUnit)) baseUnit = party[0];
+    const pick = el('div', 'unitpick');
+    for (const u of party) {
+      const b = el('button', u === baseUnit ? 'on' : '', `${u.name} Lv${u.level}`);
+      b.onclick = () => { baseUnit = u; renderBase('arena'); };
+      pick.appendChild(b);
+    }
+    body.appendChild(pick);
+    const u = baseUnit; if (!u) return;
+    const avg = Math.round(party.reduce((s, p) => s + p.level, 0) / party.length);
+    body.appendChild(el('div', 'subhead', `闘技場——${u.name} で挑む。賭け金を積み、勝てば褒賞と熟練。倒れる前に行司が止める（命は獲られぬ）`));
+    const foes = arenaOpponents(g.seed, g.chapterIndex, avg);
+    for (const opp of foes) {
+      const row = el('div', 'shoprow');
+      row.appendChild(el('span', 'nm', `［${opp.tierName}］${opp.name}（${classDef(opp.classId).name} Lv${opp.level}）`));
+      row.appendChild(el('span', 'pr', `賭${opp.wager}G→褒賞${opp.reward}G`));
+      row.appendChild(mkbtn('挑む', 'buy', () => {
+        g.gold -= opp.wager;
+        const res = arenaFight(u, opp, g.seed, g.chapterIndex);
+        if (res.win) { g.gold += res.reward; sfx('levelup'); }
+        else sfx('cancel');
+        autosave();
+        renderBase('arena');
+        const note = el('div', 'subhead', res.win
+          ? `${u.name}、${opp.name}を下した！　賭${opp.wager}G→＋${res.reward}G（差引＋${res.reward - opp.wager}G）`
+          : `${u.name}、${opp.name}に及ばず。賭${opp.wager}Gを失う（命は無事）`);
+        body.insertBefore(note, body.children[1]);
+      }, g.gold < opp.wager));
       body.appendChild(row);
     }
   } else if (tab === 'trade') {
