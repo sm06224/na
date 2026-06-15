@@ -93,6 +93,24 @@ add('eye', { name: '浮遊眼', glyph: 'e', color: '#d86a9a', hp: 26, str: 3, de
 add('death_knight', { name: '死の騎士', glyph: 'K', color: '#a06a9a', hp: 50, str: 8, def: 6, acc: 7, eva: 3, speed: 100, ai: 'melee', sight: 8, damage: '2d6+1', xp: 44, depth: [12, 15], rarity: 2, tags: ['undead'], status: { type: 'drain', turns: 1, power: 1, chance: 0.4 }, resist: { poison: 1, frost: 0.5 }, drops: 'high' });
 add('slime', { name: '溶解粘体', glyph: 'j', color: '#7ab09a', hp: 18, str: 4, def: 1, acc: 3, eva: 0, speed: 70, ai: 'melee', sight: 4, damage: '1d6', xp: 9, depth: [4, 10], rarity: 3, tags: [], special: 'corrode', resist: { poison: 1 } });
 
+/* ---- さらなる住人 ---- */
+add('beetle', { name: '甲虫', glyph: 'a', color: '#7a6a4a', hp: 10, str: 3, def: 4, acc: 3, eva: 1, speed: 90, ai: 'pack', sight: 5, damage: '1d5', xp: 5, depth: [1, 6], rarity: 5, tags: ['animal'], packMin: 2, packMax: 4 });
+add('bee', { name: '大蜂', glyph: 'i', color: '#d8b84a', hp: 5, str: 2, def: 0, acc: 5, eva: 5, speed: 150, ai: 'pack', sight: 7, damage: '1d3', xp: 3, depth: [1, 5], rarity: 4, tags: ['animal', 'flying'], status: { type: 'poison', turns: 4, power: 1, chance: 0.5 }, packMin: 3, packMax: 5 });
+add('crab', { name: '岩蟹', glyph: 'c', color: '#a86a5a', hp: 18, str: 5, def: 6, acc: 4, eva: 0, speed: 80, ai: 'melee', sight: 5, damage: '1d8', xp: 10, depth: [2, 8], rarity: 4, tags: ['animal'] });
+add('pixie', { name: '妖精', glyph: 'y', color: '#9af0d8', hp: 8, str: 2, def: 1, acc: 6, eva: 7, speed: 140, ai: 'caster', sight: 8, damage: '1d4', xp: 9, depth: [3, 9], rarity: 3, tags: ['flying'], spell: 'magicmissile', spellPower: '1d6', spellRange: 7, special: 'blink' });
+add('phantom', { name: '幽鬼', glyph: 'p', color: '#a0a0c0', hp: 16, str: 4, def: 2, acc: 6, eva: 6, speed: 110, ai: 'melee', sight: 8, damage: '1d8', xp: 16, depth: [6, 12], rarity: 3, tags: ['undead'], status: { type: 'fear', turns: 4, chance: 0.25 } });
+add('naga', { name: '蛇身', glyph: 'N', color: '#5aa07a', hp: 30, str: 6, def: 4, acc: 6, eva: 3, speed: 100, ai: 'caster', sight: 8, damage: '1d8', xp: 24, depth: [7, 13], rarity: 3, tags: ['animal'], spell: 'frostbolt', spellPower: '2d4', spellRange: 7, status: { type: 'poison', turns: 6, power: 2, chance: 0.4 }, drops: 'mid' });
+add('cyclops', { name: '一つ目巨人', glyph: 'O', color: '#b07a5a', hp: 50, str: 9, def: 3, acc: 4, eva: 0, speed: 90, ai: 'ranged', sight: 8, damage: '2d6', xp: 34, depth: [9, 14], rarity: 2, tags: ['giant'], ranged: { damage: '2d6', range: 5, name: '投石' }, drops: 'high' });
+add('manticore', { name: 'マンティコア', glyph: 'M', color: '#c8743a', hp: 44, str: 8, def: 4, acc: 6, eva: 3, speed: 110, ai: 'ranged', sight: 9, damage: '2d6', xp: 36, depth: [10, 15], rarity: 2, tags: ['animal', 'flying'], ranged: { damage: '2d5', range: 6, name: '毒針' }, status: { type: 'poison', turns: 6, power: 2, chance: 0.4 }, drops: 'high' });
+
+/* ---- なおも住人 ---- */
+add('toad', { name: '大蟇', glyph: 'f', color: '#8a9a5a', hp: 14, str: 4, def: 1, acc: 3, eva: 2, speed: 90, ai: 'melee', sight: 5, damage: '1d6', xp: 6, depth: [2, 7], rarity: 4, tags: ['animal'] });
+add('scorpion', { name: '大蠍', glyph: 's', color: '#9a7a3a', hp: 16, str: 4, def: 3, acc: 5, eva: 2, speed: 100, ai: 'melee', sight: 6, damage: '1d6', xp: 10, depth: [4, 9], rarity: 4, tags: ['animal'], status: { type: 'poison', turns: 7, power: 2, chance: 0.45 } });
+add('warg', { name: '魔狼', glyph: 'd', color: '#7a7a8a', hp: 22, str: 6, def: 2, acc: 6, eva: 4, speed: 140, ai: 'pack', sight: 9, damage: '1d8+1', xp: 15, depth: [6, 11], rarity: 4, tags: ['animal'], packMin: 2, packMax: 4, drops: 'mid' });
+add('dark_elf', { name: '闇エルフ', glyph: 'e', color: '#9a7ac8', hp: 18, str: 4, def: 2, acc: 7, eva: 5, speed: 110, ai: 'ranged', sight: 9, damage: '1d6', xp: 16, depth: [7, 12], rarity: 3, tags: ['humanoid'], ranged: { damage: '1d8', range: 7, name: '毒矢' }, status: { type: 'poison', turns: 5, power: 1, chance: 0.4 }, drops: 'mid' });
+add('flesh_golem', { name: '肉塊兵', glyph: '8', color: '#b08a8a', hp: 56, str: 8, def: 4, acc: 4, eva: 0, speed: 80, ai: 'melee', sight: 6, damage: '2d6', xp: 34, depth: [10, 15], rarity: 2, tags: ['construct'], resist: { poison: 1 }, regen: 1 });
+add('frost_giant', { name: '霜の巨人', glyph: 'P', color: '#9ad0e0', hp: 64, str: 10, def: 4, acc: 5, eva: 1, speed: 90, ai: 'ranged', sight: 8, damage: '2d7', xp: 46, depth: [12, 15], rarity: 2, tags: ['giant'], ranged: { damage: '2d6', range: 5, name: '氷塊', element: 'frost' }, resist: { frost: 0.7 }, drops: 'high' });
+
 /* ---- 中立：店主（襲わない。怒らせると手強い） ---- */
 add('shopkeeper', { name: '店主', glyph: '☻', color: '#ffd24a', hp: 70, str: 9, def: 7, acc: 9, eva: 5, speed: 120, ai: 'shopkeeper', sight: 9, damage: '2d6+2', xp: 0, depth: [1, 15], rarity: 0, tags: ['humanoid', 'unique'], peaceful: true });
 

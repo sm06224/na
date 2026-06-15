@@ -114,6 +114,20 @@ add('r_keen', { category: 'ring', name: '冴えの指輪', glyph: '=', slot: 'ri
 add('f_jerky', { category: 'food', name: '干物', glyph: '%', color: '#a86b3a', nutrition: 350, stackable: true, depth: 2, rarity: 4 });
 add('f_bread', { category: 'food', name: '堅麺麭', glyph: '%', color: '#c8a060', nutrition: 400, stackable: true, depth: 1, rarity: 5 });
 
+/* ===== さらなる品 ===== */
+add('p_heroism', { category: 'potion', name: '英雄の薬', glyph: '!', effect: 'heroism', stackable: true, depth: 5, rarity: 3, good: true });
+add('s_blink', { category: 'scroll', name: '瞬きの巻物', glyph: '?', effect: 'blink', stackable: true, depth: 2, rarity: 4, good: true });
+add('glaive', { category: 'weapon', name: '薙刀', glyph: ')', color: '#d6dae6', slot: 'weapon', damage: '1d10', acc: 1, weight: 5, twoHanded: true, reach: true, enchantable: true, depth: 5, rarity: 3 });
+add('sabre', { category: 'weapon', name: '曲刀', glyph: ')', color: '#dde2ee', slot: 'weapon', damage: '1d7', acc: 2, weight: 2, enchantable: true, depth: 3, rarity: 4 });
+add('brigandine', { category: 'armor', name: '胴丸', glyph: '[', color: '#9a8470', slot: 'armor', defense: 5, weight: 5, enchantable: true, depth: 5, rarity: 3 });
+add('f_feast', { category: 'food', name: 'ごちそう', glyph: '%', color: '#d8a040', nutrition: 700, stackable: true, depth: 3, rarity: 2 });
+add('maul', { category: 'weapon', name: '大槌', glyph: ')', color: '#b8b09c', slot: 'weapon', damage: '2d6+1', acc: -2, weight: 8, twoHanded: true, enchantable: true, depth: 8, rarity: 2 });
+add('pike', { category: 'weapon', name: '長柄槍', glyph: ')', color: '#cabf9a', slot: 'weapon', damage: '1d9', acc: 2, weight: 4, reach: true, enchantable: true, depth: 5, rarity: 3 });
+add('banded', { category: 'armor', name: '帯金鎧', glyph: '[', color: '#a6acb8', slot: 'armor', defense: 6, weight: 6, eva: -1, enchantable: true, depth: 6, rarity: 3 });
+add('p_antidote', { category: 'potion', name: '解毒の薬', glyph: '!', effect: 'cure', stackable: true, depth: 2, rarity: 4, good: true });
+add('s_holyword', { category: 'scroll', name: '聖句の巻物', glyph: '?', effect: 'aggravate_or_fear', stackable: true, depth: 5, rarity: 2, good: true });
+add('f_cheese', { category: 'food', name: '乾酪', glyph: '%', color: '#d8c060', nutrition: 300, stackable: true, depth: 1, rarity: 4 });
+
 /* ===== 遺物（artifact・唯一・名のある品。見た目は隠さない） ===== */
 add('art_yosuzume', { category: 'weapon', name: '銘刀「夜雀」', glyph: ')', color: '#bcd0ff', slot: 'weapon', damage: '1d8+1', acc: 3, weight: 2, artifact: true, unique: true, rarity: 0, depth: 6, passive: { eva: 2 }, brand: { status: { type: 'slow', turns: 6 }, chance: 0.4, element: 'frost' } });
 add('art_kagutsuchi', { category: 'weapon', name: '火刀「カグツチ」', glyph: ')', color: '#ff9a4a', slot: 'weapon', damage: '1d9+1', acc: 2, weight: 3, artifact: true, unique: true, rarity: 0, depth: 9, passive: { str: 1 }, brand: { status: { type: 'burning', turns: 3, power: 2 }, chance: 0.45, element: 'fire' } });

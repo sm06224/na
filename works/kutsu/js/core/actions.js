@@ -89,6 +89,46 @@ function fallThroughChasm(game) {
 
 export function wait(game) { game.endPlayerAction(100); return true; }
 
+/* 休む：傷が癒えるまで、または何かが起きるまで待つ（最大 max 手）。 */
+export function rest(game, max = 120) {
+  const p = game.player;
+  if (monsterVisible(game)) { game.message('近くに何かいる。休めない。'); return false; }
+  if (p.hp >= p.maxhp && p.focus >= p.maxFocus) { game.message('休む必要はない。'); return wait(game); }
+  let n = 0;
+  while (n < max && game.state === 'play') {
+    const hp0 = p.hp;
+    game.endPlayerAction(100);
+    n++;
+    if (game.state !== 'play') break;
+    if (monsterVisible(game)) { game.message('何かが現れた。'); break; }
+    if (p.hunger <= 0) { game.message('空腹で休めない。'); break; }
+    if (p.hp >= p.maxhp && p.focus >= p.maxFocus) break;
+    if (p.hp < hp0) break;                 // 毒などで減ったら中断
+  }
+  game.message(`休んだ（${n} 手）。`);
+  return true;
+}
+function monsterVisible(game) {
+  for (const m of game.board.monsters()) if (game.inSight(m.x, m.y)) return true;
+  return false;
+}
+
+/* 隣の見つけた罠を外す（失敗するとかかることも） */
+export function disarm(game) {
+  const p = game.player;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const x = p.x + dx, y = p.y + dy;
+    if (game.level.get(x, y) === T.TRAP && game.level.flag(x, y, F.DISCOVERED)) {
+      if (game.rng.chance(0.7)) { game.level.set(x, y, T.FLOOR); game.message('罠を外した。', 'good'); }
+      else { game.message('しくじった！'); if (game.rng.chance(0.4)) game.hurt(p, game.rng.dice('1d4'), '罠'); }
+      game.endPlayerAction(100);
+      return true;
+    }
+  }
+  game.message('近くに外せる罠はない。');
+  return false;
+}
+
 export function search(game) {
   const p = game.player; let found = 0;
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {

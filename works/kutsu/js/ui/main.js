@@ -168,6 +168,8 @@ window.addEventListener('keydown', e => {
     case '>': A.descend(game); return redraw();
     case '<': A.ascend(game); return redraw();
     case 's': A.search(game); return redraw();
+    case 'R': A.rest(game); return redraw();
+    case 'D': A.disarm(game); return redraw();
     case 'i': screens.inventory(game); return;
     case 'e': screens.equipment(game); return;
     case '@': case 'C': screens.character(game); return;
@@ -176,6 +178,7 @@ window.addEventListener('keydown', e => {
     case 'a': return chooseAbility();
     case 'M': { const v = toggleSound(); game.message(v ? '音を出す。' : '音を消した。'); return redraw(); }
     case '?': screens.help(); return;
+    case 'G': screens.guide(); return;
     case 'q': return chooseAndAct('薬を飲む', it => it.category === 'potion', it => { A.drink(game, it); sfx('quaff'); redraw(); });
     case 'r': return chooseAndAct('巻物を読む', it => it.category === 'scroll', it => { A.read(game, it); redraw(); });
     case 'f': return chooseAndAct('食べる', it => it.category === 'food', it => { A.eat(game, it); redraw(); });

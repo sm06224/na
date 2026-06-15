@@ -119,6 +119,15 @@ eff('deep_descent', (g, c) => {
 });
 eff('wand_confuse', (g, c) => bolt(g, c, t => { applyStatus(t, 'confuse', c.item.d.power || 12); g.log(`${t.name}が惑乱した。`); }));
 eff('wand_drain', (g, c) => bolt(g, c, t => { const r = rangedHit(g, c.user, t, { damage: c.item.d.power }); g.healActor(c.user, Math.ceil(r.damage / 2)); g.log(`${t.name}の生気を吸った（${r.damage}）。`); }));
+eff('heroism', (g, c) => { applyStatus(c.user, 'might', 20); applyStatus(c.user, 'haste', 16); g.healActor(c.user, g.rng.dice('1d8')); g.log('英雄の力が満ちた！'); return { id: true }; });
+eff('blink', (g, c) => {
+  const u = c.user;
+  for (let i = 0; i < 30; i++) {
+    const x = u.x + g.rng.range(-5, 5), y = u.y + g.rng.range(-5, 5);
+    if (g.board.passable(x, y) && !g.level.prop(x, y).deadly) { g.board.moveActor(u, x, y); if (u.isPlayer) { g.recomputeDist(); g.recomputeFOV(); } g.log('ふっと景色が近くへずれた。'); return { id: true }; }
+  }
+  g.log('瞬きは不発に終わった。'); return { id: true };
+});
 
 export function applyEffect(game, key, ctx) {
   const fn = E[key];
