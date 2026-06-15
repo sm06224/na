@@ -1,0 +1,10 @@
+{
+  "name": "kuji",
+  "version": "1.0.0",
+  "description": "籤 — a draw no one can rig, that anyone can verify. The result of a lottery, ordering or grouping is a pure function of the entrants, the mode and a salt, sealed by a hand-built SHA-256. Publish the commitment first; no one can change the outcome afterwards, and anyone can recompute it. Zero dependencies, offline, private.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

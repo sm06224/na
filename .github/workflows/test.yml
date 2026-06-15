@@ -228,6 +228,18 @@ jobs:
         working-directory: works/tane
         run: node --test tests/*.test.js
 
+  kuji:
+    name: kuji — a draw no one can rig
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Hash known vectors, then draw and verify a fair lottery headless
+        working-directory: works/kuji
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

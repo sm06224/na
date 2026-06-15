@@ -68,6 +68,7 @@
   .c-wari:hover { background: linear-gradient(160deg, rgba(79,209,165,.14), rgba(87,201,192,.05)); }
   .c-kutsu:hover { background: linear-gradient(160deg, rgba(200,168,90,.14), rgba(120,90,60,.06)); }
   .c-tane:hover { background: linear-gradient(160deg, rgba(120,210,140,.14), rgba(255,200,225,.06)); }
+  .c-kuji:hover { background: linear-gradient(160deg, rgba(183,155,255,.15), rgba(233,196,106,.07)); }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -77,7 +78,7 @@
   <header>
     <h1>na</h1>
     <p>無から生まれた、小さな作品集</p>
-    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種</div>
+    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤</div>
   </header>
 
   <div class="works">
@@ -231,6 +232,14 @@
       <p>種ひとつから、草木がひとりでに芽ぐむ。一文字の書き換え規則（L-システム）がほどけ、亀がなぞって茎と葉になり、重力と陽が育つ向きを曲げる。同じ種からは葉の一枚まで同じ草木。種は、乱数の種であり、土に蒔く種。庭・星・窟と続く「ひとりでに生まれる」系譜の、芽ぐむ章。</p>
       <div class="tags"><span class="tag">L-system</span><span class="tag">generative botany</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
       <span class="go">土に蒔く →</span>
+    </a>
+
+    <a class="card c-kuji" href="works/kuji/">
+      <span class="glyph">🎲</span>
+      <h2>籤 <span class="en">/ kuji</span></h2>
+      <p>誰にも操作できない、みんなで確かめられるくじ。順番・抽選・組分けの結果を、参加者と塩だけから一意に決め、手づくりの SHA-256 で封をする。封を先に配れば、あとから誰も結果を書き換えられず、誰でも再計算して身内びいきが無いと確かめられる。「同じ種からは同じ結果」を、芸術から信頼の道具へ。六番目の実用品。</p>
+      <div class="tags"><span class="tag">tool</span><span class="tag">provably fair</span><span class="tag">commit–reveal</span><span class="tag">offline</span></div>
+      <span class="go">くじを引く →</span>
     </a>
   </div>
 
