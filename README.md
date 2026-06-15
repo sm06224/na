@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種**
 
 </div>
 
@@ -159,6 +159,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 **墓碑銘**が立つ（`史` の血を引く年代記）。`生`・`史`・`星` と続く「ひとりでに生まれる」系譜の地の底の章で、
 **同じ種からは一マスもちがわない同じ迷宮**——`#s=種` で渡せる。コアは DOM 非依存・**56 tests**。
 
+### 🌱 [種 `tane`](./works/tane/) — *plants grown from a seed*
+**種ひとつから、草木がひとりでに芽ぐむ**。誰も枝ぶりを描かない。一文字の書き換え規則
+（**L-システム**）が種からほどけるように同じ文字を書き換えつづけ、**亀（タートル）**がそれを
+なぞって茎になり、枝を分け、葉をひらく。育つ向きは**重力と陽（ホンダの屈性）**がそっと曲げる——
+だから垂れる木も、すらりと伸びる草もある。品種は決め打ちせず、**立ってみたその影で**草姿
+（枝垂れ・すらり・横這い・こんもり・ふさ・叢）を名づける。種から決まる**四季**で葉のいろと
+花の数が変わり、草木は芽のうちに**おのれの名を名のる**。種は二重の意味を負う——**乱数の種であり、
+土に蒔く種**でもある。`#s=種` で渡せて、**同じ種からは葉の一枚までちがわぬ同じ草木**が立つ。
+`庭`・`星`・`雷`・`窟` と続く「ひとりでに生まれる」系譜の、芽ぐむ章。コアは DOM 非依存・**11 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -257,12 +267,17 @@ na/
 │  │  ├─ js/core/           budget（予算） · split（精算）
 │  │  ├─ js/ui/main.js
 │  │  └─ tests/
-│  └─ kutsu/                窟 窟（種から生まれる決定的ローグライク）
+│  ├─ kutsu/                窟 窟（種から生まれる決定的ローグライク）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           rng/util/tile/level/fov/pathfind · gen/ · 
+│  │  │                     entity/board/item/itemdb/monsterdb/combat/ai/
+│  │  │                     effects/status/player/spawn/chronicle/game/actions
+│  │  ├─ js/ui/             render · screens · main
+│  │  └─ tests/
+│  └─ tane/                 🌱 種（種から生まれる決定的な草木）
 │     ├─ index.html · style.css
-│     ├─ js/core/           rng/util/tile/level/fov/pathfind · gen/ · 
-│     │                     entity/board/item/itemdb/monsterdb/combat/ai/
-│     │                     effects/status/player/spawn/chronicle/game/actions
-│     ├─ js/ui/             render · screens · main
+│     ├─ js/core/           rng · plant（L-システム・タートル・屈性・命名）
+│     ├─ js/ui/             render · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -276,7 +291,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟`・`種` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
