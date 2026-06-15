@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { classDef, classCaps } from './classes.js';
-import { item as itemDef, isWeapon, rankValue } from './items.js';
+import { item as itemDef, isWeapon, rankValue, WEXP_THRESHOLDS, rankFromWexp } from './items.js';
 import { STAT_KEYS, cloneStats, addStats, capStats, rollLevelUp, expToLevel } from './stats.js';
 
 let _uid = 1;
@@ -30,6 +30,9 @@ export function createUnit(spec, rng) {
   const items = (spec.items || []).map(it => typeof it === 'string'
     ? makeItemStack(it) : { id: it.id, uses: it.uses });
 
+  // 武器熟練度：扱える型に初期段を与える（レベル・段位で底上げ、持ち物は必ず使える）
+  const wexp = seedWexp(cd, targetLv, items, spec.wexp);
+
   const u = {
     uid: _uid++,
     name: spec.name || cd.name,
@@ -46,6 +49,7 @@ export function createUnit(spec, rng) {
     items,
     equipped: -1,
     skills,
+    wexp,                  // { sword: n, ... } 武器熟練度
     status: [],            // [{ id, turns }]
     buffs: {},             // { str: {amt, turns}, ... }
     pos: spec.pos ? { ...spec.pos } : null,
@@ -81,13 +85,48 @@ export function equippedWeapon(u) {
   const it = itemDef(u.items[u.equipped].id);
   return isWeapon(it) ? it : null;
 }
+/* 扱える型に初期熟練度を配る。tier/level で底上げし、所持品は必ず使える段に。 */
+export function seedWexp(cd, level, items, override) {
+  const wexp = {};
+  const allowed = cd.weapons || {};
+  for (const type in allowed) {
+    const capIdx = rankValue(allowed[type]);
+    let startIdx = Math.min(capIdx, Math.floor((level || 1) / 4) + (cd.tier === 2 ? 2 : 0));
+    for (const st of (items || [])) {
+      const it = itemDef(st.id);
+      if (it && it.kind === 'weapon' && it.wtype === type) startIdx = Math.max(startIdx, rankValue(it.rank));
+    }
+    startIdx = Math.min(capIdx, Math.max(0, startIdx));
+    wexp[type] = WEXP_THRESHOLDS[startIdx];
+  }
+  if (override) for (const k in override) wexp[k] = override[k];
+  return wexp;
+}
+/* この者の、その型での現在の段（クラス上限で頭打ち） */
+export function unitRank(u, type) {
+  const cd = classDef(u.classId);
+  const cap = cd.weapons && cd.weapons[type];
+  if (!cap) return -1;
+  const capIdx = rankValue(cap);
+  const cur = u.wexp ? rankValue(rankFromWexp(u.wexp[type] || 0)) : capIdx;
+  return Math.min(capIdx, cur);
+}
 export function canUse(u, it) {
   if (!it || it.kind !== 'weapon') return false;
   const cd = classDef(u.classId);
-  const allowed = cd.weapons || {};
-  const maxRank = allowed[it.wtype];
-  if (!maxRank) return false;
-  return rankValue(maxRank) >= rankValue(it.rank);
+  if (!cd.weapons || !cd.weapons[it.wtype]) return false;
+  return unitRank(u, it.wtype) >= rankValue(it.rank);
+}
+/* 武器を使った熟練度の上昇。段が上がったら letter を返す（なければ null）。 */
+export function gainWexp(u, type, amt = 1) {
+  const cd = classDef(u.classId);
+  if (!cd.weapons || !cd.weapons[type]) return null;
+  if (!u.wexp) u.wexp = {};
+  const capW = WEXP_THRESHOLDS[rankValue(cd.weapons[type])];
+  const before = rankFromWexp(u.wexp[type] || 0);
+  u.wexp[type] = Math.min(capW, (u.wexp[type] || 0) + amt);
+  const after = rankFromWexp(u.wexp[type]);
+  return after !== before ? after : null;
 }
 export function autoEquip(u) {
   for (let i = 0; i < u.items.length; i++) {
@@ -167,6 +206,10 @@ export function promote(u, toClassId) {
   u.statsBase = capStats(u.statsBase, classCaps(toClassId));
   u.maxHp = u.statsBase.hp; u.hp = Math.min(u.hp, u.maxHp);
   u.level = 1; u.exp = 0;
+  // 熟練度：上級職で新たに扱える型は底を与えつつ、これまでの段は保つ
+  const reseed = seedWexp(to, 10, u.items);
+  u.wexp = u.wexp || {};
+  for (const t in reseed) u.wexp[t] = Math.max(u.wexp[t] || 0, reseed[t]);
   autoEquip(u);
   return true;
 }

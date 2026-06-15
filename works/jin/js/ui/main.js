@@ -1,7 +1,7 @@
 /* 陣のへそ — タイトル→章の幕間→戦い→結果。タッチで指揮する。 */
 
 import { Game } from '../core/game.js';
-import { isAlive, equippedWeapon, effectiveStats } from '../core/unit.js';
+import { isAlive, equippedWeapon, effectiveStats, unitRank } from '../core/unit.js';
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
@@ -12,7 +12,7 @@ import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
 import { skill as skillDef } from '../core/skills.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
-import { WTYPE } from '../core/items.js';
+import { WTYPE, WRANKS } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
 import { FX } from './fx.js';
 import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
@@ -634,6 +634,7 @@ function showInfo(u) {
      <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}${bond ? `　絆+${bond}` : ''}</div>
      <div class="statgrid">${statline}</div>
      <div class="itemline">得物：${w ? w.name : '—'}</div>
+     ${u.wexp ? `<div class="itemline">熟練：${Object.keys(u.wexp).map(t => `${WTYPE[t]}${WRANKS[unitRank(u, t)] || 'E'}`).join('・')}</div>` : ''}
      <div class="itemline">持物：${items || '—'}</div>
      ${sk ? `<div class="itemline">技：${sk}</div>` : ''}
      ${u.status && u.status.length ? `<div class="itemline">状態：${u.status.map(s => statusName(s.id)).join('・')}</div>` : ''}

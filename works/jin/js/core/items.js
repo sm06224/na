@@ -12,6 +12,14 @@ export const WTYPE = {
 };
 export const WRANKS = ['E', 'D', 'C', 'B', 'A', 'S'];
 export const rankValue = r => WRANKS.indexOf(r);
+/* 武器熟練度（WEXP）の閾値：E D C B A S。使うほど貯まり、段が上がる。 */
+export const WEXP_THRESHOLDS = [0, 21, 50, 90, 140, 201];
+export function rankFromWexp(n) {
+  let r = 0;
+  for (let i = 0; i < WEXP_THRESHOLDS.length; i++) if ((n | 0) >= WEXP_THRESHOLDS[i]) r = i;
+  return WRANKS[r];
+}
+export const wexpForRank = letter => WEXP_THRESHOLDS[Math.max(0, rankValue(letter))] || 0;
 
 /* 三すくみ：攻撃側が有利なら +1 威力 / +15 命中、不利なら逆 */
 const PHYS_BEAT = { sword: 'axe', axe: 'lance', lance: 'sword' };
