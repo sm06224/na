@@ -40,6 +40,11 @@ export class Battle {
       // 状態異常の処理
       const se = tickStatus(u);
       events.push(...se);
+      // 素質「再生」：自分のターンの頭に 2 割癒える
+      if (hasSkill(u, 'renewal') && u.hp < u.maxHp && u.hp > 0) {
+        const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * 0.2));
+        u.hp += h; if (h) events.push({ type: 'heal', uid: u.uid, amount: h });
+      }
       // 地形回復
       if (u.pos) {
         const t = this.board.terrainAt(u.pos.x, u.pos.y);
@@ -105,7 +110,8 @@ export class Battle {
     const hitLand = res.events.some(e => (e.type === 'hit' || e.type === 'crit') && e.by === att.uid);
     const killed = !isAlive(def);
     if (att.side === 'player' || att.side === 'ally') {
-      const exp = battleExp(att, def, killed && this.board.alliesAreEnemies(att, def));
+      let exp = battleExp(att, def, killed && this.board.alliesAreEnemies(att, def));
+      if (hasSkill(att, 'paragon')) exp *= 2;            // 天稟：経験二倍
       res.levelUps = gainExp(att, hitLand || killed ? exp : Math.max(1, Math.floor(exp / 3)), this.rng);
     }
     // 反撃で経験

@@ -8,6 +8,7 @@ import { createUnit, resetUid, isAlive } from './unit.js';
 import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
+import './expansion.js';            // 追加の職・素質を登録簿へ
 
 /* ---- 旗下の者たち（種で初期能力が決まる） ---- */
 export const ROSTER = [
