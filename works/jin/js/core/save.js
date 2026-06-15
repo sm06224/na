@@ -39,6 +39,7 @@ export function serialize(game) {
     v: SAVE_VERSION, seed: game.seed, chapterIndex: game.chapterIndex,
     gold: game.gold, useSetpiece: !!game.useSetpiece, initiative: !!game.initiative,
     hired: (game.hired || []).slice(),
+    tradeGoods: (game.tradeGoods || []).slice(),
     convoy: game.convoy.slice(),
     party: game.party.map(serUnit),
   };
@@ -50,6 +51,7 @@ export function deserialize(data) {
   g.chapterIndex = data.chapterIndex | 0;
   g.gold = data.gold | 0;
   g.hired = (data.hired || []).slice();
+  g.tradeGoods = (data.tradeGoods || []).slice();
   g.convoy = (data.convoy || []).slice();
   let uid = 1;
   g.party = data.party.map(o => deserUnit(o, uid++));
