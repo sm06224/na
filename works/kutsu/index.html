@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="窟 (kutsu) — 誰も設計しない迷宮。種ひとつから洞窟・魔物・宝・年代記が生まれる決定的ローグライク。同じ種からは同じ迷宮。オフライン・依存ゼロ。">
+<meta name="theme-color" content="#05060a">
+<title>窟 — a labyrinth no one designs</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game">
+  <canvas id="map"></canvas>
+
+  <aside id="side">
+    <div id="depthtag" class="depthtag"></div>
+    <div id="hud"></div>
+    <div class="keys-hint">? でヘルプ</div>
+  </aside>
+
+  <div id="log"></div>
+
+  <nav id="touch">
+    <div class="dpad">
+      <button data-move="-1,-1">↖</button><button data-move="0,-1">↑</button><button data-move="1,-1">↗</button>
+      <button data-move="-1,0">←</button><button id="btnWait" title="待つ">·</button><button data-move="1,0">→</button>
+      <button data-move="-1,1">↙</button><button data-move="0,1">↓</button><button data-move="1,1">↘</button>
+    </div>
+    <div class="acts">
+      <button id="btnPick">拾</button>
+      <button id="btnDescend">&gt;</button>
+      <button id="btnInv">鞄</button>
+    </div>
+  </nav>
+</div>
+
+<div id="overlay" hidden></div>
+
+<div id="title">
+  <div class="tcard">
+    <h1>窟 <span class="en">/ kutsu</span></h1>
+    <p class="lead">誰も設計しない迷宮。種をひとつ蒔くと、洞窟も魔物も宝も、<br>
+      そして潜行の年代記まで生まれる。同じ種からは、同じ迷宮。</p>
+    <div class="seedrow">
+      <input id="seedin" placeholder="種（数字でも言葉でも・空ならおまかせ）" autocomplete="off">
+      <button id="btnStart">潜る</button>
+    </div>
+    <button id="btnRandom" class="ghost">まだ誰も見ていない窟へ</button>
+    <p class="fine">移動：矢印 / hjkl / yubn・拾う g・降りる &gt;・薬 q・巻物 r・杖 z・装備 w・ヘルプ ?<br>
+      死は終わり（ローグライク）。でも種は残る——同じ窟へ何度でも。</p>
+    <p class="fine"><a href="./README.md">しくみ</a> · <a href="../../">作品集</a></p>
+  </div>
+</div>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

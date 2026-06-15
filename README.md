@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟**
 
 </div>
 
@@ -150,6 +150,15 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 できる答えを出す。割り勘アプリと違い**登録なし・サーバーなし・お金も領収書も端末から出ない**。
 コアは DOM 非依存・**19 tests**。
 
+### 窟 [窟 `kutsu`](./works/kutsu/) — *a labyrinth no one designs*
+**種ひとつから一揃いのローグライクが生まれる**。部屋＋通路・セルオートマトンの洞窟・BSP・迷路が
+深さに応じて選ばれ、繋がれ、扉・罠・水・像・階段が据えられ、深さ帯ごとの魔物（約40体・群れ・遠隔・
+呪文・盗み・擬態・ヌシ）と宝（約60種の武器/防具/薬/巻物/杖/指輪/食料）が湧く。青い薬が回復とは
+限らない——**未鑑定の見た目は潜行ごとに種で入れ替わる**。視界はシャドウキャスト、魔物は**匂い
+（ダイクストラ地図）**を下って寄り、戦いは命中＝腕対身のこなし・傷＝さいころ＋力−鎧。死ねば
+**墓碑銘**が立つ（`史` の血を引く年代記）。`生`・`史`・`星` と続く「ひとりでに生まれる」系譜の地の底の章で、
+**同じ種からは一マスもちがわない同じ迷宮**——`#s=種` で渡せる。コアは DOM 非依存・**56 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -243,10 +252,17 @@ na/
 │  │  ├─ js/core/           sun（赤緯・均時差・高度方位・薄明） · window（窓の直射）
 │  │  ├─ js/ui/             render · main
 │  │  └─ tests/
-│  └─ wari/                 💴 割（立て替えを最小の送金で精算）
+│  ├─ wari/                 💴 割（立て替えを最小の送金で精算）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           budget（予算） · split（精算）
+│  │  ├─ js/ui/main.js
+│  │  └─ tests/
+│  └─ kutsu/                窟 窟（種から生まれる決定的ローグライク）
 │     ├─ index.html · style.css
-│     ├─ js/core/split.js   割る · 残高 · 最小送金
-│     ├─ js/ui/main.js
+│     ├─ js/core/           rng/util/tile/level/fov/pathfind · gen/ · 
+│     │                     entity/board/item/itemdb/monsterdb/combat/ai/
+│     │                     effects/status/player/spawn/chronicle/game/actions
+│     ├─ js/ui/             render · screens · main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -260,7 +276,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
