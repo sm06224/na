@@ -57,11 +57,17 @@
 <!-- 台詞 -->
 <div id="dialogue" class="overlay dlg" hidden>
   <div class="dlgbox">
-    <div id="dlgWho" class="dlgwho"></div>
-    <div id="dlgText" class="dlgtext"></div>
-    <div class="dlgmore">▼ タップで送る</div>
+    <canvas id="dlgFace" class="dlgface" width="96" height="96"></canvas>
+    <div class="dlgmain">
+      <div id="dlgWho" class="dlgwho"></div>
+      <div id="dlgText" class="dlgtext"></div>
+      <div class="dlgmore">▼ タップで送る</div>
+    </div>
   </div>
 </div>
+
+<!-- 会心のカットイン -->
+<canvas id="cutin" width="200" height="200" hidden></canvas>
 
 <!-- 拠点（章と章のあいだ） -->
 <div id="base" class="overlay" hidden>
