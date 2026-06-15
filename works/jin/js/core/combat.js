@@ -11,6 +11,7 @@ import { classDef } from './classes.js';
 import { triangle } from './items.js';
 import { rateOf } from './skills.js';
 import { hasStatus, addStatus } from './status.js';
+import { weatherHitMod, weatherMightMod } from './weather.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -69,6 +70,7 @@ export function strikeInfo(src, tgt, board) {
   if (w.eff) for (const e of w.eff) if (tags.includes(e)) eff = true;
   if (eff) might += w.mt * 2;                       // 特効は威力三倍ぶん
   if (w.wtype === 'light') might += Math.floor((src.faith ?? 5) / 4);   // 信仰が光を強める
+  if (board && board.weather) might += weatherMightMod(board.weather, w);   // 空模様が理（火）を左右する
 
   const atkStat = magic ? sa.mag : sa.str;
   const atk = atkStat + Math.max(0, might);
@@ -84,7 +86,8 @@ export function strikeInfo(src, tgt, board) {
   const flank = flankBonus(src, tgt);
   const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit;
   const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
-  const hit = clamp(Math.round(hitStat - avo), 0, 100);
+  let hit = clamp(Math.round(hitStat - avo), 0, 100);
+  if (board && board.weather) hit = clamp(hit + weatherHitMod(board.weather, w), 0, 100);   // 空模様が狙いを乱す
 
   let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2 + flank.crit;
   if (hasSkill(src, 'focus')) critStat += loneBonus(src, board);

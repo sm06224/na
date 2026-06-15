@@ -22,6 +22,7 @@ import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.
 import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS, hireRoster, hire, canHire, dismiss, canDismiss, jobChoices, reclass, canReclass, RECLASS_COST } from '../core/party.js';
 import { encodeSave, decodeSave } from '../core/save.js';
 import { TRADE_GOODS, tradePrice, buyGood, sellGood, holdings, canBuyGood } from '../core/trade.js';
+import { weatherForChapter } from '../core/weather.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -140,7 +141,8 @@ function showIntro() {
   playMusic('prologue');
   const ch = g.chapter;
   $('introTitle').textContent = ch.title;
-  $('introText').textContent = ch.intro;
+  const wx = weatherForChapter(g.seed, g.chapterIndex, ch.biome || 'green');
+  $('introText').textContent = ch.intro + `\n\n空模様：${wx.name}——${wx.line}`;
   const pp = $('introParty'); pp.innerHTML = '';
   for (const u of g.livingParty()) {
     const d = document.createElement('span');
@@ -211,7 +213,9 @@ function refreshHud() {
   }
   const o = b.objective;
   const objText = o.type === 'rout' ? '目標：敵の殲滅' : o.type === 'seize' ? '目標：玉座の制圧' : o.type === 'defeat_boss' ? '目標：敵将の撃破' : o.type === 'survive' ? `目標：${o.turns}ターン生存` : '目標：制圧';
-  $('objInfo').textContent = objText + `　味方${b.board.unitsOf('player').length}／敵${b.board.unitsOf('enemy').length}`;
+  const wx = b.board.weather;
+  const wxText = (wx && wx.id !== 'clear') ? `　〔${wx.name}〕` : '';
+  $('objInfo').textContent = objText + wxText + `　味方${b.board.unitsOf('player').length}／敵${b.board.unitsOf('enemy').length}`;
 }
 
 /* ---------- 選択と移動 ---------- */
