@@ -1,0 +1,10 @@
+{
+  "name": "nami",
+  "version": "1.0.0",
+  "description": "波 — a pond you can touch. Ripples are born where you touch, spread, reflect off the banks, interfere and settle — no one draws the waves; a discrete wave equation does. Wait, and rain falls. Zero dependencies, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
