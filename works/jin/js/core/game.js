@@ -9,8 +9,13 @@ import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { SETPIECES, parseMap } from './maps.js';
+import { EXTRA_SETPIECES } from './maps2.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
 import './items_extra.js';          // 追加の得物を登録簿へ
+import './items_extra2.js';         // 終盤の伝説装備を登録簿へ
+
+/* 全章ぶんの設置マップ（第一幕8＋第二幕8） */
+const ALL_SETPIECES = SETPIECES.concat(EXTRA_SETPIECES);
 
 /* ---- 旗下の者たち（種で初期能力が決まる） ---- */
 export const ROSTER = [
@@ -56,9 +61,51 @@ export const CHAPTERS = [
   { title: '第七章・火口の城', biome: 'volcano', w: 19, h: 13, objective: 'defeat_boss', level: 15, count: 10,
     boss: { classId: 'wyvernlord', name: '竜将ガルム', level: 18 },
     intro: '火口の城に、竜の将が待つ。', outro: '竜は墜ちた。王都は、すぐそこ。' },
-  { title: '最終章・王座の間', biome: 'ruins', w: 19, h: 14, objective: 'seize', level: 17, count: 11,
+  { title: '第八章・王座の間', biome: 'ruins', w: 19, h: 14, objective: 'seize', level: 17, count: 11,
     boss: { classId: 'commander', name: '簒奪王デズモンド', level: 20, statBoost: { hp: 16, def: 4, str: 4, spd: 2 } },
-    intro: 'すべては、この王座のために。', outro: '簒奪の王は倒れた。長い戦が、ようやく終わる。' },
+    intro: 'すべては、この王座のために。', outro: '簒奪の王は倒れた。——だが彼は、最期に妙な言葉を遺した。「塔が……目覚める」と。' },
+
+  /* ── 第二幕：王を操っていた、より古い影 ── */
+  { title: '第九章・凱旋の途', biome: 'green', w: 18, h: 12, objective: 'rout', level: 19, count: 10,
+    recruits: ['oren'],
+    boss: { classId: 'hero', name: '残党将ボルド', level: 22 },
+    intro: '帰る道に、王に従わぬ残党が立ち塞がる。', outro: '勝ったはずの戦が、まだ終わらない。' },
+  { title: '第十章・理の塔', biome: 'ruins', w: 18, h: 14, objective: 'defeat_boss', level: 21, count: 11, monster: true,
+    recruits: ['liza'],
+    boss: { classId: 'archmage_foe', name: '塔守クレシス', level: 24, items: ['bolting'] },
+    intro: '禁じられた理を蓄える塔。その主を断て。', outro: '塔の頂で、古い扉が開いていた。誰かが——先にいた。' },
+  { title: '第十一章・竜牙の谷', biome: 'volcano', w: 19, h: 13, objective: 'rout', level: 23, count: 12, monster: true,
+    recruits: ['gunnar'],
+    boss: { classId: 'wyvernlord', name: '竜牙のヴァロ', level: 26 },
+    intro: '竜牙族の谷。翼の影が、空を覆う。', outro: '谷を抜けた。鱗の匂いが、まだ鼻に残る。' },
+  { title: '第十二章・水没都市', biome: 'green', w: 19, h: 14, objective: 'seize', level: 25, count: 12,
+    recruits: ['noelle'],
+    boss: { classId: 'general', name: '沈黙の衛士', level: 28 },
+    intro: '水に沈んだ都の、ただ一つ残る玉座を取れ。', outro: '水面が、空をうつして静まった。' },
+  { title: '第十三章・屍の野', biome: 'ruins', w: 19, h: 14, objective: 'defeat_boss', level: 27, count: 13, monster: true,
+    boss: { classId: 'necromancer', name: '屍呼びオルガ', level: 30, items: ['nosferatu'] },
+    intro: '野は屍で埋まり、なお起き上がる。呼ぶ者を断て。', outro: '屍は土へ還った。だが、もっと大きな気配が近い。' },
+  { title: '第十四章・天空の社', biome: 'snow', w: 19, h: 14, objective: 'seize', level: 29, count: 13,
+    boss: { classId: 'falcon', name: '社守ティアナ', level: 32 },
+    intro: '雲の上の社。古き約束が、ここで結ばれた。', outro: '風が、最後の頁の在り処を告げた。' },
+  { title: '第十五章・禁書の間', biome: 'ruins', w: 20, h: 14, objective: 'defeat_boss', level: 31, count: 14, monster: true,
+    boss: { classId: 'sorcerer', name: '禁書の声', level: 34, items: ['nosferatu'], statBoost: { hp: 12, mag: 4, res: 4 } },
+    intro: '頁をめくる声がする。それは、王を操っていた声だった。', outro: '声は途切れた。けれど、頁の奥から、巨きな影が立ち上がる。' },
+  { title: '終章・古き竜', biome: 'volcano', w: 20, h: 15, objective: 'defeat_boss', level: 33, count: 14, monster: true,
+    boss: { classId: 'firedrake', name: '古竜アズヴァルド', level: 38, statBoost: { hp: 28, def: 6, str: 6, res: 4, spd: 2 } },
+    intro: '禁書が呼んだのは、世界より古い竜。これが、ほんとうの最後の戦。', outro: '古竜は崩れ、灰は風に溶けた。長い長い戦が、いま本当に終わる。' },
+];
+
+/* ── 第二幕で加わる仲間（その章に着くと馳せ参じる） ── */
+export const EXTRA_ROSTER = [
+  { id: 'oren', name: 'オレン', classId: 'shaman', level: 14, joinAt: 8, items: ['flux', 'vulnerary'],
+    growths: { mag: 5, def: 5 }, bio: '塔を追われた呪術師。闇の理に通じる。', deathQuote: '頁は……閉じる、か……' },
+  { id: 'liza', name: 'リーザ', classId: 'monk', level: 16, joinAt: 9, items: ['lightning', 'vulnerary'],
+    growths: { mag: 5, res: 10 }, bio: '塔に囚われていた光の徒。屍を祓う。', deathQuote: '光が……届きますように……' },
+  { id: 'gunnar', name: 'グンナル', classId: 'fighter', level: 18, joinAt: 10, items: ['steel_axe', 'hand_axe'],
+    growths: { hp: 10, str: 5 }, bio: '竜牙の谷で生き延びた斧使い。', deathQuote: 'はっ……ここまで、か……' },
+  { id: 'noelle', name: 'ノエル', classId: 'thief', level: 18, joinAt: 11, items: ['iron_dagger', 'vulnerary'],
+    growths: { spd: 5, lck: 10 }, bio: '水没都市の生き残り。影と鍵の名手。', deathQuote: 'しくじった……な……' },
 ];
 
 export class Game {
@@ -85,15 +132,26 @@ export class Game {
   get done() { return this.chapterIndex >= CHAPTERS.length; }
   livingParty() { return this.party.filter(isAlive); }
 
+  /* その章までに加わる仲間を、軍へ（重複なし・決定的） */
+  recruitUpTo(index) {
+    const r = this.rng.derive('recruit');
+    for (const spec of EXTRA_ROSTER) {
+      if (spec.joinAt <= index && !this.party.some(u => u.name === spec.name)) {
+        this.party.push(createUnit({ ...spec, side: 'player' }, r.derive(spec.id)));
+      }
+    }
+  }
+
   /* 章の戦場を組む。{ battle, deploy } を返す。 */
   startChapter(index = this.chapterIndex) {
     const ch = CHAPTERS[index];
     const cr = this.rng.derive('ch' + index);
+    this.recruitUpTo(index);
 
     // 戦場：手作りの設置マップ、または種からの生成
     let board, deployTiles, spawns, objective, bossSeat = null;
-    if (this.useSetpiece && SETPIECES[index]) {
-      const parsed = parseMap(SETPIECES[index]);
+    if (this.useSetpiece && ALL_SETPIECES[index]) {
+      const parsed = parseMap(ALL_SETPIECES[index]);
       board = parsed.board; deployTiles = parsed.deploy.slice(); spawns = parsed.spawns.slice(0, ch.count);
       bossSeat = parsed.boss;
       if (ch.objective === 'seize') {
