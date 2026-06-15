@@ -351,6 +351,30 @@ export const SUPPORTS = [
   },
 ];
 
+/* 第二幕（第9〜終章）の台本と支援会話を取り込む。
+   script2 の見出し（9〜15）は実際の章番号（index 8〜15）へ正しく対応づける。
+   第十五章・禁書の間（index 14）だけは、ここで綴じる。 */
+import { EXTRA_SCRIPTS, EXTRA_SUPPORTS } from './script2.js';
+const ACT2_MAP = { 8: 9, 9: 10, 10: 11, 11: 12, 12: 13, 13: 14, 15: 15 };
+for (const idx in ACT2_MAP) { const s = EXTRA_SCRIPTS[ACT2_MAP[idx]]; if (s) CHAPTER_SCRIPTS[idx] = s; }
+CHAPTER_SCRIPTS[14] = {
+  open: [
+    { who: 'ナレーション', line: '禁書の間。頁をめくる音だけが、回廊にこだましている。' },
+    { who: 'オレン', line: 'ここが心臓だ。私がめくり、逃げ出した頁――その声の、本体がいる。' },
+    { who: '禁書の声', line: '……戻ったか、めくり手よ。よい。最後の一行は、お前の名で綴じよう。' },
+    { who: 'リン', line: 'お前が、デズモンドを操っていた声か。何のために、こんなにも人を駒にする。' },
+    { who: '禁書の声', line: '世界は未完の書だ。乱れた頁を、わたしが綴じ直す。王も、竜も、お前も――等しく、一文字。' },
+    { who: 'リーザ', line: 'ちがう。人は、誰かに書かれる文字じゃない。自分の頁は、自分でめくるんです。' },
+    { who: 'リン', line: 'この一戦で、お前の本を閉じる。みんな――最後の頁まで、共に書こう。' },
+  ],
+  win: [
+    { who: '禁書の声', line: 'ばかな……物語が、書き手を、拒むなど……' },
+    { who: 'オレン', line: '声は消えた。だが――頁の奥が、まだ脈打っている。声は、最後の一行に、古き竜を呼んでいた。' },
+    { who: 'リン', line: '行こう。これが、ほんとうの最後だ。' },
+  ],
+};
+SUPPORTS.push(...EXTRA_SUPPORTS);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
