@@ -47,6 +47,7 @@ export function reachable(grid, start, mp, opts = {}) {
   const from = new Map();        // key -> prev key
   const sk = key(start.x, start.y);
   dist.set(sk, 0);
+  const zoc = opts.zoc || (() => false);
   const heap = new Heap();
   heap.push({ x: start.x, y: start.y, g: 0, f: 0, t: 0 });
   let tie = 1;
@@ -54,6 +55,8 @@ export function reachable(grid, start, mp, opts = {}) {
     const cur = heap.pop();
     const ck = key(cur.x, cur.y);
     if (cur.g > (dist.get(ck) ?? Infinity)) continue;
+    // 支配領域（ZOC）：敵の隣に踏み込んだら、そこで足が止まる（始点は除く）
+    if (zoc(cur.x, cur.y) && !(cur.x === start.x && cur.y === start.y)) continue;
     for (const d of DIRS4) {
       const nx = cur.x + d.x, ny = cur.y + d.y;
       if (!grid.inBounds(nx, ny)) continue;
@@ -77,6 +80,7 @@ export function reachable(grid, start, mp, opts = {}) {
 export function findPath(grid, start, goal, opts = {}) {
   const costAt = opts.costAt || (() => 1);
   const blocked = opts.blocked || (() => false);
+  const zoc = opts.zoc || (() => false);
   const gk = key(goal.x, goal.y);
   const g = new Map(); const from = new Map();
   const sk = key(start.x, start.y);
@@ -89,6 +93,7 @@ export function findPath(grid, start, goal, opts = {}) {
     const ck = key(cur.x, cur.y);
     if (ck === gk) return rebuild(from, sk, gk);
     if (cur.g > (g.get(ck) ?? Infinity)) continue;
+    if (zoc(cur.x, cur.y) && ck !== sk && ck !== gk) continue;   // ZOC で足止め
     for (const d of DIRS4) {
       const nx = cur.x + d.x, ny = cur.y + d.y;
       if (!grid.inBounds(nx, ny)) continue;

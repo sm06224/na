@@ -38,6 +38,7 @@ export function planTurn(board, u, rng) {
   const reach = reachable(board.terrain, u.pos, u.mov, {
     costAt: (x, y) => board.costForUnit(u, x, y),
     blocked: (x, y) => board.blockedForUnit(u, x, y),
+    zoc: (x, y) => board.zocFor(u, x, y),
   });
   // 立てるマス（自分の今の位置か、他のユニットがいないマス）
   const standable = [];
