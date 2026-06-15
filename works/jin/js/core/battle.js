@@ -84,6 +84,7 @@ export class Battle {
     const reach = reachable(this.board.terrain, u.pos, u.mov, {
       costAt: (x, y) => this.board.costForUnit(u, x, y),
       blocked: (x, y) => this.board.blockedForUnit(u, x, y),
+      zoc: (x, y) => this.board.zocFor(u, x, y),
     });
     const tiles = [];
     for (const [k] of reach.dist) {
@@ -96,6 +97,7 @@ export class Battle {
     return findPath(this.board.terrain, u.pos, dest, {
       costAt: (x, y) => this.board.costForUnit(u, x, y),
       blocked: (x, y) => this.board.blockedForUnit(u, x, y),
+      zoc: (x, y) => this.board.zocFor(u, x, y),
     });
   }
   attackTargetsFrom(u, tile) {

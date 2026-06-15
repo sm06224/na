@@ -65,4 +65,12 @@ export class Board {
     const o = this.unitAt(x, y);
     return !!o && this.alliesAreEnemies(u, o);
   }
+  /* 支配領域（ZOC）：敵が隣接するマスか。飛行も「翼」も等しく受ける */
+  zocFor(u, x, y) {
+    for (const o of this.units) {
+      if (!isAlive(o) || !o.pos) continue;
+      if (this.alliesAreEnemies(u, o) && Math.abs(o.pos.x - x) + Math.abs(o.pos.y - y) === 1) return true;
+    }
+    return false;
+  }
 }
