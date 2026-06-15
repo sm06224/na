@@ -133,5 +133,81 @@ ab('herbal', {
   use(game) { const n = game.healActor(game.player, game.rng.dice('2d6')); game.message(`薬草で手当てした（+${n}）。`, 'good'); return true; },
 });
 
+/* ---- 僧侶 ---- */
+ab('smite', {
+  name: '裁き', focus: 4, targeted: true,
+  desc: '聖なる光で打つ。不死には効きめ大。',
+  use(game, { dx, dy }) {
+    const { actor, path } = boltTarget(game, game.player, dx, dy, 7);
+    game.flashBolt(path, 'magicmissile');
+    if (actor) {
+      let dmg = game.rng.dice('2d5');
+      if (actor.hasTag && actor.hasTag('undead')) dmg = Math.round(dmg * 1.6);
+      game.hurt(actor, dmg, game.player);
+      game.message(`聖光が${actor.name}を裁いた（${dmg}）。`, 'good');
+    } else game.message('光は虚空へ消えた。');
+    return true;
+  },
+});
+ab('mend', {
+  name: '癒し', focus: 5, targeted: false,
+  desc: '深い傷を癒し、淀みを払う。',
+  use(game) {
+    const n = game.healActor(game.player, game.rng.dice('3d6'));
+    if (game.player.hasStatus('poison')) { game.player.statuses = game.player.statuses.filter(s => s.type !== 'poison'); }
+    game.message(`祈りが傷を癒した（+${n}）。`, 'good');
+    return true;
+  },
+});
+ab('bless', {
+  name: '祝福', focus: 4, targeted: false,
+  desc: 'しばし守りと力を授かる。',
+  use(game) { applyStatus(game.player, 'fortify', 14, 3); applyStatus(game.player, 'might', 14); game.message('淡い光に包まれた。'); return true; },
+});
+ab('turn_undead', {
+  name: '退魔', focus: 4, targeted: false,
+  desc: 'まわりの不死を怯えさせる。',
+  use(game) {
+    let n = 0;
+    for (const m of game.board.monsters()) if (game.chebToPlayer(m.x, m.y) <= 6 && m.hasTag && m.hasTag('undead')) { applyStatus(m, 'fear', game.rng.range(8, 14)); n++; }
+    game.message(n ? '不死どもが怯えて退いた！' : 'まわりに不死はいない。');
+    return true;
+  },
+});
+
+/* ---- 共通の追補 ---- */
+ab('quake', {
+  name: '震脚', focus: 5, targeted: false,
+  desc: '足を踏み鳴らし、隣の敵すべてを揺さぶる。',
+  use(game) {
+    let n = 0;
+    for (const d of DIR8) {
+      const a = game.board.actorAt(game.player.x + d.x, game.player.y + d.y);
+      if (a && a.alive && a.faction === 'monster') { const dmg = game.rng.dice('1d6'); game.hurt(a, dmg, game.player); if (a.alive && game.rng.oneIn(2)) applyStatus(a, 'stun', 1); n++; }
+    }
+    game.message(n ? '地が鳴り、敵がよろめいた！' : 'まわりに敵はいない。');
+    return true;
+  },
+});
+ab('volley', {
+  name: '連射', focus: 5, targeted: true,
+  desc: '直線上の敵を続けざまに射る。',
+  use(game, { dx, dy }) {
+    let x = game.player.x, y = game.player.y, hit = 0;
+    const path = [];
+    for (let i = 0; i < 9; i++) {
+      x += dx; y += dy;
+      if (!game.level.inBounds(x, y)) break;
+      path.push({ x, y });
+      const a = game.board.actorAt(x, y);
+      if (a && a.alive && a.faction === 'monster') { const r = rangedHit(game, game.player, a, { damage: '1d6' }); hit++; if (r.killed) continue; }
+      if (!game.level.clearTile(x, y)) break;
+    }
+    game.flashBolt(path, 'magicmissile');
+    game.message(hit ? `${hit} 体を射抜いた。` : '矢は誰にも当たらなかった。', hit ? 'good' : 'info');
+    return true;
+  },
+});
+
 export function getAbility(key) { return AB[key]; }
 export function allAbilities() { return Object.values(AB); }
