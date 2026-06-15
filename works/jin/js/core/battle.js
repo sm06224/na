@@ -7,7 +7,7 @@
 import { manhattan, key, tilesInRange } from './grid.js';
 import { reachable, findPath } from './pathfind.js';
 import { equippedWeapon, effectiveStats, isAlive, hasSkill, gainExp, autoEquip, attackSpeed, gainWexp } from './unit.js';
-import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon, dirToward, patternTiles } from './combat.js';
+import { resolveCombat, forecast, inAttackRange, resolveArea, areaTargets, isAreaWeapon, dirToward, patternTiles, resolveArithmetic } from './combat.js';
 import { planTurn } from './ai.js';
 import { battleExp } from './stats.js';
 import { tickStatus, canAct, addStatus, clearStatus } from './status.js';
@@ -211,6 +211,20 @@ export class Battle {
       res.levelUps = gainExp(caster, exp, this.rng);
     }
     this.record(`${caster.name}　範囲攻撃 → ${res.targets.length}体${res.fallen.length ? `（${res.fallen.length}撃破）` : ''}`);
+    this.cleanupDead();
+    this.checkEnd();
+    return res;
+  }
+  doArithmetic(caster, prop, num) {
+    const res = resolveArithmetic(caster, prop, num, this.board);
+    caster.hasActed = true; caster.hasMoved = true;
+    if ((caster.side === 'player' || caster.side === 'ally') && res.targets.length) {
+      let kills = res.fallen.length;
+      let exp = Math.min(100, 12 + res.targets.length * 4 + kills * 18);
+      if (hasSkill(caster, 'paragon')) exp *= 2;
+      res.levelUps = gainExp(caster, exp, this.rng);
+    }
+    this.record(`${caster.name}　算術 → ${res.targets.length}体${res.fallen.length ? `（${res.fallen.length}撃破）` : ''}`);
     this.cleanupDead();
     this.checkEnd();
     return res;

@@ -283,3 +283,30 @@ export function isAreaWeapon(u) {
   const w = equippedWeapon(u);
   return !!(w && w.aoe);
 }
+
+/* ---- 算術（カリキュレーター）：能力値が「ある数の倍数」の敵を、全員まとめて撃つ ---- */
+export const ARITH_PROPS = [['Lv', 'level'], ['HP', 'hp'], ['守', 'def'], ['魔防', 'res'], ['速', 'spd']];
+export const ARITH_NUMS = [2, 3, 4, 5];
+export function statValue(u, prop) {
+  if (prop === 'level') return u.level | 0;
+  if (prop === 'hp') return u.hp | 0;
+  const es = effectiveStats(u);
+  return es[prop] | 0;
+}
+export function arithmeticTargets(caster, prop, num, board) {
+  if (!num) return [];
+  return board.enemiesOf(caster).filter(e => e.pos && (statValue(e, prop) % num === 0));
+}
+export function resolveArithmetic(caster, prop, num, board) {
+  const events = [];
+  const targets = arithmeticTargets(caster, prop, num, board);
+  const mag = effectiveStats(caster).mag;
+  for (const t of targets) {
+    if (!isAlive(t)) continue;
+    const d = Math.max(1, mag - effectiveStats(t).res);
+    t.hp = Math.max(0, t.hp - d);
+    events.push({ type: 'hit', by: caster.uid, tgt: t.uid, dmg: d });
+  }
+  const fallen = targets.filter(t => !isAlive(t)).map(t => t.uid);
+  return { events, fallen, targets };
+}

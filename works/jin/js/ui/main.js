@@ -5,7 +5,8 @@ import { isAlive, equippedWeapon, effectiveStats, unitRank } from '../core/unit.
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
-import { forecast, inAttackRange, isAreaWeapon, areaTargets } from '../core/combat.js';
+import { forecast, inAttackRange, isAreaWeapon, areaTargets, ARITH_PROPS, ARITH_NUMS, arithmeticTargets } from '../core/combat.js';
+import { hasSkill as unitHasSkill } from '../core/unit.js';
 import { manhattan, key } from '../core/grid.js';
 import { Camera, draw, BASE_TILE, setView3d, isView3d } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
@@ -239,6 +240,7 @@ function openMenu() {
     const centers = S.battle.areaCentersFrom(u, u.pos);
     if (centers.length) add('範囲攻撃', () => beginAoe(centers), 'primary');
   } else if (targets.length) add('攻撃', () => beginTarget(targets), 'primary');
+  if (unitHasSkill(u, 'arithmetic')) add('算術', () => beginArith(), 'primary');
   if (staffT.length) add('杖', () => beginStaff(staffT), 'primary');
   if (consum.length) add('道具', () => openItems(consum));
   add('待機', () => { sfx('select2'); S.battle.doWait(u); endAction(); });
@@ -320,8 +322,51 @@ async function confirmAoe() {
   S.busy = false;
   endAction();
 }
+/* ---------- 算術 ---------- */
+function beginArith() {
+  hideMenu();
+  const menu = $('actionMenu'); menu.innerHTML = '';
+  const mk = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; menu.appendChild(b); };
+  for (const [label, prop] of ARITH_PROPS) mk(label, () => chooseArithNum(prop), 'primary');
+  mk('やめる', () => { openMenu(); }, 'ghost');
+  menu.hidden = false;
+  toast('能力値を選ぶ');
+}
+function chooseArithNum(prop) {
+  const menu = $('actionMenu'); menu.innerHTML = '';
+  const mk = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; menu.appendChild(b); };
+  for (const n of ARITH_NUMS) mk('×' + n, () => arithPreview(prop, n), 'primary');
+  mk('もどる', beginArith, 'ghost');
+  menu.hidden = false;
+  toast('倍数を選ぶ');
+}
+function arithPreview(prop, num) {
+  const u = S.selected;
+  hideMenu();
+  const tgts = arithmeticTargets(u, prop, num, S.board);
+  S.atkTiles = tgts.map(t => ({ x: t.pos.x, y: t.pos.y }));
+  S._arith = { prop, num }; S._arithMode = true;
+  const label = (ARITH_PROPS.find(p => p[1] === prop) || ['?'])[0];
+  $('fcBody').innerHTML = `<div class="fcrow"><b>${u.name}</b> 算術　${label} ×${num} → <b>${tgts.length}</b>体</div>`
+    + tgts.map(t => `<div class="fcrow">${t.name}（${classDef(t.classId).name}）</div>`).join('');
+  $('forecast').hidden = false;
+}
+async function confirmArith() {
+  const u = S.selected, { prop, num } = S._arith;
+  $('forecast').hidden = true; S._arithMode = false; S.atkTiles = null;
+  S.busy = true; S.mode = 'animating';
+  const res = S.battle.doArithmetic(u, prop, num);
+  for (const t of res.targets) if (t.pos) { S.fx.burst(t.pos.x, t.pos.y, '#9cc8ff'); }
+  S.fx.addShake(5);
+  await playEvents(res.events);
+  if (res.levelUps && res.levelUps.length) await showLevelUps(u, res.levelUps);
+  refreshLog();
+  S.busy = false;
+  endAction();
+}
 async function confirmAttack() {
   if (S._aoeMode) return confirmAoe();
+  if (S._arithMode) return confirmArith();
   const u = S.selected, def = S._pendingDef;
   $('forecast').hidden = true;
   S.atkTiles = null;
@@ -831,7 +876,7 @@ $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').
 $('logClose').onclick = () => { $('log').hidden = true; };
 $('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) { if (S.battle && S.battle.initiative) advanceInitiative(); else maybeAuto(); } };
 $('fcGo').onclick = confirmAttack;
-$('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
+$('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; S._arithMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
 $('nextBtn').onclick = () => { $('result').hidden = true; openBase(); };
 $('retryBtn').onclick = () => { $('result').hidden = true; sortie(); };
