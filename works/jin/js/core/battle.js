@@ -157,7 +157,7 @@ export class Battle {
     const w = equippedWeapon(u);
     const events = [];
     if (w.staff === 'heal') {
-      const h = Math.min(target.maxHp - target.hp, (w.power >= 99 ? target.maxHp : w.power + Math.floor(effectiveStats(u).mag / 2)));
+      const h = Math.min(target.maxHp - target.hp, (w.power >= 99 ? target.maxHp : w.power + Math.floor(effectiveStats(u).mag / 2) + Math.floor((u.faith ?? 5) / 3)));
       target.hp += h; events.push({ type: 'heal', uid: target.uid, amount: h });
       if (u.side === 'player') gainExp(u, 12, this.rng);
     } else if (w.staff === 'restore') {
