@@ -106,3 +106,20 @@ button.ghost { background: #0e1220; border: 1px solid var(--line); color: var(--
 .codexbody .entry .tac { color: var(--gold); font-size: .76rem; margin-top: .2rem; }
 .codexbody .conv { font-size: .82rem; line-height: 1.9; }
 .codexbody .conv .who { color: var(--gold); }
+
+/* 拠点 */
+.basecard { max-width: 38em; max-height: 88vh; display: flex; flex-direction: column; text-align: left; }
+.basegold { color: var(--gold); font-weight: 700; font-size: .9rem; margin: .2rem 0 .4rem; text-align: right; }
+.basebody { min-height: 30vh; }
+.shoprow, .convrow, .partyrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .45rem .2rem; border-bottom: 1px solid rgba(150,175,235,.1); font-size: .84rem; }
+.shoprow .nm { flex: 1; } .shoprow .pr { color: var(--gold); font-variant-numeric: tabular-nums; margin: 0 .5rem; }
+.minibtn { background: #14101b; border: 1px solid var(--line); color: var(--ink); border-radius: 8px;
+  padding: .35em .8em; font: inherit; font-size: .76rem; cursor: pointer; white-space: nowrap; }
+.minibtn.buy { background: linear-gradient(120deg, #5f7cff, #6f8cff); color: #0a0d14; border: none; font-weight: 700; }
+.minibtn:disabled { opacity: .4; }
+.unitpick { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .7rem; }
+.unitpick button { background: #14101b; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: .35em .8em; font: inherit; font-size: .76rem; cursor: pointer; }
+.unitpick button.on { background: linear-gradient(120deg,#5f7cff,#6f8cff); color: #0a0d14; border: none; font-weight: 700; }
+.subhead { color: var(--soft); font-size: .74rem; margin: .6rem 0 .3rem; letter-spacing: .06em; }
+.codeta { width: 100%; height: 4.5em; background: #0e1220; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .5em .7em; font: .72rem ui-monospace, monospace; word-break: break-all; resize: vertical; }

@@ -14,6 +14,12 @@ import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
 import { FX } from './fx.js';
+import { shopStock, buy, canBuy, sellFromConvoy, sellPrice } from '../core/shop.js';
+import { giveItem, takeItem, equipItem, equipAccessory, useBooster, canPromote, promotionOptions, doPromote, MAX_ITEMS } from '../core/party.js';
+import { encodeSave, decodeSave } from '../core/save.js';
+import { item as itemDef2 } from '../core/items.js';
+
+const SAVE_KEY = 'jin.save.v2';
 
 const $ = id => document.getElementById(id);
 const canvas = $('stage');
@@ -370,9 +376,10 @@ async function showOutcome() {
   $('resultTitle').textContent = win ? '勝利' : '敗北';
   if (win) {
     const r = S.game.onVictory();
+    autosave();
     $('resultText').textContent = `${ch.outro}\n（報酬 ${r.reward}G／所持 ${r.gold}G）`;
-    $('nextBtn').textContent = S.game.done ? '——' : '次の章へ';
-    $('nextBtn').style.display = S.game.done ? 'none' : '';
+    $('nextBtn').textContent = S.game.done ? 'おわりへ' : '拠点へ';
+    $('nextBtn').style.display = '';
     $('retryBtn').style.display = 'none';
   } else {
     const reason = S.battle.reason === 'lord' ? `${S.game.party[0].name}が倒れた——戦記はここで途絶えた。` : '全軍が潰えた。';
@@ -541,17 +548,114 @@ function renderCodex(tab) {
   body.scrollTop = 0;
 }
 
+/* ---------- 拠点（章と章のあいだ） ---------- */
+function autosave() { try { localStorage.setItem(SAVE_KEY, encodeSave(S.game)); } catch { /* あふれは無視 */ } }
+function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
+let baseUnit = null;
+const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['記録', 'record']];
+
+function openBase() {
+  $('result').hidden = true;
+  if (!S.game || S.game.done) { showIntro(); return; }
+  S.mode = 'base';
+  playMusic('prologue');
+  $('baseTitle').textContent = `拠点 — 次は「${S.game.chapter.title}」`;
+  baseUnit = S.game.livingParty()[0];
+  const tabs = $('baseTabs'); tabs.innerHTML = '';
+  BASE_TABS.forEach(([label, id], i) => {
+    const b = document.createElement('button'); b.textContent = label;
+    b.onclick = () => { [...tabs.children].forEach(c => c.classList.remove('on')); b.classList.add('on'); renderBase(id); };
+    if (i === 0) b.classList.add('on');
+    tabs.appendChild(b);
+  });
+  renderBase('shop');
+  $('base').hidden = false;
+}
+function baseGold() { $('baseGold').textContent = `所持金 ${S.game.gold} G`; }
+function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+function mkbtn(label, cls, fn, disabled) { const b = el('button', 'minibtn ' + (cls || ''), label); b.disabled = !!disabled; b.onclick = fn; return b; }
+
+function renderBase(tab) {
+  baseGold();
+  const body = $('baseBody'); body.innerHTML = '';
+  const g = S.game;
+  if (tab === 'shop') {
+    body.appendChild(el('div', 'subhead', '買う'));
+    for (const id of shopStock(g)) {
+      const it = itemDef2(id); const row = el('div', 'shoprow');
+      row.appendChild(el('span', 'nm', it.name));
+      row.appendChild(el('span', 'pr', it.price + 'G'));
+      row.appendChild(mkbtn('買う', 'buy', () => { if (buy(g, id)) { sfx('select'); autosave(); renderBase('shop'); } }, !canBuy(g, id)));
+      body.appendChild(row);
+    }
+    body.appendChild(el('div', 'subhead', '荷駄（売る・半値）'));
+    if (!g.convoy.length) body.appendChild(el('div', 'shoprow', '——'));
+    g.convoy.forEach((id, i) => {
+      const it = itemDef2(id); const row = el('div', 'convrow');
+      row.appendChild(el('span', 'nm', it ? it.name : id));
+      row.appendChild(mkbtn('売 ' + sellPrice(id) + 'G', '', () => { if (sellFromConvoy(g, i)) { sfx('cancel'); autosave(); renderBase('shop'); } }));
+      body.appendChild(row);
+    });
+  } else if (tab === 'party') {
+    const pick = el('div', 'unitpick');
+    for (const u of g.livingParty()) {
+      const b = el('button', u === baseUnit ? 'on' : '', `${u.name} Lv${u.level}`);
+      b.onclick = () => { baseUnit = u; renderBase('party'); };
+      pick.appendChild(b);
+    }
+    body.appendChild(pick);
+    const u = baseUnit; if (!u) return;
+    const cd = classDef(u.classId); const es = effectiveStats(u);
+    body.appendChild(el('div', 'subhead', `${u.name}（${cd.name} Lv${u.level}）HP${u.maxHp}　` + STAT_KEYS.map(k => `${STAT_NAMES[k]}${es[k]}`).join(' ')));
+    if (canPromote(u)) {
+      for (const to of promotionOptions(u)) {
+        body.appendChild(mkbtn(`★ ${classDef(to).name}へ転職`, 'buy', () => { doPromote(u, to); sfx('levelup'); autosave(); renderBase('party'); }));
+      }
+    }
+    body.appendChild(el('div', 'subhead', '持ち物（装備・荷駄へ）'));
+    u.items.forEach((st, i) => {
+      const it = itemDef2(st.id); const row = el('div', 'shoprow');
+      const eq = (i === u.equipped) ? '◆' : '';
+      row.appendChild(el('span', 'nm', eq + (it ? it.name : st.id) + (st.uses ? `×${st.uses}` : '')));
+      if (it && it.kind === 'weapon') row.appendChild(mkbtn('装備', '', () => { if (equipItem(u, i)) { sfx('select'); renderBase('party'); } }));
+      row.appendChild(mkbtn('荷駄へ', '', () => { takeItem(g, u, i); autosave(); renderBase('party'); }));
+      body.appendChild(row);
+    });
+    if (u.accessory) body.appendChild(el('div', 'subhead', `装飾：${itemDef2(u.accessory).name}`));
+    body.appendChild(el('div', 'subhead', '荷駄から'));
+    if (!g.convoy.length) body.appendChild(el('div', 'shoprow', '——'));
+    g.convoy.forEach((id, i) => {
+      const it = itemDef2(id); if (!it) return;
+      const row = el('div', 'convrow'); row.appendChild(el('span', 'nm', it.name));
+      if (it.kind === 'booster') row.appendChild(mkbtn('使う', 'buy', () => { useBooster(g, u, i); sfx('levelup'); autosave(); renderBase('party'); }));
+      else if (it.kind === 'accessory') row.appendChild(mkbtn('着ける', '', () => { equipAccessory(g, u, i); sfx('select'); autosave(); renderBase('party'); }));
+      else row.appendChild(mkbtn('持つ', '', () => { if (giveItem(g, u, i)) { sfx('select'); autosave(); renderBase('party'); } }, u.items.length >= MAX_ITEMS));
+      body.appendChild(row);
+    });
+  } else if (tab === 'record') {
+    body.appendChild(el('div', 'subhead', 'この符号を控えれば、どこでも続きから（自動保存もされます）'));
+    const ta = el('textarea', 'codeta'); ta.readOnly = true; ta.value = encodeSave(g); body.appendChild(ta);
+    body.appendChild(mkbtn('符号を写す', 'buy', async () => { try { await navigator.clipboard.writeText(ta.value); toast('符号を写しました'); } catch { ta.select(); } }));
+    body.appendChild(el('div', 'subhead', '別の符号を読み込む'));
+    const inp = el('textarea', 'codeta'); inp.placeholder = '符号を貼る'; body.appendChild(inp);
+    body.appendChild(mkbtn('読み込む', '', () => { try { const ng = decodeSave(inp.value.trim()); S.game = ng; autosave(); toast('読み込みました'); openBase(); } catch { toast('符号を読めませんでした'); } }));
+  }
+}
+
 /* ---------- ボタン ---------- */
 $('startBtn').onclick = () => startGame(parseInt($('seedInput').value, 10) || 20260615);
 $('codexBtn').onclick = openCodex;
 $('codexClose').onclick = () => { $('codex').hidden = true; };
+$('baseGo').onclick = () => { $('base').hidden = true; showIntro(); };
+$('continueBtn').onclick = () => { try { S.game = decodeSave(localStorage.getItem(SAVE_KEY)); $('title').hidden = true; openBase(); } catch { toast('続きを読めませんでした'); } };
+$('loadBtn').onclick = () => { const code = prompt('セーブ符号を貼ってください'); if (!code) return; try { S.game = decodeSave(code.trim()); $('title').hidden = true; openBase(); } catch { toast('符号を読めませんでした'); } };
 $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 0; };
 $('sortieBtn').onclick = sortie;
 $('endTurn').onclick = endTurn;
 $('fcGo').onclick = confirmAttack;
 $('fcCancel').onclick = () => { $('forecast').hidden = true; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
-$('nextBtn').onclick = () => { $('result').hidden = true; showIntro(); };
+$('nextBtn').onclick = () => { $('result').hidden = true; openBase(); };
 $('retryBtn').onclick = () => { $('result').hidden = true; sortie(); };
 $('muteBtn').onclick = () => { const m = !isMuted(); setMuted(m); setMusicMuted(m); $('muteBtn').textContent = m ? '♪̸' : '♪'; if (!m) { sfx('select'); resumeMusic(); } };
 
@@ -573,5 +677,6 @@ function toast(msg, ms = 1400) { const el = $('toast'); el.textContent = msg; el
 
 /* ---------- 起動 ---------- */
 $('seedInput').value = '20260615';
+if (hasSave()) $('continueBtn').hidden = false;
 fit();
 requestAnimationFrame(loop);
