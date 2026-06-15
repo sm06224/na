@@ -5,7 +5,7 @@
 
 import { item as itemDef } from './items.js';
 import { classDef, classCaps, CLASS_LIST } from './classes.js';
-import { canUse, autoEquip, createUnit, isAlive, seedWexp } from './unit.js';
+import { canUse, autoEquip, createUnit, isAlive, seedWexp, faithOf } from './unit.js';
 import { promote } from './unit.js';
 import { capStats, STAT_KEYS } from './stats.js';
 import { RNG } from './rng.js';
@@ -137,6 +137,7 @@ export function reclass(game, unit, toId) {
     unit.statsBase[k] += diff;
   }
   unit.classId = toId; unit.mov = to.mov; unit.mode = to.mode;
+  unit.faith = faithOf(toId);
   unit.skills = [...new Set([...unit.skills, ...(to.skills || [])])];
   unit.statsBase = capStats(unit.statsBase, classCaps(toId));
   unit.maxHp = unit.statsBase.hp; unit.hp = Math.min(unit.hp, unit.maxHp);

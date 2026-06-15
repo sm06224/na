@@ -701,7 +701,7 @@ function showInfo(u) {
   $('infoBody').innerHTML =
     `<canvas id="infoFace" width="72" height="72" style="float:right;width:64px;height:64px;border-radius:10px;margin-left:.5rem"></canvas>
      <h3>${u.name} <small>${cd.name} Lv${u.level}</small></h3>
-     <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}${bond ? `　絆+${bond}` : ''}</div>
+     <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}　信仰${u.faith ?? 5}${bond ? `　絆+${bond}` : ''}</div>
      <div class="statgrid">${statline}</div>
      <div class="itemline">得物：${w ? w.name : '—'}</div>
      ${u.wexp ? `<div class="itemline">熟練：${Object.keys(u.wexp).map(t => `${WTYPE[t]}${WRANKS[unitRank(u, t)] || 'E'}`).join('・')}</div>` : ''}

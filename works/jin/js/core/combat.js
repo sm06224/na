@@ -68,6 +68,7 @@ export function strikeInfo(src, tgt, board) {
   let eff = false;
   if (w.eff) for (const e of w.eff) if (tags.includes(e)) eff = true;
   if (eff) might += w.mt * 2;                       // 特効は威力三倍ぶん
+  if (w.wtype === 'light') might += Math.floor((src.faith ?? 5) / 4);   // 信仰が光を強める
 
   const atkStat = magic ? sa.mag : sa.str;
   const atk = atkStat + Math.max(0, might);
@@ -76,7 +77,8 @@ export function strikeInfo(src, tgt, board) {
   const terrDef = flierTgt ? 0 : (terr.def || 0);       // 飛行は地形の守りを受けない
   const terrAvo = flierTgt ? 0 : (terr.avo || 0);
   const defStat = (magic ? sd.res : sd.def) + terrDef;
-  const dmg = Math.max(0, atk - defStat);
+  let dmg = Math.max(0, atk - defStat);
+  if (w.wtype === 'dark') dmg = Math.max(0, dmg - Math.floor((tgt.faith ?? 5) / 4));   // 信仰が闇をやわらげる
 
   const sBond = bondOf(src, board), tBond = bondOf(tgt, board);
   const flank = flankBonus(src, tgt);

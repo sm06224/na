@@ -10,6 +10,15 @@ import { STAT_KEYS, cloneStats, addStats, capStats, rollLevelUp, expToLevel } fr
 let _uid = 1;
 export function resetUid(n = 1) { _uid = n; }
 
+/* 信仰：光魔法と杖を強め、闇の傷をやわらげる。職ごとの心ばえ。 */
+const FAITH = {
+  bishop: 16, monk: 12, cleric: 12, valkyrie: 12, greatlord: 9, falcon: 9, lord: 8, sage: 8, bard: 8,
+  dancer: 7, pegasus: 7, soldier: 5, mercenary: 5, knight: 5, archer: 5, cavalier: 5, paladin: 6,
+  thief: 4, rogue: 4, assassin: 3, brigand: 3, fighter: 4, berserker: 2,
+  shaman: 2, druid: 2, sorcerer: 0, necromancer: 0, wightlord: 0, revenant: 0, mogall: 1, gargoyle: 1, firedrake: 1, darkflier: 3, dread: 3,
+};
+export function faithOf(classId) { return FAITH[classId] ?? 5; }
+
 /* ユニットを作る。level まで自動で育てる（決定的）。 */
 export function createUnit(spec, rng) {
   const cd = classDef(spec.classId) || classDef('soldier');
@@ -54,6 +63,7 @@ export function createUnit(spec, rng) {
     buffs: {},             // { str: {amt, turns}, ... }
     pos: spec.pos ? { ...spec.pos } : null,
     facing: spec.facing ?? (spec.side === 'enemy' ? 3 : 1),   // 0北 1東 2南 3西
+    faith: spec.faith ?? faithOf(cd.id),
     hasMoved: false,
     hasActed: false,
     boss: !!spec.boss,
@@ -204,6 +214,7 @@ export function promote(u, toClassId) {
   u.classId = toClassId;
   u.mov = to.mov; u.mode = to.mode;
   u.skills = uniq([...u.skills, ...(to.skills || [])]);
+  u.faith = faithOf(toClassId);
   u.statsBase = capStats(u.statsBase, classCaps(toClassId));
   u.maxHp = u.statsBase.hp; u.hp = Math.min(u.hp, u.maxHp);
   u.level = 1; u.exp = 0;
