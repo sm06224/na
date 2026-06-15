@@ -133,6 +133,14 @@ add('cockatrice', { name: '鶏蛇', glyph: 'c', color: '#b89a4a', hp: 24, str: 5
 add('efreet', { name: '炎魔', glyph: '&', color: '#e0702a', hp: 38, str: 7, def: 4, acc: 7, eva: 3, speed: 110, ai: 'caster', sight: 9, damage: '1d10', xp: 36, depth: [11, 15], rarity: 2, tags: ['demon'], spell: 'firebolt', spellPower: '3d4', spellRange: 7, resist: { fire: 0.8 }, drops: 'high' });
 add('shoggoth', { name: '蠢く塊', glyph: 'O', color: '#7a8a9a', hp: 80, str: 9, def: 4, acc: 5, eva: 0, speed: 80, ai: 'melee', sight: 6, damage: '2d7', xp: 54, depth: [13, 15], rarity: 1, tags: [], special: 'corrode', resist: { poison: 1, frost: 0.5, fire: 0.5 }, regen: 2, drops: 'high' });
 
+/* ---- 末尾の住人 ---- */
+add('mole', { name: '盲土竜', glyph: 'r', color: '#8a7a5a', hp: 8, str: 2, def: 1, acc: 3, eva: 2, speed: 100, ai: 'wander', sight: 3, damage: '1d4', xp: 3, depth: [1, 5], rarity: 4, tags: ['animal'] });
+add('viper', { name: '青蝮', glyph: 's', color: '#5a9a8a', hp: 9, str: 3, def: 0, acc: 6, eva: 4, speed: 110, ai: 'melee', sight: 6, damage: '1d4', xp: 7, depth: [3, 8], rarity: 4, tags: ['animal'], status: { type: 'poison', turns: 8, power: 2, chance: 0.5 } });
+add('draugr', { name: '海屍', glyph: 'z', color: '#7a9a9a', hp: 26, str: 6, def: 3, acc: 5, eva: 1, speed: 90, ai: 'melee', sight: 6, damage: '1d10', xp: 18, depth: [8, 13], rarity: 3, tags: ['undead'], resist: { frost: 0.5, poison: 1 }, drops: 'mid' });
+add('quasit', { name: 'クァジット', glyph: 'i', color: '#c84e7a', hp: 14, str: 3, def: 2, acc: 7, eva: 6, speed: 130, ai: 'caster', sight: 8, damage: '1d5', xp: 14, depth: [6, 12], rarity: 3, tags: ['demon', 'flying'], spell: 'firebolt', spellPower: '1d8', spellRange: 6, special: 'blink', resist: { fire: 0.5 } });
+add('succubus', { name: '夢魔', glyph: 'h', color: '#c87aa8', hp: 28, str: 4, def: 3, acc: 7, eva: 6, speed: 120, ai: 'caster', sight: 9, damage: '1d8', xp: 28, depth: [10, 15], rarity: 2, tags: ['demon'], spell: 'lightning', spellPower: '2d5', spellRange: 8, status: { type: 'confuse', turns: 5, chance: 0.4 }, drops: 'high' });
+add('wyrm', { name: '古竜の影', glyph: 'D', color: '#9a3a6a', hp: 100, str: 11, def: 7, acc: 8, eva: 2, speed: 110, ai: 'ranged', sight: 10, damage: '3d6', xp: 90, depth: [14, 15], rarity: 1, tags: ['dragon', 'unique'], ranged: { damage: '4d6', range: 8, name: '闇炎', element: 'fire' }, resist: { fire: 0.6, frost: 0.5 }, special: 'summon', summonKey: 'drake', boss: true, drops: 'high' });
+
 /* ---- 中立：店主（襲わない。怒らせると手強い） ---- */
 add('shopkeeper', { name: '店主', glyph: '☻', color: '#ffd24a', hp: 70, str: 9, def: 7, acc: 9, eva: 5, speed: 120, ai: 'shopkeeper', sight: 9, damage: '2d6+2', xp: 0, depth: [1, 15], rarity: 0, tags: ['humanoid', 'unique'], peaceful: true });
 
