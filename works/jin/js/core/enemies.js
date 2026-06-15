@@ -21,8 +21,8 @@ const WEAPON_BY_TYPE = {
 
 /* 難度の浅い→深いで湧く職 */
 const POOL_EARLY = ['brigand', 'soldier', 'fighter', 'archer', 'mercenary'];
-const POOL_MID = ['soldier', 'fighter', 'archer', 'mercenary', 'cavalier', 'knight', 'mage', 'thief'];
-const POOL_LATE = ['mercenary', 'cavalier', 'knight', 'mage', 'shaman', 'pegasus', 'wyvern', 'archer', 'soldier'];
+const POOL_MID = ['soldier', 'fighter', 'archer', 'mercenary', 'cavalier', 'knight', 'mage', 'thief', 'cleric'];
+const POOL_LATE = ['mercenary', 'cavalier', 'knight', 'mage', 'shaman', 'pegasus', 'wyvern', 'archer', 'soldier', 'cleric'];
 const POOL_MONSTER = ['revenant', 'gargoyle', 'mogall', 'brigand'];
 
 function poolFor(chapter, monster) {

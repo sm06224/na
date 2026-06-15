@@ -247,6 +247,12 @@ export class Battle {
         const res = this.doAttack(u, def);
         rec.attack = def.uid; rec.events = res.events;
       }
+    } else if (plan.heal != null) {
+      const ally = this.board.units.find(x => x.uid === plan.heal);
+      if (ally && isAlive(ally) && manhattan(u.pos, ally.pos) <= (equippedWeapon(u)?.max || 1)) {
+        const res = this.doStaff(u, ally);
+        rec.heal = ally.uid; rec.events = res.events;
+      }
     }
     u.hasActed = true;
     return rec;

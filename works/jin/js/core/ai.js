@@ -21,6 +21,9 @@ function targetPriority(t) {
   return p;
 }
 
+function nearestEnemy(board, u, enemies) {
+  return enemies.reduce((m, e) => manhattan(e.pos, u.pos) < manhattan(m.pos, u.pos) ? e : m, enemies[0]);
+}
 function expected(fc) {
   if (!fc) return { dmg: 0, kill: 0, counter: 0 };
   const dmg = fc.hit / 100 * fc.dmg * (fc.doubles ? 2 : 1);
@@ -45,6 +48,29 @@ export function planTurn(board, u, rng) {
 
   const enemies = board.enemiesOf(u);
   if (!enemies.length) return { move: null };
+
+  // 癒し手：杖を持つ者は、傷ついた味方を癒すことを最優先に考える
+  const sw = equippedWeapon(u);
+  if (sw && sw.wtype === 'staff' && sw.staff === 'heal') {
+    const allies = board.alliesOf(u).concat([u]).filter(a => a.pos && a.hp < a.maxHp);
+    let bestHeal = null;
+    if (allies.length) {
+      for (const tile of standable) {
+        for (const a of allies) {
+          if (manhattan(tile, a.pos) > sw.max || manhattan(tile, a.pos) < sw.min) continue;
+          const missing = a.maxHp - a.hp;
+          const safety = -manhattan(tile, nearestEnemy(board, u, enemies).pos) * 0.2;  // 前に出すぎない
+          const score = missing * 2 + (a === u ? 1 : 0) + safety;
+          if (!bestHeal || score > bestHeal.score) bestHeal = { score, move: tile, heal: a.uid };
+        }
+      }
+    }
+    if (bestHeal) return { move: bestHeal.move, heal: bestHeal.heal };
+    // 癒す相手がいなければ、傷ついた味方の方へ寄る（無ければ後退気味に留まる）
+    const wounded = board.alliesOf(u).filter(a => a.hp < a.maxHp).sort((p, q) => (q.maxHp - q.hp) - (p.maxHp - p.hp))[0];
+    if (wounded) { const t = stepToward(board.terrain, reach, wounded.pos); return { move: t || u.pos }; }
+    return { move: u.pos };
+  }
 
   // 守り/ボスは持ち場から離れすぎない
   const anchor = u.aiAnchor || u.pos;
