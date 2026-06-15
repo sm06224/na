@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="籤 (kuji) — 誰にも操作できない、みんなで確かめられるくじ。順番・抽選・組分けの結果を、参加者と塩だけから一意に決め、SHA-256 で封をする。封を先に配れば、あとから誰も結果を書き換えられない。登録なし・サーバーなし・端末から出ない。">
+<meta name="theme-color" content="#120f17">
+<title>籤 — 誰にも操作できない、確かめられるくじ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>籤 <span class="en">/ kuji</span></h1>
+  <p class="tagline">誰にも操作できない、みんなで確かめられるくじ</p>
+</header>
+
+<nav id="tabs" class="tabs">
+  <button class="tab on" data-tab="draw">ひく</button>
+  <button class="tab" data-tab="verify">たしかめる</button>
+</nav>
+
+<main>
+  <!-- ============ ひく ============ -->
+  <div id="drawpane">
+    <section class="panel">
+      <div class="phead"><h2>① 参加者</h2><span id="nCount" class="total"></span></div>
+      <textarea id="entrants" rows="5" placeholder="ひとり一行で&#10;あおい&#10;はると&#10;ゆい&#10;…"></textarea>
+      <p class="hint">名前でも、番号でも、席でも。前後の空白と空行は無視します。</p>
+    </section>
+
+    <section class="panel">
+      <div class="phead"><h2>② なにを決める</h2></div>
+      <div class="modes">
+        <label class="mode on"><input type="radio" name="mode" value="order" checked><span>順番</span><small>並びをきめる</small></label>
+        <label class="mode"><input type="radio" name="mode" value="pick"><span>抽選</span><small>何人か選ぶ</small></label>
+        <label class="mode"><input type="radio" name="mode" value="groups"><span>組分け</span><small>何班かに分ける</small></label>
+      </div>
+      <label id="countWrap" class="countfld" hidden>
+        <span id="countLabel">当選</span>
+        <input id="count" type="number" min="1" max="999" step="1" value="1">
+        <span id="countUnit">人</span>
+      </label>
+      <details class="extra">
+        <summary>みんなの合言葉を混ぜる（任意・引く人すら結果を予見できなくなる）</summary>
+        <textarea id="words" rows="3" placeholder="参加者がひとり一語ずつ思いつきの言葉を。順番は関係ありません。&#10;ねこ&#10;らーめん&#10;…"></textarea>
+      </details>
+    </section>
+
+    <section class="panel seal">
+      <div class="phead"><h2>③ 封をする</h2><button id="reseed" class="mini">塩をふり直す</button></div>
+      <p class="hint">この「封」を、<b>結果より先に</b>みんなへ配ってください。あとから塩を選び直しても封と合わず、結果は書き換えられません。</p>
+      <div class="sealrow">
+        <code id="commit" class="seal-hash"></code>
+        <button id="copyCommit" class="pill">封を写す</button>
+      </div>
+      <div class="saltrow"><span>塩</span><code id="salt"></code></div>
+    </section>
+
+    <button id="go" class="add wide big">くじを引く</button>
+
+    <section class="panel result" id="result" hidden>
+      <div class="phead"><h2 id="resultTitle">結果</h2><code id="drawId" class="badge"></code></div>
+      <div id="resultBody"></div>
+      <div class="row foot-actions">
+        <button id="shareResult" class="pill primary">結果と証拠を送る</button>
+        <button id="copyEv" class="pill">証拠を写す</button>
+      </div>
+      <p class="hint">「証拠」には参加者・モード・塩が畳まれています。受け取った人は「たしかめる」で開けば、同じ結果が出ることを自分の目で確認できます。</p>
+    </section>
+  </div>
+
+  <!-- ============ たしかめる ============ -->
+  <div id="verifypane" hidden>
+    <section class="panel">
+      <div class="phead"><h2>証拠を入れる</h2></div>
+      <textarea id="evIn" rows="3" placeholder="送られてきた『証拠』を貼る（リンクで開けば自動で入ります）"></textarea>
+      <label class="countfld wide-fld">
+        <span>封（任意）</span>
+        <input id="commitIn" placeholder="先に配られた封があれば貼る">
+      </label>
+      <button id="verifyGo" class="add wide">確かめる</button>
+    </section>
+
+    <section class="panel result" id="vResult" hidden>
+      <div id="vVerdict" class="verdict"></div>
+      <div class="phead"><h2 id="vTitle">再現された結果</h2><code id="vId" class="badge"></code></div>
+      <div id="vBody"></div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" hidden></div>
+
+<footer>
+  くじも名前も、端末から一歩も出ません。リンクには参加者と塩だけが畳まれます。<br>
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
