@@ -168,6 +168,8 @@ window.addEventListener('keydown', e => {
     case '>': A.descend(game); return redraw();
     case '<': A.ascend(game); return redraw();
     case 's': A.search(game); return redraw();
+    case 'R': A.rest(game); return redraw();
+    case 'D': A.disarm(game); return redraw();
     case 'i': screens.inventory(game); return;
     case 'e': screens.equipment(game); return;
     case '@': case 'C': screens.character(game); return;
