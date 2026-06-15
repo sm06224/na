@@ -5,8 +5,9 @@
 
 import { item as itemDef } from './items.js';
 import { classDef, classCaps } from './classes.js';
-import { canUse, autoEquip, promote } from './unit.js';
+import { canUse, autoEquip, promote, createUnit, isAlive } from './unit.js';
 import { capStats } from './stats.js';
+import { RNG } from './rng.js';
 
 export const MAX_ITEMS = 5;
 
@@ -67,6 +68,51 @@ export function useBooster(game, unit, convoyIndex) {
 }
 
 /* 上級転職できるか（Lv10 以上で転職先がある） */
+/* ---- 斡旋（雇用）と解雇 ---- */
+const HIRE_POOL = ['soldier', 'mercenary', 'fighter', 'archer', 'cavalier', 'knight', 'mage', 'monk', 'cleric', 'thief', 'pegasus'];
+const HIRE_NAMES = ['ベルク', 'ナタ', 'ロイ', 'エマ', 'ティム', 'サラ', 'ゴウ', 'ミナ', 'レフ', 'クルト', 'アヤ', 'ダン', 'ノヴァ', 'リコ', 'ハル', 'ユーリ', 'メル', 'ガイ', 'セシル', 'トト'];
+const HIRE_WEAPON = { soldier: 'iron_lance', mercenary: 'iron_sword', fighter: 'iron_axe', archer: 'iron_bow', cavalier: 'iron_lance', knight: 'iron_lance', mage: 'fire', monk: 'lightning', cleric: 'heal', thief: 'iron_dagger', pegasus: 'iron_lance' };
+
+/* 章ごとの斡旋名簿（種から決定的・各候補は一度だけ雇える） */
+export function hireRoster(game, chapterIndex = game.chapterIndex) {
+  const rng = new RNG((game.seed ^ 0x9e3779b9 ^ Math.imul(chapterIndex + 1, 2246822519)) >>> 0);
+  const lv = Math.max(1, Math.round(game.party.reduce((s, u) => s + u.level, 0) / Math.max(1, game.party.length)));
+  const out = [];
+  for (let i = 0; i < 4; i++) {
+    const cr = rng.derive('h' + i);
+    const classId = cr.pick(HIRE_POOL);
+    const level = Math.max(1, lv + cr.range(-2, 2));
+    out.push({
+      id: `h${chapterIndex}_${i}`, name: cr.pick(HIRE_NAMES), classId, level,
+      items: [HIRE_WEAPON[classId] || 'iron_sword', 'vulnerary'],
+      cost: 700 + level * 180,
+    });
+  }
+  return out;
+}
+export function canHire(game, cand) {
+  return !(game.hired || []).includes(cand.id) && game.gold >= cand.cost && game.party.length < 16;
+}
+export function hire(game, cand) {
+  if (!canHire(game, cand)) return null;
+  game.gold -= cand.cost;
+  (game.hired = game.hired || []).push(cand.id);
+  const u = createUnit({ ...cand, side: 'player', bio: '斡旋所で雇い入れた者。' }, game.rng.derive('hired:' + cand.id));
+  game.party.push(u);
+  return u;
+}
+export function canDismiss(game, unit) {
+  return !unit.isLord && isAlive(unit) && game.party.filter(isAlive).length > 1;
+}
+export function dismiss(game, unit) {
+  if (!canDismiss(game, unit)) return false;
+  const i = game.party.indexOf(unit);
+  if (i < 0) return false;
+  for (const it of unit.items) game.convoy.push(it.id);   // 持ち物は荷駄へ返す
+  game.party.splice(i, 1);
+  return true;
+}
+
 export function canPromote(unit) {
   const cd = classDef(unit.classId);
   return !!(cd.promotesTo && cd.promotesTo.length && unit.level >= 10);
