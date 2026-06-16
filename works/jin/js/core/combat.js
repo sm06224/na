@@ -13,6 +13,7 @@ import { rateOf } from './skills.js';
 import { hasStatus, addStatus } from './status.js';
 import { weatherHitMod, weatherMightMod } from './weather.js';
 import { supportBondBonus } from './support.js';
+import { forgeBonus } from './forge.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -65,7 +66,9 @@ export function strikeInfo(src, tgt, board) {
   const dw = equippedWeapon(tgt);
   const tri = dw ? triangle(w.wtype, dw.wtype) : { atk: 0, hit: 0 };
 
-  let might = w.mt + tri.atk;
+  const fstack = (src.items && src.equipped >= 0) ? src.items[src.equipped] : null;
+  const fb = forgeBonus(fstack && fstack.forge);     // 鍛冶の上乗せ（威力・命中・会心）
+  let might = w.mt + tri.atk + fb.mt;
   const tags = effectiveTags(tgt);
   let eff = false;
   if (w.eff) for (const e of w.eff) if (tags.includes(e)) eff = true;
@@ -85,12 +88,12 @@ export function strikeInfo(src, tgt, board) {
 
   const sBond = bondOf(src, board), tBond = bondOf(tgt, board);
   const flank = flankBonus(src, tgt);
-  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit;
+  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit + fb.hit;
   const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
   let hit = clamp(Math.round(hitStat - avo), 0, 100);
   if (board && board.weather) hit = clamp(hit + weatherHitMod(board.weather, w), 0, 100);   // 空模様が狙いを乱す
 
-  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2 + flank.crit;
+  let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2 + flank.crit + fb.crit;
   if (hasSkill(src, 'focus')) critStat += loneBonus(src, board);
   if (hasSkill(src, 'wrath') && src.hp * 2 <= src.maxHp) critStat += 30;     // 憤怒
   const crit = clamp(critStat - sd.lck, 0, 100);

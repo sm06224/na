@@ -29,6 +29,7 @@ import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { makeSkirmish, SKIRMISH_BIOMES, SKIRMISH_SIZES } from '../core/skirmish.js';
 import { treasureAt, canOpenChest, openChest, visitVillage } from '../core/treasure.js';
 import { stealTargetsFrom, stealableItems, resolveSteal } from '../core/steal.js';
+import { canForge, applyForge, forgeLevelOf, forgeCost, MAX_FORGE } from '../core/forge.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -994,8 +995,13 @@ function renderBase(tab) {
     u.items.forEach((st, i) => {
       const it = itemDef2(st.id); const row = el('div', 'shoprow');
       const eq = (i === u.equipped) ? '◆' : '';
-      row.appendChild(el('span', 'nm', eq + (it ? it.name : st.id) + (st.uses ? `×${st.uses}` : '')));
+      const fl = forgeLevelOf(st);
+      row.appendChild(el('span', 'nm', eq + (it ? it.name : st.id) + (fl ? `+${fl}` : '') + (st.uses ? `×${st.uses}` : '')));
       if (it && it.kind === 'weapon') row.appendChild(mkbtn('装備', '', () => { if (equipItem(u, i)) { sfx('select'); renderBase('party'); } }));
+      if (it && it.kind === 'weapon' && it.wtype !== 'staff') {
+        const label = fl >= MAX_FORGE ? '極' : `鍛${forgeCost(fl)}G`;
+        row.appendChild(mkbtn(label, 'buy', () => { applyForge(g, st); sfx('levelup'); autosave(); renderBase('party'); }, !canForge(g, st, it)));
+      }
       row.appendChild(mkbtn('荷駄へ', '', () => { takeItem(g, u, i); autosave(); renderBase('party'); }));
       body.appendChild(row);
     });
