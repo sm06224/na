@@ -346,8 +346,10 @@ export class Battle {
     // 勝利
     const o = this.objective;
     const enemies = this.board.unitsOf('enemy');
-    if (o.type === 'rout' && !enemies.length) { this.win('rout'); }
-    else if (o.type === 'defeat_boss') {
+    // 敵を倒し切れば、どの目標でも勝ち（制圧・離脱でも詰まらぬよう）。ただし未到来の増援が残るうちは保留。
+    const pendingReinf = (this.reinforce || []).some(w => !w.done);
+    if (!enemies.length && !pendingReinf) { this.win(o.type === 'seize' ? 'seize' : o.type === 'defeat_boss' ? 'boss' : o.type === 'escape' ? 'escape' : 'rout'); return; }
+    if (o.type === 'defeat_boss') {
       const boss = this.board.units.find(u => u.uid === o.uid);
       if (!boss || !isAlive(boss)) this.win('boss');
     } else if (o.type === 'seize' && lord && lord.pos && lord.pos.x === o.x && lord.pos.y === o.y) {
