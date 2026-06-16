@@ -51,8 +51,8 @@ test('魔物誌：基本職をすべて網羅し、欄がそろう', () => {
 });
 
 /* ---- 物語（script） ---- */
-test('戦記：全16章すべてに開幕と勝利の場、台詞に話者と本文', () => {
-  assert.equal(CHAPTERS.length, 16, '第一幕8＋第二幕8');
+test('戦記：全章すべてに開幕と勝利の場、台詞に話者と本文', () => {
+  assert.equal(CHAPTERS.length, 24, '第一幕8＋第二幕8＋第三幕8');
   for (let i = 0; i < CHAPTERS.length; i++) {
     const s = chapterScript(i);
     assert.ok(s.open.length >= 1 && s.win.length >= 1, `第${i + 1}章に台本`);
@@ -92,12 +92,12 @@ test('第二幕の設置マップ：八枚すべてが解ける', () => {
     assert.ok(r.deploy.length >= 1 && r.spawns.length >= 1 && r.boss, `${sp.id} に布陣・湧き・将`);
   }
 });
-test('加入する仲間：第二幕で軍に馳せ参じる', () => {
+test('加入する仲間：物語を通じて軍に馳せ参じる', () => {
   const g = new Game(123);
   const n0 = g.party.length;
-  g.recruitUpTo(15);
+  g.recruitUpTo(23);
   assert.equal(g.party.length, n0 + EXTRA_ROSTER.length, '全員加入');
-  g.recruitUpTo(15);
+  g.recruitUpTo(23);
   assert.equal(g.party.length, n0 + EXTRA_ROSTER.length, '二重加入しない');
 });
 test('設置マップでも、全章が自動で決着する', () => {
