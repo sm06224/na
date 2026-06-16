@@ -375,6 +375,10 @@ CHAPTER_SCRIPTS[14] = {
 };
 SUPPORTS.push(...EXTRA_SUPPORTS);
 
+/* 第三幕（第十七章〜終々章 = index 16〜23）の台本を取り込む。 */
+import { ACT3_SCRIPTS } from './act3.js';
+for (const k in ACT3_SCRIPTS) CHAPTER_SCRIPTS[k] = ACT3_SCRIPTS[k];
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
