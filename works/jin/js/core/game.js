@@ -10,6 +10,7 @@ import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
 import { placeTreasures, treasureCountFor } from './treasure.js';
+import { reinforcementSpecs } from './reinforce.js';
 import { applySupportsToUnits, awardSupportsAfterBattle } from './support.js';
 import { SETPIECES, parseMap } from './maps.js';
 import { EXTRA_SETPIECES } from './maps2.js';
@@ -204,12 +205,20 @@ export class Game {
     const tc = treasureCountFor(index);
     placeTreasures(board, cr.derive('treasure'), { chests: tc.chests, villages: tc.villages, chapterIndex: index });   // 宝箱と村
 
+    // 増援：種と章から決まる新手の波（盤の縁から到来）
+    const rr = cr.derive('reinforce');
+    const reinforce = reinforcementSpecs(this.seed, index, ch).map((wave, wi) => ({
+      turn: wave.turn,
+      units: wave.specs.map((sp, i) => createUnit({ ...sp, side: 'enemy' }, rr.derive('w' + wi + 'u' + i))),
+    }));
+
     const battle = new Battle(board, {
       rng: cr.derive('fight'),
       objective,
       maxTurns: ch.objective === 'survive' ? (ch.turns || 10) : 0,
       initiative: this.initiative,
       expectLord: true,
+      reinforce,
     });
     this.battle = battle;
     applySupportsToUnits(this, board);                    // 支援段の早見表を各自へ
