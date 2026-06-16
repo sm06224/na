@@ -13,6 +13,7 @@ import { battleExp } from './stats.js';
 import { tickStatus, canAct, addStatus, clearStatus } from './status.js';
 import { item as itemDef } from './items.js';
 import { rateOf } from './skills.js';
+import { edgeSpawnTiles } from './reinforce.js';
 
 export const PHASES = ['player', 'enemy', 'ally'];
 
@@ -45,6 +46,8 @@ export class Battle {
     this.log = [];
     this.initiative = !!opts.initiative;
     this.expectLord = !!opts.expectLord;     // 主君前提（盤から失われたら敗北＝詰み無限の保険）
+    this.reinforce = opts.reinforce || [];   // 増援の波 [{turn, units:[...], done}]
+    this.rrng = (this.rng && this.rng.derive) ? this.rng.derive('reinforce') : null;
     if (this.initiative) this.beginInitiative();
     else this.beginPhase('player');
   }
@@ -304,9 +307,30 @@ export class Battle {
   }
   startPlayerTurn() {
     this.turn++;
+    this.spawnReinforcements();
     this.phaseIdx = 0;
     this.beginPhase('player');
     this.checkEnd();
+  }
+
+  /* 増援：この手番までに到来予定の波を、盤の縁の空きマスへ配する。 */
+  spawnReinforcements() {
+    if (!this.reinforce || !this.reinforce.length) return [];
+    const spawned = [];
+    for (const wave of this.reinforce) {
+      if (wave.done || this.turn < wave.turn) continue;
+      wave.done = true;
+      let tiles = edgeSpawnTiles(this.board);
+      if (this.rrng) tiles = this.rrng.shuffle(tiles);
+      for (const u of wave.units) {
+        const tile = tiles.pop();
+        if (!tile) break;
+        this.board.add(u, tile.x, tile.y);
+        spawned.push(u);
+      }
+    }
+    if (spawned.length) { this.board.rebuildIndex(); this.record(`増援 ${spawned.length} 体が現れた！`); }
+    return spawned;
   }
 
   /* ---- 勝敗 ---- */
@@ -361,7 +385,7 @@ export class Battle {
     this.orderIdx++;
     this.checkEnd();
     if (this.over) return;
-    if (this.orderIdx >= this.order.length) { this.turn++; this.rebuildOrder(); }
+    if (this.orderIdx >= this.order.length) { this.turn++; this.spawnReinforcements(); this.rebuildOrder(); }
   }
 
   /* ---- テスト・自動進行：行動順モードで両軍 AI ---- */
