@@ -67,6 +67,7 @@ export function createUnit(spec, rng) {
     faith: spec.faith ?? faithOf(cd.id),
     hasMoved: false,
     hasActed: false,
+    dead: false,            // 永久の死（勝利で初めて確定する。敗北・再戦では戻る）
     boss: !!spec.boss,
     aiKind: spec.aiKind || (spec.boss ? 'boss' : 'charge'),
     aiAnchor: spec.aiAnchor || null,

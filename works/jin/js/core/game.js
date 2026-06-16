@@ -141,7 +141,9 @@ export class Game {
   }
   get chapter() { return CHAPTERS[this.chapterIndex]; }
   get done() { return this.chapterIndex >= CHAPTERS.length; }
-  livingParty() { return this.party.filter(isAlive); }
+  /* 出撃できる仲間＝永久の死を迎えていない者。戦闘で倒れても（hp0）、
+     勝利で確定するまでは「戻れる」——敗北・再戦では全員が立ち上がる。 */
+  livingParty() { return this.party.filter(u => !u.dead); }
 
   /* その章までに加わる仲間を、軍へ（重複なし・決定的） */
   recruitUpTo(index) {
@@ -207,6 +209,7 @@ export class Game {
       objective,
       maxTurns: ch.objective === 'survive' ? (ch.turns || 10) : 0,
       initiative: this.initiative,
+      expectLord: true,
     });
     this.battle = battle;
     applySupportsToUnits(this, board);                    // 支援段の早見表を各自へ
@@ -218,7 +221,10 @@ export class Game {
     const reward = 1500 + this.chapterIndex * 500;
     this.gold += reward;
     const supportUps = this.battle ? awardSupportsAfterBattle(this, this.battle.board) : [];
+    // 勝利して初めて、この章で倒れた者の死が確定する（敗北では確定しない＝再戦で戻る）
+    const fallen = [];
+    for (const u of this.party) if (!u.dead && u.hp <= 0) { u.dead = true; fallen.push(u.name); }
     this.chapterIndex++;
-    return { reward, gold: this.gold, done: this.done, supportUps };
+    return { reward, gold: this.gold, done: this.done, supportUps, fallen };
   }
 }

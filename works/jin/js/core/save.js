@@ -16,7 +16,7 @@ function serUnit(u) {
     skills: u.skills.slice(), accessory: u.accessory || null,
     wexp: u.wexp ? { ...u.wexp } : {}, faith: u.faith ?? 5,
     isLord: !!u.isLord, side: u.side, bio: u.bio || '', deathQuote: u.deathQuote || null,
-    dead: u.hp <= 0,
+    dead: !!u.dead || u.hp <= 0,
   };
   for (const k of STAT_KEYS) { o.statsBase[k] = u.statsBase[k] | 0; o.growths[k] = u.growths[k] | 0; }
   return o;
@@ -29,7 +29,7 @@ function deserUnit(o, uid) {
     items: (o.items || []).map(it => ({ id: it.id, uses: it.uses, forge: it.forge | 0 })), equipped: o.equipped ?? -1,
     skills: (o.skills || []).slice(), status: [], buffs: {}, accessory: o.accessory || null,
     wexp: o.wexp ? { ...o.wexp } : {}, faith: o.faith ?? 5, facing: 1,
-    pos: null, hasMoved: false, hasActed: false, boss: false,
+    pos: null, hasMoved: false, hasActed: false, boss: false, dead: !!o.dead,
     aiKind: 'charge', isLord: !!o.isLord, side: o.side || 'player', bio: o.bio || '', deathQuote: o.deathQuote || null,
   };
 }

@@ -58,7 +58,7 @@ export function makeSkirmish(seed, opts = {}) {
   board.weather = weatherForChapter(seed, 0, biome);
 
   const battle = new Battle(board, {
-    rng: master.derive('fight'), objective: { type: 'rout' }, initiative,
+    rng: master.derive('fight'), objective: { type: 'rout' }, initiative, expectLord: true,
   });
   return { battle, board, squad, biome, size: sz.id, level };
 }
