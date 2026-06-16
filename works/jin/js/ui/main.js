@@ -30,6 +30,7 @@ import { TRADE_GOODS, tradePrice, buyGood, sellGood, holdings, canBuyGood } from
 import { weatherForChapter } from '../core/weather.js';
 import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { makeSkirmish, SKIRMISH_BIOMES, SKIRMISH_SIZES } from '../core/skirmish.js';
+import { GAIDEN, makeGaiden } from '../core/gaiden.js';
 import { treasureAt, canOpenChest, openChest, visitVillage } from '../core/treasure.js';
 import { stealTargetsFrom, stealableItems, resolveSteal } from '../core/steal.js';
 import { canForge, applyForge, forgeLevelOf, forgeCost, MAX_FORGE } from '../core/forge.js';
@@ -206,6 +207,38 @@ function startSkirmish() {
   if (battle.initiative) advanceInitiative();
   else maybeAuto();
 }
+
+/* 外伝：シナリオ選択を開く */
+function openGaiden() {
+  const list = $('gaidenList'); list.innerHTML = '';
+  for (const s of GAIDEN) {
+    const b = document.createElement('button'); b.className = 'big'; b.style.cssText = 'display:block;width:100%;margin:6px 0;text-align:left';
+    b.innerHTML = `<b>${s.title}</b><br><span style="font-size:12px;opacity:.8">${s.intro}</span>`;
+    b.onclick = () => { $('gaiden').hidden = true; startGaiden(s); };
+    list.appendChild(b);
+  }
+  $('title').hidden = true; $('gaiden').hidden = false;
+}
+/* 外伝の一戦を布く（演習の経路を借り、題と物語を持たせる） */
+function startGaiden(scenario) {
+  const seed = (parseInt($('seedInput').value, 10) || (Date.now() >>> 0)) >>> 0;
+  const initiative = $('initChk').checked;
+  S.game = null;
+  S.skirmish = { seed, biome: scenario.biome, label: scenario.title, outro: scenario.outro, gaiden: true, scenario, initiative };
+  const { battle } = makeGaiden(scenario, seed, { initiative });
+  S.battle = battle; S.board = battle.board;
+  $('title').hidden = true;
+  playMusic('battle_' + scenario.biome);
+  S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
+  clearSel(); S.mode = 'idle';
+  $('hud').hidden = false;
+  $('autoBtn').classList.toggle('on', S.auto);
+  $('endTurn').style.display = battle.initiative ? 'none' : '';
+  refreshHud(); refreshLog();
+  toast(scenario.title);
+  if (battle.initiative) advanceInitiative();
+  else maybeAuto();
+}
 /* 会戦（マスコンバット）：盤を布かず、軍と軍で一気に決する */
 function massBattle() {
   $('intro').hidden = true;
@@ -252,7 +285,7 @@ function massBattle() {
 }
 function refreshHud() {
   const b = S.battle;
-  const head = S.skirmish ? '演習' : `第${S.game.chapterIndex + 1}章`;
+  const head = S.skirmish ? (S.skirmish.label || '演習') : `第${S.game.chapterIndex + 1}章`;
   if (b.initiative) {
     const act = b.activeUnit();
     const who = act ? `${act.name}${act.side === 'player' ? '（自軍）' : '（敵）'}の手番` : '—';
@@ -716,10 +749,11 @@ async function showOutcome() {
   if (win) S.fx.confetti(70);
   playMusic(win ? 'victory' : 'defeat');
   if (S.skirmish) {
-    $('resultTitle').textContent = win ? '演習・勝利' : '演習・敗北';
+    const gd = S.skirmish.gaiden;
+    $('resultTitle').textContent = (gd ? S.skirmish.label : '演習') + (win ? '・勝利' : '・敗北');
     $('resultText').textContent = win
-      ? `${SKIRMISH_SIZES[S.skirmish.size].name}の戦場を制した。——また別の種で、別の一戦を。`
-      : '演習に敗れた。手勢を立て直し、もう一度。';
+      ? (gd ? S.skirmish.outro : `${SKIRMISH_SIZES[S.skirmish.size].name}の戦場を制した。——また別の種で、別の一戦を。`)
+      : (gd ? 'この外伝に敗れた。手勢を立て直し、もう一度。' : '演習に敗れた。手勢を立て直し、もう一度。');
     $('nextBtn').textContent = 'タイトルへ';
     $('nextBtn').style.display = '';
     $('retryBtn').textContent = 'もう一度';
@@ -1142,6 +1176,8 @@ $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 
 $('sortieBtn').onclick = sortie;
 $('massBtn').onclick = massBattle;
 $('skirmishBtn').onclick = startSkirmish;
+$('gaidenBtn').onclick = openGaiden;
+$('gaidenClose').onclick = () => { $('gaiden').hidden = true; $('title').hidden = false; };
 $('resignBtn').onclick = () => {
   if (!S.battle || S.battle.over) return;
   if (!confirm('この戦いを投了して、章を初めからやり直しますか？（倒れた仲間も立ち上がります）')) return;
@@ -1166,7 +1202,7 @@ $('nextBtn').onclick = () => {
 };
 $('retryBtn').onclick = () => {
   $('result').hidden = true;
-  if (S.skirmish) { startSkirmish(); return; }
+  if (S.skirmish) { const g = S.skirmish.gaiden && S.skirmish.scenario; if (g) startGaiden(g); else startSkirmish(); return; }
   if (S._massLost) { S._massLost = false; showIntro(); } else sortie();
 };
 $('muteBtn').onclick = () => { const m = !isMuted(); setMuted(m); setMusicMuted(m); $('muteBtn').textContent = m ? '♪̸' : '♪'; if (!m) { sfx('select'); resumeMusic(); } };

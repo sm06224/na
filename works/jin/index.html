@@ -50,6 +50,7 @@
     <div class="btnrow">
       <button id="continueBtn" class="ghost" hidden>つづきから</button>
       <button id="skirmishBtn" class="ghost">演習（一戦）</button>
+      <button id="gaidenBtn" class="ghost">外伝</button>
       <button id="loadBtn" class="ghost">符号で読込</button>
     </div>
     <label class="optrow"><input type="checkbox" id="setpieceChk"> 手作りの設置マップで戦う（種の生成ではなく）</label>
@@ -106,6 +107,16 @@
       <button id="sortieBtn" class="big">出撃（陣を布く）</button>
       <button id="massBtn" class="ghost">会戦（自動・大ぶつかり）</button>
     </div>
+  </div>
+</div>
+
+<!-- 外伝（シナリオ選択） -->
+<div id="gaiden" class="overlay" hidden>
+  <div class="card">
+    <h2>外伝</h2>
+    <p class="lead">本筋の外で語られる、独立した戦記。今の種で挑める。</p>
+    <div id="gaidenList"></div>
+    <div class="btnrow"><button id="gaidenClose" class="ghost">もどる</button></div>
   </div>
 </div>
 
