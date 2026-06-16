@@ -123,14 +123,14 @@ cls({
 });
 cls({
   id: 'hero', name: '勇者', tier: 2, mode: 'foot', mov: 6,
-  weapons: { sword: 'A', axe: 'B' }, skills: ['quickblade', 'sol', 'adept'],
+  weapons: { sword: 'A', axe: 'B' }, skills: ['quickblade', 'sol', 'adept', 'certainty'],
   bases: { hp: 30, str: 8, mag: 0, skl: 9, spd: 9, lck: 5, def: 6, res: 3 },
   growths: { hp: 80, str: 50, mag: 5, skl: 55, spd: 50, lck: 35, def: 30, res: 25 },
   desc: '傭兵の到達点。剣と斧をふるう英雄。',
 });
 cls({
   id: 'swordmaster', name: '剣聖', tier: 2, mode: 'foot', mov: 6,
-  weapons: { sword: 'S' }, skills: ['quickblade', 'astra', 'vantage'],
+  weapons: { sword: 'S' }, skills: ['quickblade', 'astra', 'vantage', 'gamble'],
   bases: { hp: 26, str: 7, mag: 0, skl: 12, spd: 12, lck: 6, def: 5, res: 4 },
   growths: { hp: 75, str: 45, mag: 5, skl: 60, spd: 60, lck: 40, def: 25, res: 25 },
   caps: { skl: 30, spd: 30 },
@@ -138,14 +138,14 @@ cls({
 });
 cls({
   id: 'warrior', name: '武将', tier: 2, mode: 'foot', mov: 6,
-  weapons: { axe: 'A', bow: 'B' }, skills: ['colossus'],
+  weapons: { axe: 'A', bow: 'B' }, skills: ['colossus', 'lifedeath'],
   bases: { hp: 34, str: 11, mag: 0, skl: 6, spd: 6, lck: 4, def: 6, res: 2 },
   growths: { hp: 90, str: 60, mag: 0, skl: 45, spd: 40, lck: 30, def: 30, res: 15 },
   desc: '斧と弓を操る豪傑。',
 });
 cls({
   id: 'berserker', name: '狂戦士', tier: 2, mode: 'foot', mov: 6,
-  weapons: { axe: 'S' }, skills: ['colossus', 'wrath'],
+  weapons: { axe: 'S' }, skills: ['colossus', 'wrath', 'vengeance'],
   bases: { hp: 35, str: 12, mag: 0, skl: 7, spd: 8, lck: 3, def: 5, res: 1 },
   growths: { hp: 85, str: 65, mag: 0, skl: 50, spd: 45, lck: 25, def: 22, res: 12 },
   critBonus: 15,
@@ -181,7 +181,7 @@ cls({
 });
 cls({
   id: 'general', name: '将軍', tier: 2, mode: 'armor', mov: 5,
-  weapons: { lance: 'A', axe: 'A' }, skills: ['wary', 'pavise'],
+  weapons: { lance: 'A', axe: 'A' }, skills: ['wary', 'pavise', 'guard'],
   bases: { hp: 36, str: 11, mag: 0, skl: 6, spd: 4, lck: 4, def: 14, res: 4 },
   growths: { hp: 95, str: 55, mag: 0, skl: 40, spd: 30, lck: 30, def: 55, res: 22 },
   desc: '城そのもの。最強の守り。',

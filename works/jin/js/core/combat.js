@@ -69,6 +69,7 @@ export function strikeInfo(src, tgt, board) {
   const fstack = (src.items && src.equipped >= 0) ? src.items[src.equipped] : null;
   const fb = forgeBonus(fstack && fstack.forge);     // 鍛冶の上乗せ（威力・命中・会心）
   let might = w.mt + tri.atk + fb.mt;
+  if (hasSkill(src, 'lifedeath')) might += 3;         // 死線：攻めれば威力＋
   const tags = effectiveTags(tgt);
   let eff = false;
   if (w.eff) for (const e of w.eff) if (tags.includes(e)) eff = true;
@@ -82,13 +83,16 @@ export function strikeInfo(src, tgt, board) {
   const flierTgt = tgt.mode === 'fly';
   const terrDef = flierTgt ? 0 : (terr.def || 0);       // 飛行は地形の守りを受けない
   const terrAvo = flierTgt ? 0 : (terr.avo || 0);
-  const defStat = (magic ? sd.res : sd.def) + terrDef;
+  let defStat = (magic ? sd.res : sd.def) + terrDef;
+  if (hasSkill(tgt, 'lifedeath')) defStat = Math.max(0, defStat - 3);     // 死線：守りは薄い
   let dmg = Math.max(0, atk - defStat);
   if (w.wtype === 'dark') dmg = Math.max(0, dmg - Math.floor((tgt.faith ?? 5) / 4));   // 信仰が闇をやわらげる
 
   const sBond = bondOf(src, board), tBond = bondOf(tgt, board);
   const flank = flankBonus(src, tgt);
-  const hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit + fb.hit;
+  let hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit + fb.hit;
+  if (hasSkill(src, 'certainty')) hitStat += 15;       // 堅実：よく当たる
+  if (hasSkill(src, 'gamble')) hitStat -= 10;          // 一か八か：当たりにくいが
   const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
   let hit = clamp(Math.round(hitStat - avo), 0, 100);
   if (board && board.weather) hit = clamp(hit + weatherHitMod(board.weather, w), 0, 100);   // 空模様が狙いを乱す
@@ -96,6 +100,7 @@ export function strikeInfo(src, tgt, board) {
   let critStat = (w.crit || 0) + Math.floor(sa.skl / 2) + (classDef(src.classId).critBonus || 0) + sBond * 2 + flank.crit + fb.crit;
   if (hasSkill(src, 'focus')) critStat += loneBonus(src, board);
   if (hasSkill(src, 'wrath') && src.hp * 2 <= src.maxHp) critStat += 30;     // 憤怒
+  if (hasSkill(src, 'gamble')) critStat += 15;                               // 一か八か：会心が冴える
   const crit = clamp(critStat - sd.lck, 0, 100);
 
   return { atk, dmg, hit, crit, magic, defStat, weapon: w, eff, flank: flank.kind };
@@ -148,7 +153,7 @@ function performStrike(src, tgt, board, rng, events) {
   let hits = 1;
 
   if (!nihil) {
-    const order = ['lethality', 'astra', 'adept', 'aether', 'luna', 'sol', 'ignis', 'pierce', 'colossus'];
+    const order = ['lethality', 'astra', 'adept', 'aether', 'luna', 'sol', 'ignis', 'vengeance', 'pierce', 'colossus'];
     for (const id of order) {
       if (!hasSkill(src, id)) continue;
       if (!rng.roll(rateOf(id, src))) continue;
@@ -160,6 +165,7 @@ function performStrike(src, tgt, board, rng, events) {
       else if (id === 'luna') { dmg = Math.max(0, info.atk - Math.floor(info.defStat / 2)); }
       else if (id === 'sol') { drainFactor = 0.5; }
       else if (id === 'ignis') { const es = effectiveStats(src); dmg = info.dmg + Math.floor(Math.max(es.mag, es.str) / 2); }
+      else if (id === 'vengeance') { dmg = info.dmg + Math.floor((src.maxHp - src.hp) / 2); }   // 復讐：失った HP の半分
       else if (id === 'pierce') { dmg = info.atk; }
       else if (id === 'colossus') { dmg = Math.round(info.dmg * 1.5); }
       break;
@@ -182,6 +188,7 @@ function performStrike(src, tgt, board, rng, events) {
       if (ranged && hasSkill(tgt, 'aegis') && rng.roll(rateOf('aegis', tgt))) { d = Math.floor(d / 2); events.push({ type: 'skill', by: tgt.uid, id: 'aegis' }); }
       else if (!ranged && hasSkill(tgt, 'pavise') && rng.roll(rateOf('pavise', tgt))) { d = Math.floor(d / 2); events.push({ type: 'skill', by: tgt.uid, id: 'pavise' }); }
     }
+    if (hasSkill(tgt, 'guard') && d > 0) d = Math.max(0, d - 2);    // 守勢：受ける傷をやわらげる
     // 致命なら祈り
     if ((lethal || d >= tgt.hp)) {
       if (hasSkill(tgt, 'miracle') && tgt.hp > 1 && rng.roll(rateOf('miracle', tgt))) {

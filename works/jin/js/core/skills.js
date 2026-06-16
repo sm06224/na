@@ -44,6 +44,15 @@ sk({ id: 'ignis', name: 'イグニス', kind: 'battle', trigger: 'attack', rate:
 sk({ id: 'adept', name: '連撃', kind: 'battle', trigger: 'attack', rate: u => (effectiveStats(u).spd | 0),
   effect: 'adept', desc: 'もう一撃、続けて打つ（速さ %）。' });
 
+sk({ id: 'vengeance', name: '復讐', kind: 'battle', trigger: 'attack', rate: halfSkl,
+  effect: 'vengeance', desc: '失った HP の半分を、追加の傷として上乗せ（技/2 %）。' });
+
+/* ---- 常時の素質（戦闘の数値を恒常に書き換える） ---- */
+sk({ id: 'gamble', name: '一か八か', kind: 'passive', effect: 'gamble', desc: '会心 +15、命中 −10。博打打ちの一刀。' });
+sk({ id: 'lifedeath', name: '死線', kind: 'passive', effect: 'lifedeath', desc: '攻めれば威力 +3、されど守りは −3。攻めに賭ける構え。' });
+sk({ id: 'certainty', name: '堅実', kind: 'passive', effect: 'certainty', desc: '命中 +15。確実に当てる手堅さ。' });
+sk({ id: 'guard', name: '守勢', kind: 'passive', effect: 'guard', desc: '受ける傷を 2 軽くする（最低 0）。' });
+
 /* ---- 常時の素質 ---- */
 sk({ id: 'quickblade', name: '速駆け', kind: 'passive', effect: 'easyDouble', desc: '追撃に必要な速さ差が緩む（−1）。' });
 sk({ id: 'wrath', name: '憤怒', kind: 'passive', effect: 'wrath', desc: 'HPが半分を切ると、会心が大きく上がる。' });
