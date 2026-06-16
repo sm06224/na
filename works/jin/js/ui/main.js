@@ -728,7 +728,7 @@ async function showOutcome() {
     return;
   }
   const ch = S.game.chapter;
-  if (win) await playDialogue(chapterScript(S.game.chapterIndex).win);
+  if (win && !S.auto) await playDialogue(chapterScript(S.game.chapterIndex).win);   // オート中は勝利劇を挟まず即結果（タップ待ちで固まらぬよう）
   $('resultTitle').textContent = win ? '勝利' : '敗北';
   if (win) {
     const r = S.game.onVictory();
