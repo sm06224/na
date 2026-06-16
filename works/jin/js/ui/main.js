@@ -26,6 +26,7 @@ import { weatherForChapter } from '../core/weather.js';
 import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { makeSkirmish, SKIRMISH_BIOMES, SKIRMISH_SIZES } from '../core/skirmish.js';
 import { treasureAt, canOpenChest, openChest, visitVillage } from '../core/treasure.js';
+import { stealTargetsFrom, stealableItems, resolveSteal } from '../core/steal.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -313,6 +314,8 @@ function openMenu() {
   if (unitHasSkill(u, 'arithmetic')) add('算術', () => beginArith(), 'primary');
   if (staffT.length) add('杖', () => beginStaff(staffT), 'primary');
   if (consum.length) add('道具', () => openItems(consum));
+  const stealT = stealTargetsFrom(S.battle.board, u, u.pos);
+  if (stealT.length) add('盗む', () => beginSteal(stealT));
   const obj = S.game && treasureAt(S.battle.board, u.pos.x, u.pos.y);
   if (obj && obj.type === 'chest') {
     if (canOpenChest(u, obj)) add(obj.locked ? '開ける（施錠）' : '開ける', () => takeTreasure(u, obj), 'primary');
@@ -358,6 +361,39 @@ function takeTreasure(u, obj) {
   autosave();
   S.battle.doWait(u);
   endAction();
+}
+
+/* ---------- 盗み ---------- */
+function beginSteal(targets) {
+  S.mode = 'steal';
+  hideMenu();
+  S.staffTiles = targets.map(t => ({ x: t.pos.x, y: t.pos.y }));
+  S._stealTargets = targets;
+  toast('懐をねらう相手をタップ');
+}
+function openStealItems(target) {
+  const u = S.selected;
+  const idx = stealableItems(u, target);
+  const menu = $('actionMenu'); menu.innerHTML = '';
+  for (const i of idx) {
+    const it = itemDef(target.items[i].id);
+    const b = document.createElement('button');
+    b.textContent = `${it.name}を盗む`;
+    b.onclick = () => {
+      const res = resolveSteal(u, target, i);
+      sfx('select2');
+      S.fx.burst(target.pos.x, target.pos.y, '#caa2ff');
+      S.popups.push({ x: u.pos.x, y: u.pos.y, text: `盗：${itemDef(res.item).name}`, color: '#caa2ff', t: performance.now() });
+      S.staffTiles = null;
+      S.battle.doWait(u);
+      endAction();
+    };
+    menu.appendChild(b);
+  }
+  const back = document.createElement('button'); back.textContent = 'やめる'; back.className = 'ghost';
+  back.onclick = () => { S.staffTiles = null; openMenu(); S.mode = 'menu'; };
+  menu.appendChild(back);
+  menu.hidden = false;
 }
 
 /* ---------- 攻撃 ---------- */
@@ -771,6 +807,11 @@ function onTap(px, py) {
   if (S.mode === 'staff') {
     const t = (S._staffTargets || []).find(t => t.pos.x === tile.x && t.pos.y === tile.y);
     if (t) doStaffOn(t); else { S.staffTiles = null; openMenu(); S.mode = 'menu'; }
+    return;
+  }
+  if (S.mode === 'steal') {
+    const t = (S._stealTargets || []).find(t => t.pos.x === tile.x && t.pos.y === tile.y);
+    if (t) openStealItems(t); else { S.staffTiles = null; openMenu(); S.mode = 'menu'; }
     return;
   }
   if (S.mode === 'selected') {
