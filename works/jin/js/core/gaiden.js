@@ -11,6 +11,7 @@ import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
 import { makeSkirmishSquad, SKIRMISH_SIZES } from './skirmish.js';
 import { EXTRA_GAIDEN } from './gaiden_extra.js';
+import { EXTRA_GAIDEN2 } from './gaiden_extra2.js';
 
 /* 外伝シナリオ（純粋なデータ）。 */
 export const GAIDEN = [
@@ -34,6 +35,7 @@ export const GAIDEN = [
 
 /* 続編の外伝群を合流させる（題と物語だけのデータ）。 */
 GAIDEN.push(...EXTRA_GAIDEN);
+GAIDEN.push(...EXTRA_GAIDEN2);
 
 export function gaidenById(id) { return GAIDEN.find(s => s.id === id) || null; }
 
