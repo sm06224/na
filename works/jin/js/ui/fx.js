@@ -54,6 +54,14 @@ export class FX {
     this.ring(x, y, color, 0.8);
     this.spark(x, y, color, 10, 3.4);
   }
+  /* 稲妻（from→to のぎざぎざ）。雷の魔に。 */
+  lightning(from, to, color = '#cfe6ff') {
+    this.arcs.push({ kind: 'bolt', x0: from.x, y0: from.y, x1: to.x, y1: to.y, life: 0.2, max: 0.2, color, seed: Math.random() * 6.28 });
+  }
+  /* 光条（太い直線が一瞬走る）。光・闇の魔に。 */
+  beam(from, to, color = '#ffe08a') {
+    this.arcs.push({ kind: 'beam', x0: from.x, y0: from.y, x1: to.x, y1: to.y, life: 0.22, max: 0.22, color });
+  }
   /* 魔法陣（術者の足元に一瞬の輪） */
   magicCircle(x, y, color = '#b79bff') {
     this.arcs.push({ cx: x, cy: y, life: 0.5, max: 0.5, color, kind: 'rune', scale: 0.9 });
@@ -116,6 +124,26 @@ export class FX {
         ctx.beginPath(); ctx.arc(cxp, cyp, rr, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(cxp, cyp, rr * 0.6, 0, Math.PI * 2); ctx.stroke();
         for (let i = 0; i < 6; i++) { const a2 = (Math.PI / 3) * i + (1 - k) * 1.5; ctx.beginPath(); ctx.moveTo(cxp + Math.cos(a2) * rr * 0.6, cyp + Math.sin(a2) * rr * 0.6); ctx.lineTo(cxp + Math.cos(a2) * rr, cyp + Math.sin(a2) * rr); ctx.stroke(); }
+      } else if (a.kind === 'bolt') {
+        // 稲妻：from→to をぎざぎざに、二度描き（白芯＋色）
+        const x0 = sx(a.x0), y0 = sy(a.y0), x1 = sx(a.x1), y1 = sy(a.y1);
+        const seg = 8, nx = -(y1 - y0), ny = (x1 - x0), nl = Math.hypot(nx, ny) || 1;
+        const pts = [];
+        for (let i = 0; i <= seg; i++) {
+          const f = i / seg; let jx = 0, jy = 0;
+          if (i > 0 && i < seg) { const r = (Math.sin(a.seed * 99 + i * 37) ) * T * 0.5; jx = nx / nl * r; jy = ny / nl * r; }
+          pts.push([x0 + (x1 - x0) * f + jx, y0 + (y1 - y0) * f + jy]);
+        }
+        ctx.strokeStyle = a.color; ctx.lineWidth = 5 * k; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts) ctx.lineTo(p[0], p[1]); ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 * k;
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts) ctx.lineTo(p[0], p[1]); ctx.stroke();
+      } else if (a.kind === 'beam') {
+        const x0 = sx(a.x0), y0 = sy(a.y0), x1 = sx(a.x1), y1 = sy(a.y1);
+        ctx.strokeStyle = a.color; ctx.lineWidth = T * 0.5 * k; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = T * 0.18 * k;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
       } else {
         ctx.strokeStyle = a.color; ctx.lineWidth = a.w * k; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(sx(a.x0), sy(a.y0)); ctx.lineTo(sx(a.x1), sy(a.y1)); ctx.stroke();
