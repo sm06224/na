@@ -348,6 +348,9 @@ export const TERRAIN_NOTES = {
 import { EXTRA_BESTIARY, EXTRA_WORLD } from './lore_extra.js';
 BESTIARY.push(...EXTRA_BESTIARY);
 WORLD.push(...EXTRA_WORLD);
+import { EXTRA_BESTIARY2, EXTRA_WORLD2 } from './lore_extra2.js';
+BESTIARY.push(...EXTRA_BESTIARY2);
+WORLD.push(...EXTRA_WORLD2);
 
 /* ------------------------------------------------------------
    bestiaryOf — classId から図鑑の一葉を引く。
