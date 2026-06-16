@@ -12,6 +12,7 @@ import { triangle } from './items.js';
 import { rateOf } from './skills.js';
 import { hasStatus, addStatus } from './status.js';
 import { weatherHitMod, weatherMightMod } from './weather.js';
+import { supportBondBonus } from './support.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -47,12 +48,12 @@ export function flankBonus(att, def) {
   return { hit: 7, crit: 8, kind: 'side' };
 }
 
-/* 絆（隣り合う味方の数、最大3）— 布陣そのものが力になる */
+/* 絆（隣り合う味方の数、最大3）＋支援段の上乗せ — 布陣そのものが力になる */
 export function bondOf(u, board) {
   if (!board || !u.pos) return 0;
   let n = 0;
   for (const a of board.alliesOf(u)) if (a.pos && manhattan(a.pos, u.pos) === 1) n++;
-  return Math.min(3, n);
+  return Math.min(6, n + supportBondBonus(u, board));
 }
 
 /* 片側の一撃ぶんの数値（src が tgt を打つ） */

@@ -12,6 +12,8 @@ import { manhattan, key } from '../core/grid.js';
 import { Camera, draw, BASE_TILE, setView3d, isView3d } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
+import { EXTRA_SUPPORTS } from '../core/script2.js';
+import { supportRank, supportPoints, rankLetter, SUPPORT_THRESHOLDS } from '../core/support.js';
 import { skill as skillDef } from '../core/skills.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE, WRANKS } from '../core/items.js';
@@ -702,7 +704,10 @@ async function showOutcome() {
   if (win) {
     const r = S.game.onVictory();
     autosave();
-    $('resultText').textContent = `${ch.outro}\n（報酬 ${r.reward}G／所持 ${r.gold}G）`;
+    const sup = (r.supportUps && r.supportUps.length)
+      ? '\n絆が深まった：' + r.supportUps.map(s => `${s.a}＆${s.b}→${s.rank}`).join('、')
+      : '';
+    $('resultText').textContent = `${ch.outro}\n（報酬 ${r.reward}G／所持 ${r.gold}G）${sup}`;
     $('nextBtn').textContent = S.game.done ? 'おわりへ' : '拠点へ';
     $('nextBtn').style.display = '';
     $('retryBtn').style.display = 'none';
@@ -901,7 +906,8 @@ function renderCodex(tab) {
 function autosave() { if (!S.game) return; try { localStorage.setItem(SAVE_KEY, encodeSave(S.game)); } catch { /* あふれは無視 */ } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
 let baseUnit = null;
-const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['闘技', 'arena'], ['交易', 'trade'], ['記録', 'record']];
+const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['闘技', 'arena'], ['支援', 'support'], ['交易', 'trade'], ['記録', 'record']];
+const ALL_SUPPORTS = [...SUPPORTS, ...EXTRA_SUPPORTS];
 
 function openBase() {
   $('result').hidden = true;
@@ -1046,6 +1052,24 @@ function renderBase(tab) {
           : `${u.name}、${opp.name}に及ばず。賭${opp.wager}Gを失う（命は無事）`);
         body.insertBefore(note, body.children[1]);
       }, g.gold < opp.wager));
+      body.appendChild(row);
+    }
+  } else if (tab === 'support') {
+    body.appendChild(el('div', 'subhead', '支援——共に戦い、隣りあうほど絆は深まる（C→B→A）。段が上がると会話が読める'));
+    const names = new Set(g.party.map(u => u.name));
+    const pairs = ALL_SUPPORTS.filter(s => names.has(s.a) && names.has(s.b));
+    if (!pairs.length) body.appendChild(el('div', 'shoprow', 'まだ語る間柄がない'));
+    for (const s of pairs) {
+      const pts = supportPoints(g, s.a, s.b);
+      const rk = supportRank(g, s.a, s.b);
+      const next = SUPPORT_THRESHOLDS[rk];
+      const row = el('div', 'shoprow');
+      row.appendChild(el('span', 'nm', `${s.a} ＆ ${s.b}`));
+      row.appendChild(el('span', 'pr', rk > 0 ? `絆 ${rankLetter(pts)}` : (next ? `あと${next - pts}` : '—')));
+      row.appendChild(mkbtn(rk > 0 ? '会話を読む' : '（C未満）', rk > 0 ? 'buy' : '', () => {
+        $('base').hidden = true;
+        playDialogue(s.lines).then(() => { $('base').hidden = false; renderBase('support'); });
+      }, rk < 1));
       body.appendChild(row);
     }
   } else if (tab === 'trade') {

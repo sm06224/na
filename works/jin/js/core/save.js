@@ -40,6 +40,7 @@ export function serialize(game) {
     gold: game.gold, useSetpiece: !!game.useSetpiece, initiative: !!game.initiative,
     hired: (game.hired || []).slice(),
     tradeGoods: (game.tradeGoods || []).slice(),
+    supports: { ...(game.supports || {}) },
     convoy: game.convoy.slice(),
     party: game.party.map(serUnit),
   };
@@ -52,6 +53,7 @@ export function deserialize(data) {
   g.gold = data.gold | 0;
   g.hired = (data.hired || []).slice();
   g.tradeGoods = (data.tradeGoods || []).slice();
+  g.supports = { ...(data.supports || {}) };
   g.convoy = (data.convoy || []).slice();
   let uid = 1;
   g.party = data.party.map(o => deserUnit(o, uid++));
