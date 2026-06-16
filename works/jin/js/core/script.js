@@ -387,6 +387,10 @@ SUPPORTS.push(...EXTRA_SUPPORTS3);
 import { EXTRA_SUPPORTS4 } from './script5.js';
 SUPPORTS.push(...EXTRA_SUPPORTS4);
 
+/* なお十四組——まだ言葉を交わしていない者たちの絆。 */
+import { EXTRA_SUPPORTS5 } from './script6.js';
+SUPPORTS.push(...EXTRA_SUPPORTS5);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];

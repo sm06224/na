@@ -23,6 +23,7 @@ import './items_extra2.js';         // 終盤の伝説装備を登録簿へ
 import './items_extra3.js';         // 連射（ブレイブ）武器と名品を登録簿へ
 import './items_extra4.js';         // 状態を与える得物（鈍足・盲目）を登録簿へ
 import './items_extra5.js';         // 第三幕の星の得物・指輪を登録簿へ
+import './items_extra6.js';         // 古の遺物（武器・杖・能力品・装飾）を登録簿へ
 import './items_status.js';         // 状態異常を与える得物を登録簿へ
 import './items_area.js';           // マップ攻撃（範囲）の得物を登録簿へ
 
