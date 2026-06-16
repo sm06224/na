@@ -10,6 +10,7 @@ import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
 import { placeTreasures, treasureCountFor } from './treasure.js';
+import { applySupportsToUnits, awardSupportsAfterBattle } from './support.js';
 import { SETPIECES, parseMap } from './maps.js';
 import { EXTRA_SETPIECES } from './maps2.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
@@ -122,6 +123,7 @@ export class Game {
     this.gold = 5000;
     this.hired = [];                        // 斡旋で雇い入れた候補id
     this.tradeGoods = [];                   // 交易品（土地差で利ざやを取る）
+    this.supports = {};                     // 支援値「名前|名前」→点（絆の成長）
     this.convoy = ['vulnerary', 'vulnerary', 'concoction', 'steel_sword', 'hand_axe'];
     this.party = [];
     this._buildParty();
@@ -205,15 +207,16 @@ export class Game {
       initiative: this.initiative,
     });
     this.battle = battle;
+    applySupportsToUnits(this, board);                    // 支援段の早見表を各自へ
     return { battle, deploy, chapter: ch };
   }
 
-  /* 勝利時：金を得て次章へ */
+  /* 勝利時：金を得て次章へ。共に戦った絆も深まる。 */
   onVictory() {
-    const ch = CHAPTERS[this.chapterIndex];
     const reward = 1500 + this.chapterIndex * 500;
     this.gold += reward;
+    const supportUps = this.battle ? awardSupportsAfterBattle(this, this.battle.board) : [];
     this.chapterIndex++;
-    return { reward, gold: this.gold, done: this.done };
+    return { reward, gold: this.gold, done: this.done, supportUps };
   }
 }
