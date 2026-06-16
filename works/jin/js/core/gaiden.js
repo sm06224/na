@@ -10,6 +10,7 @@ import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
 import { makeSkirmishSquad, SKIRMISH_SIZES } from './skirmish.js';
+import { EXTRA_GAIDEN } from './gaiden_extra.js';
 
 /* 外伝シナリオ（純粋なデータ）。 */
 export const GAIDEN = [
@@ -30,6 +31,9 @@ export const GAIDEN = [
     intro: '禁書は閉じたはずだ。だが廃都の玉座に、まだ頁をめくる声がする。玉座を制せ。',
     outro: '声は途切れた。残響もまた、静かに消えていった。' },
 ];
+
+/* 続編の外伝群を合流させる（題と物語だけのデータ）。 */
+GAIDEN.push(...EXTRA_GAIDEN);
 
 export function gaidenById(id) { return GAIDEN.find(s => s.id === id) || null; }
 
