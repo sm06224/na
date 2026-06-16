@@ -628,4 +628,8 @@ export const SONGS = {
 import { EXTRA_SONGS } from './songs2.js';
 Object.assign(SONGS, EXTRA_SONGS);
 
+/* 拠点・闘技場の曲を合流させる。 */
+import { EXTRA_SONGS3 } from './songs3.js';
+Object.assign(SONGS, EXTRA_SONGS3);
+
 export function song(id) { return SONGS[id] || null; }

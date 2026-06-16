@@ -1017,14 +1017,14 @@ function openBase() {
   $('result').hidden = true;
   if (!S.game || S.game.done) { showIntro(); return; }
   S.mode = 'base';
-  playMusic('prologue');
+  playMusic('camp');
   $('baseTitle').textContent = `拠点 — 次は「${S.game.chapter.title}」`;
   $('campLine').textContent = campLine(S.game.seed, S.game.chapterIndex);
   baseUnit = S.game.livingParty()[0];
   const tabs = $('baseTabs'); tabs.innerHTML = '';
   BASE_TABS.forEach(([label, id], i) => {
     const b = document.createElement('button'); b.textContent = label;
-    b.onclick = () => { [...tabs.children].forEach(c => c.classList.remove('on')); b.classList.add('on'); renderBase(id); };
+    b.onclick = () => { [...tabs.children].forEach(c => c.classList.remove('on')); b.classList.add('on'); playMusic(id === 'arena' ? 'arena' : 'camp'); renderBase(id); };
     if (i === 0) b.classList.add('on');
     tabs.appendChild(b);
   });
@@ -1257,6 +1257,7 @@ function wakeAudio() {
 function resumeMusic() {
   // ミュート解除や画面復帰のとき、いまの場面に合う曲へ
   if (S.mode === 'title') playMusic('title');
+  else if (S.mode === 'base') playMusic('camp');
   else if (S.mode === 'play' || S.mode === 'idle' || S.mode === 'selected' || S.mode === 'menu' || S.mode === 'target') {
     if (S.skirmish) playMusic('battle_' + (S.skirmish.biome || 'green'));
     else if (S.game) playMusic(battleTune(S.game.chapterIndex, (S.game.chapter && S.game.chapter.biome) || (S.board && S.board.biome) || 'green'));
