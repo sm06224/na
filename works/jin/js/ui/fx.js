@@ -7,10 +7,11 @@ export class FX {
     this.parts = [];      // 火花・破片
     this.arcs = [];       // 斬撃・魔法弧などの線
     this.shots = [];      // 飛び道具（矢・弾）
+    this.flashes = [];    // 画面全体の閃光（スクリーン空間）
     this.shake = 0;       // 画面の揺れ（px 相当）
   }
-  clear() { this.parts.length = 0; this.arcs.length = 0; this.shots.length = 0; this.shake = 0; }
-  get count() { return this.parts.length + this.arcs.length + this.shots.length; }
+  clear() { this.parts.length = 0; this.arcs.length = 0; this.shots.length = 0; this.flashes.length = 0; this.shake = 0; }
+  get count() { return this.parts.length + this.arcs.length + this.shots.length + this.flashes.length; }
   addShake(a) { this.shake = Math.min(14, Math.max(this.shake, a)); }
 
   /* 火花（中心から飛び散る粒） */
@@ -29,6 +30,37 @@ export class FX {
   burst(x, y, color = '#b79bff') {
     this.arcs.push({ cx: x, cy: y, life: 0.4, max: 0.4, color, kind: 'ring' });
     this.spark(x, y, color, 12, 2.4);
+  }
+  /* 画面全体の閃光（会心・撃破・魔法）。スクリーン空間 0..1 の強さ。 */
+  flash(color = '#ffffff', strength = 0.4, dur = 0.26) {
+    this.flashes.push({ color, life: dur, max: dur, strength });
+  }
+  /* 広がる輪（魔法・衝撃）。scale はタイル倍率。 */
+  ring(x, y, color = '#b79bff', scale = 1.1) {
+    this.arcs.push({ cx: x, cy: y, life: 0.4, max: 0.4, color, kind: 'ring', scale });
+  }
+  /* 会心の星はじけ（鋭い十字＋多数の火花＋輪）。 */
+  star(x, y, color = '#ffd86a') {
+    this.ring(x, y, color, 1.4);
+    for (let i = 0; i < 4; i++) {
+      const a = (Math.PI / 2) * i;
+      this.arcs.push({ x0: x, y0: y, x1: x + Math.cos(a) * 0.9, y1: y + Math.sin(a) * 0.9, life: 0.26, max: 0.26, color, w: 5, kind: 'slash' });
+    }
+    this.spark(x, y, color, 20, 5);
+    this.spark(x, y, '#ffffff', 8, 3);
+  }
+  /* 物理の衝撃（小さな輪＋火花）。weapon 色で。 */
+  impact(x, y, color = '#ffd0a0') {
+    this.ring(x, y, color, 0.8);
+    this.spark(x, y, color, 10, 3.4);
+  }
+  /* 魔法陣（術者の足元に一瞬の輪） */
+  magicCircle(x, y, color = '#b79bff') {
+    this.arcs.push({ cx: x, cy: y, life: 0.5, max: 0.5, color, kind: 'rune', scale: 0.9 });
+  }
+  /* 砂塵（移動・着地の小さな煙） */
+  dust(x, y, color = 'rgba(210,200,180,.9)') {
+    for (let i = 0; i < 6; i++) this.parts.push({ x: x + (Math.random() - 0.5) * 0.4, y: y + 0.2, vx: (Math.random() - 0.5) * 1.2, vy: -0.3 - Math.random() * 0.4, life: 0.4 + Math.random() * 0.2, max: 0.6, color, size: 2 + Math.random() * 2, grav: 1 });
   }
   /* 癒しの粒（上へ昇る） */
   heal(x, y) {
@@ -51,6 +83,8 @@ export class FX {
       p.vy += (p.grav || 0) * dt;
     }
     for (const a of this.arcs) a.life -= dt;
+    for (const f of this.flashes) f.life -= dt;
+    this.flashes = this.flashes.filter(f => f.life > 0);
     for (const s of this.shots) {
       s.t += dt / s.dur;
       const f = Math.min(1, s.t);
@@ -75,7 +109,13 @@ export class FX {
       ctx.globalAlpha = k;
       if (a.kind === 'ring') {
         ctx.strokeStyle = a.color; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(sx(a.cx), sy(a.cy), (1 - k) * T * 1.1, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx(a.cx), sy(a.cy), (1 - k) * T * (a.scale || 1.1), 0, Math.PI * 2); ctx.stroke();
+      } else if (a.kind === 'rune') {
+        ctx.strokeStyle = a.color; ctx.lineWidth = 2;
+        const rr = T * (a.scale || 0.9), cxp = sx(a.cx), cyp = sy(a.cy);
+        ctx.beginPath(); ctx.arc(cxp, cyp, rr, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cxp, cyp, rr * 0.6, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 6; i++) { const a2 = (Math.PI / 3) * i + (1 - k) * 1.5; ctx.beginPath(); ctx.moveTo(cxp + Math.cos(a2) * rr * 0.6, cyp + Math.sin(a2) * rr * 0.6); ctx.lineTo(cxp + Math.cos(a2) * rr, cyp + Math.sin(a2) * rr); ctx.stroke(); }
       } else {
         ctx.strokeStyle = a.color; ctx.lineWidth = a.w * k; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(sx(a.x0), sy(a.y0)); ctx.lineTo(sx(a.x1), sy(a.y1)); ctx.stroke();
@@ -104,6 +144,13 @@ export class FX {
       if (p.screen) { X = p.x * cam._vw; Y = p.y * cam._vh; }
       else { X = sx(p.x); Y = sy(p.y); }
       ctx.fillRect(X - p.size / 2, Y - p.size / 2, p.size, p.size);
+    }
+    // 画面全体の閃光（粒の上に被せる）
+    for (const f of this.flashes) {
+      const k = f.life / f.max;
+      ctx.globalAlpha = k * f.strength;
+      ctx.fillStyle = f.color;
+      ctx.fillRect(0, 0, cam._vw || 0, cam._vh || 0);
     }
     ctx.globalAlpha = 1;
   }

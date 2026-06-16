@@ -303,7 +303,7 @@ async function moveSelectedTo(tile) {
   if (!path) return;
   S.mode = 'animating';                       // 移動中は入力を締める（連打での多重移動を防ぐ）
   S.moveTiles = S.atkTiles = S.path = null;
-  if (path.length > 1) { sfx('move'); await animateMove(u, path); }
+  if (path.length > 1) { sfx('move'); await animateMove(u, path); S.fx.dust(tile.x, tile.y); }
   S.battle.doMove(u, tile);
   openMenu();
 }
@@ -594,28 +594,41 @@ async function playEvents(events) {
     const tgt = e.tgt != null ? uOf(e.tgt) : (e.uid != null ? uOf(e.uid) : null);
     const by = e.by != null ? uOf(e.by) : null;
     if (e.type === 'miss') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(340); }
-    else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd0a0', 8); } sfx('hit'); await sleep(420); }
-    else if (e.type === 'crit') { if (by) showCutin(by); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.spark(tgt.pos.x, tgt.pos.y, '#ffd86a', 16, 4.5); S.fx.addShake(9); } sfx('crit'); await sleep(560); }
+    else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { const c = impactColor(by); popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.impact(tgt.pos.x, tgt.pos.y, c); S.fx.addShake(3); } sfx('hit'); await sleep(420); }
+    else if (e.type === 'crit') { if (by) showCutin(by); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.star(tgt.pos.x, tgt.pos.y, '#ffd86a'); S.fx.flash('#fff3c8', 0.4); S.fx.addShake(12); } sfx('crit'); await sleep(560); }
     else if (e.type === 'skill') { if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff'); await sleep(260); }
     else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
     else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
     else if (e.type === 'poison' || e.type === 'burn') { if (tgt && tgt.pos) popup(tgt.pos, String(e.dmg), '#b6e07c'); await sleep(220); }
     else if (e.type === 'status') { if (tgt && tgt.pos) { popup(tgt.pos, statusName(e.id), '#b6e07c'); S.fx.burst(tgt.pos.x, tgt.pos.y, '#9cd06a'); } await sleep(260); }
     else if (e.type === 'restore' || e.type === 'buff' || e.type === 'debuff') { await sleep(120); }
-    // 死亡
-    if (tgt && !isAlive(tgt)) { if (tgt.pos) popup(tgt.pos, '×', '#ff6a5a', true); sfx('die'); }
+    // 死亡——撃破の演出（破片・閃光・揺れ）
+    if (tgt && !isAlive(tgt)) { if (tgt.pos) { popup(tgt.pos, '×', '#ff6a5a', true); S.fx.spark(tgt.pos.x, tgt.pos.y, '#c0463e', 18, 4); S.fx.spark(tgt.pos.x, tgt.pos.y, '#3a2630', 10, 2.6); S.fx.flash('#ff6a5a', 0.22); S.fx.addShake(8); } sfx('die'); }
   }
   // 倒れた者を盤から
   for (const u of S.board.units) if (!isAlive(u) && u.pos) { S.board.remove(u); u.pos = null; }
 }
 function flashHit(u) { S.anim = { type: 'hit', uid: u.uid, until: performance.now() + 260 }; setTimeout(() => { if (S.anim && S.anim.type === 'hit') S.anim = null; }, 280); }
+/* 得物の型ごとの色（衝撃・斬撃の色味） */
+function impactColor(by) {
+  const w = by && equippedWeapon(by);
+  const wt = w && w.wtype;
+  return ({ sword: '#dfe8ff', lance: '#b9e0ff', axe: '#ffcf9a', bow: '#ffe8b0', dagger: '#cfe0d0',
+    anima: '#ff9c6a', light: '#ffe08a', dark: '#c79bff', fist: '#ffd0a0' })[wt] || '#ffd0a0';
+}
 function attackFx(by, tgt, crit) {
   if (!by.pos || !tgt.pos) return;
   const w = equippedWeapon(by);
   const dist = manhattan(by.pos, tgt.pos);
-  if (w && w.magic) S.fx.shoot(by.pos, tgt.pos, { kind: 'bolt', color: '#c9b3ff', dur: 0.18, onArrive: () => S.fx.burst(tgt.pos.x, tgt.pos.y, '#b79bff') });
-  else if (dist > 1) S.fx.shoot(by.pos, tgt.pos, { kind: 'arrow', dur: 0.16 });
-  else S.fx.slash(by.pos, tgt.pos, crit ? '#ffd86a' : '#ffffff');
+  if (w && w.magic) {
+    const c = w.wtype === 'light' ? '#ffe08a' : w.wtype === 'dark' ? '#c79bff' : '#ff9c6a';
+    S.fx.magicCircle(by.pos.x, by.pos.y, c);
+    S.fx.shoot(by.pos, tgt.pos, { kind: 'bolt', color: c, dur: 0.18, onArrive: () => { S.fx.ring(tgt.pos.x, tgt.pos.y, c, 1.3); S.fx.spark(tgt.pos.x, tgt.pos.y, c, 12, 3); } });
+  } else if (dist > 1) {
+    S.fx.shoot(by.pos, tgt.pos, { kind: 'arrow', dur: 0.16 });
+  } else {
+    S.fx.slash(by.pos, tgt.pos, crit ? '#ffd86a' : impactColor(by));
+  }
 }
 function skillName(id) { const m = { sol: '太陽', luna: '月光', astra: '流星', pierce: '貫通', colossus: '剛撃', lethality: '瞬殺！', aether: '天空', aegis: '盾防', pavise: '大盾', miracle: '祈り', ignis: 'イグニス', adept: '連撃', wrath: '憤怒', vantage: '先制', lifetaker: '命奪' }; return m[id] || id; }
 function statusName(id) { return ({ poison: '毒', sleep: '眠り', silence: '沈黙', freeze: '凍結', berserk: '狂乱' })[id] || id; }
