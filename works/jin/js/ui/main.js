@@ -9,7 +9,7 @@ import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
 import { forecast, inAttackRange, isAreaWeapon, areaTargets, ARITH_PROPS, ARITH_NUMS, arithmeticTargets } from '../core/combat.js';
 import { hasSkill as unitHasSkill } from '../core/unit.js';
 import { manhattan, key } from '../core/grid.js';
-import { Camera, draw, BASE_TILE, setView3d, isView3d } from './render.js';
+import { Camera, draw, BASE_TILE, setView3d, isView3d, setPixel, isPixel } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
 import { EXTRA_SUPPORTS } from '../core/script2.js';
@@ -1124,6 +1124,7 @@ $('resignBtn').onclick = () => {
 };
 $('endTurn').onclick = endTurn;
 $('view3dBtn').onclick = () => { setView3d(!isView3d()); $('view3dBtn').classList.toggle('on', isView3d()); sfx('select'); };
+$('pixelBtn').onclick = () => { setPixel(!isPixel()); $('pixelBtn').classList.toggle('on', isPixel()); sfx('select'); };
 $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
 $('logClose').onclick = () => { $('log').hidden = true; };
 $('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('on', S.auto); if (S.auto) { if (S.battle && S.battle.initiative) advanceInitiative(); else maybeAuto(); } };
