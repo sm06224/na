@@ -13,6 +13,7 @@ import { Camera, draw, BASE_TILE, setView3d, isView3d } from './render.js';
 import { sfx, setMuted, isMuted } from './audio.js';
 import { chapterScript, SUPPORTS } from '../core/script.js';
 import { EXTRA_SUPPORTS } from '../core/script2.js';
+import { EXTRA_SUPPORTS2 } from '../core/script3.js';
 import { supportRank, supportPoints, rankLetter, SUPPORT_THRESHOLDS } from '../core/support.js';
 import { skill as skillDef } from '../core/skills.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
@@ -894,7 +895,7 @@ function renderCodex(tab) {
   else if (tab === 'world') for (const w of WORLD) entry(w.title, '', w.text);
   else if (tab === 'weapon') for (const k in WEAPON_NOTES) entry(WTYPE[k] || k, '', WEAPON_NOTES[k]);
   else if (tab === 'terrain') for (const k in TERRAIN_NOTES) entry(k, '', TERRAIN_NOTES[k]);
-  else if (tab === 'support') for (const s of SUPPORTS) {
+  else if (tab === 'support') for (const s of ALL_SUPPORTS) {
     const d = document.createElement('div'); d.className = 'entry';
     const lines = s.lines.map(l => `<span class="who">${l.who}</span>「${l.line}」`).join('<br>');
     d.innerHTML = `<h4>${s.a} & ${s.b}</h4><p class="conv">${lines}</p>`;
@@ -908,7 +909,7 @@ function autosave() { if (!S.game) return; try { localStorage.setItem(SAVE_KEY, 
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; } }
 let baseUnit = null;
 const BASE_TABS = [['店', 'shop'], ['編成', 'party'], ['斡旋', 'hire'], ['闘技', 'arena'], ['支援', 'support'], ['交易', 'trade'], ['記録', 'record']];
-const ALL_SUPPORTS = [...SUPPORTS, ...EXTRA_SUPPORTS];
+const ALL_SUPPORTS = [...SUPPORTS, ...EXTRA_SUPPORTS, ...EXTRA_SUPPORTS2];
 
 function openBase() {
   $('result').hidden = true;
