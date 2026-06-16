@@ -120,8 +120,9 @@ export function forecast(a, b, board) {
   if (!ai) return null;
   const dist = (a.pos && b.pos) ? manhattan(a.pos, b.pos) : 1;
   const counter = canCounter(b, a, dist) ? strikeInfo(b, a, board) : null;
-  const aDouble = (attackSpeed(a) - attackSpeed(b)) >= doubleThresh(a) && !hasSkill(b, 'wary');
-  const bDouble = counter && (attackSpeed(b) - attackSpeed(a)) >= doubleThresh(b) && !hasSkill(a, 'wary');
+  const aBrave = !!(ai.weapon && ai.weapon.brave), bBrave = !!(counter && counter.weapon && counter.weapon.brave);
+  const aDouble = aBrave || ((attackSpeed(a) - attackSpeed(b)) >= doubleThresh(a) && !hasSkill(b, 'wary'));
+  const bDouble = counter && (bBrave || ((attackSpeed(b) - attackSpeed(a)) >= doubleThresh(b) && !hasSkill(a, 'wary')));
   return {
     atk: ai.atk, dmg: ai.dmg, hit: ai.hit, crit: ai.crit, doubles: aDouble, eff: ai.eff, flank: ai.flank,
     counter: counter ? { dmg: counter.dmg, hit: counter.hit, crit: counter.crit, doubles: bDouble, eff: counter.eff } : null,
@@ -150,7 +151,7 @@ function performStrike(src, tgt, board, rng, events) {
   let drainFactor = 0;
   let lethal = false;
   let procId = null;
-  let hits = 1;
+  let hits = info.weapon && info.weapon.brave ? 2 : 1;     // 連射（ブレイブ）の得物は一手で二撃
 
   if (!nihil) {
     const order = ['lethality', 'astra', 'adept', 'aether', 'luna', 'sol', 'ignis', 'vengeance', 'pierce', 'colossus'];
