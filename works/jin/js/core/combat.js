@@ -10,7 +10,7 @@ import { effectiveStats, attackSpeed, equippedWeapon, hasSkill, isAlive } from '
 import { classDef } from './classes.js';
 import { triangle } from './items.js';
 import { rateOf } from './skills.js';
-import { hasStatus, addStatus } from './status.js';
+import { hasStatus, addStatus, BLIND_PENALTY } from './status.js';
 import { weatherHitMod, weatherMightMod } from './weather.js';
 import { supportBondBonus } from './support.js';
 import { forgeBonus } from './forge.js';
@@ -93,6 +93,7 @@ export function strikeInfo(src, tgt, board) {
   let hitStat = w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri.hit + sBond * 5 + flank.hit + fb.hit;
   if (hasSkill(src, 'certainty')) hitStat += 15;       // 堅実：よく当たる
   if (hasSkill(src, 'gamble')) hitStat -= 10;          // 一か八か：当たりにくいが
+  if (hasStatus(src, 'blind')) hitStat -= BLIND_PENALTY;   // 盲目：狙いが定まらぬ
   const avo = attackSpeed(tgt) * 2 + sd.lck + terrAvo + tBond * 3;
   let hit = clamp(Math.round(hitStat - avo), 0, 100);
   if (board && board.weather) hit = clamp(hit + weatherHitMod(board.weather, w), 0, 100);   // 空模様が狙いを乱す

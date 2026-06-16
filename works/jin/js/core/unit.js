@@ -6,6 +6,7 @@
 import { classDef, classCaps } from './classes.js';
 import { item as itemDef, isWeapon, rankValue, WEXP_THRESHOLDS, rankFromWexp } from './items.js';
 import { STAT_KEYS, cloneStats, addStats, capStats, rollLevelUp, expToLevel } from './stats.js';
+import { hasStatus, SLOW_PENALTY } from './status.js';
 
 let _uid = 1;
 export function resetUid(n = 1) { _uid = n; }
@@ -169,7 +170,8 @@ export function attackSpeed(u) {
   const s = effectiveStats(u);
   const w = equippedWeapon(u);
   const burden = w ? Math.max(0, (w.wt || 0) - Math.floor(s.str / 5)) : 0;
-  return s.spd - burden;
+  const slow = (u.status && hasStatus(u, 'slow')) ? SLOW_PENALTY : 0;     // 鈍足は攻速を削ぐ
+  return s.spd - burden - slow;
 }
 
 /* この相手に何マスから攻撃できるか（装備の射程） */
