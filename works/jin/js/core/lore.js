@@ -363,6 +363,9 @@ WORLD.push(...EXTRA_WORLD5);
 import { EXTRA_BESTIARY6, EXTRA_WORLD6 } from './lore_extra6.js';
 BESTIARY.push(...EXTRA_BESTIARY6);
 WORLD.push(...EXTRA_WORLD6);
+import { EXTRA_BESTIARY7, EXTRA_WORLD7 } from './lore_extra7.js';
+BESTIARY.push(...EXTRA_BESTIARY7);
+WORLD.push(...EXTRA_WORLD7);
 
 /* ------------------------------------------------------------
    bestiaryOf — classId から図鑑の一葉を引く。

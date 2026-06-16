@@ -395,6 +395,10 @@ SUPPORTS.push(...EXTRA_SUPPORTS5);
 import { EXTRA_SUPPORTS6 } from './script7.js';
 SUPPORTS.push(...EXTRA_SUPPORTS6);
 
+/* なお十二組——まだ綴られていなかった絆を、ここに。 */
+import { EXTRA_SUPPORTS7 } from './script8.js';
+SUPPORTS.push(...EXTRA_SUPPORTS7);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
