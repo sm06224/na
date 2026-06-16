@@ -32,6 +32,7 @@ import { weatherForChapter } from '../core/weather.js';
 import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { makeSkirmish, SKIRMISH_BIOMES, SKIRMISH_SIZES } from '../core/skirmish.js';
 import { GAIDEN, makeGaiden } from '../core/gaiden.js';
+import { makeTowerFloor, floorTitle, floorSpec } from '../core/tower.js';
 import { treasureAt, canOpenChest, openChest, visitVillage } from '../core/treasure.js';
 import { stealTargetsFrom, stealableItems, resolveSteal } from '../core/steal.js';
 import { canForge, applyForge, forgeLevelOf, forgeCost, MAX_FORGE } from '../core/forge.js';
@@ -224,6 +225,33 @@ function startSkirmish() {
   $('endTurn').style.display = battle.initiative ? 'none' : '';
   refreshHud(); refreshLog();
   toast(`演習：${SKIRMISH_SIZES[size].name}・Lv${level}`);
+  if (battle.initiative) advanceInitiative();
+  else maybeAuto();
+}
+
+const TOWER_BEST_KEY = 'jin_tower_best';
+function towerBest() { return parseInt(localStorage.getItem(TOWER_BEST_KEY), 10) || 0; }
+function towerRecord(floor) { if (floor > towerBest()) { try { localStorage.setItem(TOWER_BEST_KEY, String(floor)); } catch {} } }
+
+/* 試練の塔：一層を布く。勝てば次の層へ続く。 */
+function startTower(floor, seed) {
+  seed = (seed != null ? seed : (parseInt($('seedInput').value, 10) || (Date.now() >>> 0))) >>> 0;
+  floor = Math.max(1, floor | 0) || 1;
+  const initiative = $('initChk').checked;
+  const spec = floorSpec(floor);
+  S.game = null;
+  S.skirmish = { seed, biome: spec.biome, label: floorTitle(floor), tower: { seed, floor }, initiative };
+  const { battle } = makeTowerFloor(seed, floor, { initiative });
+  S.battle = battle; S.board = battle.board;
+  $('title').hidden = true;
+  playMusic(spec.isBoss ? 'boss' : 'battle_' + spec.biome);
+  S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
+  clearSel(); S.mode = 'idle';
+  $('hud').hidden = false;
+  $('autoBtn').classList.toggle('on', S.auto);
+  $('endTurn').style.display = battle.initiative ? 'none' : '';
+  refreshHud(); refreshLog();
+  toast(`${floorTitle(floor)}（Lv${spec.level}）`);
   if (battle.initiative) advanceInitiative();
   else maybeAuto();
 }
@@ -788,6 +816,29 @@ async function showOutcome() {
   if (win) S.fx.confetti(70);
   playMusic(win ? 'victory' : 'defeat');
   if (S.skirmish) {
+    const tw = S.skirmish.tower;
+    if (tw) {
+      const floor = tw.floor;
+      if (win) {
+        towerRecord(floor);
+        const next = floorSpec(floor + 1);
+        $('resultTitle').textContent = `${floorTitle(floor)}・突破`;
+        $('resultText').textContent = `${floor}層を踏み越えた。次は「${floorTitle(floor + 1)}」（Lv${next.level}）。\n（最高到達 ${towerBest()}層）`;
+        $('nextBtn').textContent = '次の層へ';
+        $('nextBtn').style.display = '';
+        $('retryBtn').textContent = 'タイトルへ';
+        $('retryBtn').style.display = '';
+      } else {
+        $('resultTitle').textContent = `${floorTitle(floor)}・敗北`;
+        $('resultText').textContent = `塔は ${floor}層で登攀者を退けた。\n（最高到達 ${towerBest()}層）`;
+        $('nextBtn').textContent = 'この層を再挑戦';
+        $('nextBtn').style.display = '';
+        $('retryBtn').textContent = 'タイトルへ';
+        $('retryBtn').style.display = '';
+      }
+      $('result').hidden = false;
+      return;
+    }
     const gd = S.skirmish.gaiden;
     $('resultTitle').textContent = (gd ? S.skirmish.label : '演習') + (win ? '・勝利' : '・敗北');
     $('resultText').textContent = win
@@ -1218,6 +1269,7 @@ $('sortieBtn').onclick = sortie;
 $('massBtn').onclick = massBattle;
 $('skirmishBtn').onclick = startSkirmish;
 $('gaidenBtn').onclick = openGaiden;
+$('towerBtn').onclick = () => startTower(1);
 $('gaidenClose').onclick = () => { $('gaiden').hidden = true; $('title').hidden = false; };
 $('resignBtn').onclick = () => {
   if (!S.battle || S.battle.over) return;
@@ -1236,14 +1288,22 @@ $('autoBtn').onclick = () => { S.auto = !S.auto; $('autoBtn').classList.toggle('
 $('fcGo').onclick = confirmAttack;
 $('fcCancel').onclick = () => { $('forecast').hidden = true; S._aoeMode = false; S._arithMode = false; openMenu(); S.mode = 'menu'; S.atkTiles = null; };
 $('infoClose').onclick = () => { $('info').hidden = true; };
+function toTitle() { S.skirmish = null; S.board = null; S.mode = 'title'; $('hud').hidden = true; $('title').hidden = false; playMusic('title'); }
 $('nextBtn').onclick = () => {
   $('result').hidden = true;
-  if (S.skirmish) { S.skirmish = null; S.board = null; S.mode = 'title'; $('hud').hidden = true; $('title').hidden = false; playMusic('title'); return; }
+  if (S.skirmish) {
+    const tw = S.skirmish.tower;
+    if (tw) { const won = S.battle && S.battle.victory; startTower(won ? tw.floor + 1 : tw.floor, tw.seed); return; }
+    toTitle(); return;
+  }
   openBase();
 };
 $('retryBtn').onclick = () => {
   $('result').hidden = true;
-  if (S.skirmish) { const g = S.skirmish.gaiden && S.skirmish.scenario; if (g) startGaiden(g); else startSkirmish(); return; }
+  if (S.skirmish) {
+    if (S.skirmish.tower) { toTitle(); return; }
+    const g = S.skirmish.gaiden && S.skirmish.scenario; if (g) startGaiden(g); else startSkirmish(); return;
+  }
   if (S._massLost) { S._massLost = false; showIntro(); } else sortie();
 };
 $('muteBtn').onclick = () => { const m = !isMuted(); setMuted(m); setMusicMuted(m); $('muteBtn').textContent = m ? '♪̸' : '♪'; if (!m) { sfx('select'); resumeMusic(); } };
