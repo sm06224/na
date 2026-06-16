@@ -1,16 +1,14 @@
-/* 陣 — 顔。画像ファイルなし。名前から決定的に、その人の顔を描く。
-   同じ名前からは、いつも同じ顔。会話の話者と、会心のカットインに使う。
-   作りは「やわらかなアニメ調」——大きく澄んだ瞳・細い眉・小さな口・ほのかな頬。 */
+/* 陣 — 顔。画像ファイルなし。名前から決定的に、その人の顔を“ドット絵”で描く。
+   盤の駒・地形と同じ粒の手触りに揃える（トーン統一）。同じ名前は同じ顔。 */
 
 import { roundRect } from './sprites.js';
 
-const SKINS = ['#f4d8b8', '#ecc8a0', '#e0b488', '#cf9d6e', '#bd8456', '#f6dcc4'];   // 自然な肌色のみ
+const SKINS = ['#f4d8b8', '#ecc8a0', '#e0b488', '#cf9d6e', '#bd8456', '#f6dcc4'];
 const HAIRS = ['#33271c', '#5a3a22', '#8a5a2a', '#caa24a', '#e3dccb', '#33405f', '#6a2f3e', '#39564a', '#a23a5a', '#242a33'];
 const EYES = ['#3a78b8', '#7a4a2a', '#3a9a64', '#8a48a0', '#b24040', '#445066'];
 
 function hash(s) {
-  let h = 0x811c9dc5;
-  s = String(s);
+  let h = 0x811c9dc5; s = String(s);
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
   return h >>> 0;
 }
@@ -30,116 +28,104 @@ export function faceFeatures(key) {
   };
 }
 
-/* やわらかな影／明るみ */
-function shade(hex, f) {
+function darken(hex, f) {
   const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
-  else { r *= (1 + f); g *= (1 + f); b *= (1 + f); }
+  r *= (1 - f); g *= (1 - f); b *= (1 - f);
   return `rgb(${r | 0},${g | 0},${b | 0})`;
 }
 
-/* 顔を描く。(x,y) 左上、s 一辺。opts.color=襟の色, opts.flip=左右反転 */
+const R = 20;   // 論理解像度（20×20 の粒）
+
+/* 顔をドット絵で描く。(x,y) 左上、s 一辺。opts.color=襟の色, opts.flip=左右反転 */
 export function drawPortrait(ctx, key, x, y, s, opts = {}) {
   const f = faceFeatures(key);
+  const hairD = darken(f.hair, 0.28), skinD = darken(f.skin, 0.14), ol = '#20242e';
   ctx.save();
   ctx.translate(x, y);
   if (opts.flip) { ctx.translate(s, 0); ctx.scale(-1, 1); }
-  // 背景
-  const bg = ctx.createLinearGradient(0, 0, 0, s);
-  bg.addColorStop(0, 'rgba(34,42,64,.95)'); bg.addColorStop(1, 'rgba(16,20,32,.95)');
-  ctx.fillStyle = bg; roundRect(ctx, 0, 0, s, s, s * 0.12); ctx.fill();
+  // 背景（角丸）でクリップ
+  ctx.fillStyle = '#1b2030'; roundRect(ctx, 0, 0, s, s, s * 0.12); ctx.fill();
   ctx.save(); roundRect(ctx, 0, 0, s, s, s * 0.12); ctx.clip();
+  ctx.fillStyle = '#222a3c'; ctx.fillRect(0, 0, s, s);
 
-  const cx = s * 0.5, cy = s * 0.50, fw = s * 0.28, fh = s * 0.32;
-  // 襟・肩（職/陣営の色）
+  const c = s / R;
+  // 粒を置く（論理座標で）。範囲は 0..R。
+  const grid = Array.from({ length: R }, () => Array(R).fill(null));
+  const set = (gx, gy, col) => { if (gx >= 0 && gx < R && gy >= 0 && gy < R && col) grid[gy][gx] = col; };
+  const box = (gx, gy, w, h, col) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) set(gx + i, gy + j, col); };
+
   const col = opts.color || '#5f7cff';
-  ctx.fillStyle = col;
-  ctx.beginPath(); ctx.moveTo(s * 0.08, s); ctx.quadraticCurveTo(cx, s * 0.72, s * 0.92, s); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = shade(col, 0.18);
-  ctx.beginPath(); ctx.moveTo(cx, s * 0.78); ctx.lineTo(s * 0.42, s); ctx.lineTo(s * 0.58, s); ctx.closePath(); ctx.fill();
+  // 襟・肩
+  box(2, 17, 16, 3, col);
+  box(7, 16, 6, 1, darken(col, 0.18));
   // 首
-  ctx.fillStyle = shade(f.skin, -0.08); ctx.fillRect(cx - s * 0.08, cy + fh * 0.62, s * 0.16, s * 0.18);
+  box(8, 14, 4, 3, skinD);
+
   // 後ろ髪（長髪）
-  if (f.long) { ctx.fillStyle = shade(f.hair, -0.12); ctx.beginPath(); ctx.ellipse(cx, cy + fh * 0.25, fw * 1.28, fh * 1.3, 0, 0, Math.PI * 2); ctx.fill(); }
+  if (f.long) { box(3, 4, 14, 13, hairD); }
+
+  // 顔の輪郭（角を落として丸く）
+  box(5, 4, 10, 12, f.skin);
+  set(5, 4, null); set(14, 4, null); set(5, 15, null); set(14, 15, null);
+  set(5, 5, skinD); set(14, 5, skinD);
   // 耳
-  ctx.fillStyle = f.skin;
-  for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sg * fw * 0.96, cy + fh * 0.18, fw * 0.18, fh * 0.2, 0, 0, Math.PI * 2); ctx.fill(); }
-  // 顔（まるい輪郭）
-  ctx.fillStyle = f.skin;
-  ctx.beginPath(); ctx.ellipse(cx, cy, fw, fh, 0, 0, Math.PI * 2); ctx.fill();
-  // あごの丸み・額の明るみ
-  ctx.fillStyle = shade(f.skin, 0.14); ctx.beginPath(); ctx.ellipse(cx, cy - fh * 0.32, fw * 0.7, fh * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+  set(4, 9, f.skin); set(15, 9, f.skin); set(4, 10, skinD); set(15, 10, skinD);
+
+  // 髪（前髪）型ちがい
+  hairTop(box, set, f, hairD);
+
+  // 眉（髪色）
+  const bw = f.browAngle;
+  box(6, 8, 3, 1, f.hair); box(11, 8, 3, 1, f.hair);
+  if (bw > 0) { set(6, 9, f.hair); set(13, 9, f.hair); } else if (bw < 0) { set(8, 9, f.hair); set(11, 9, f.hair); }
+
+  // 目（大きな粒の瞳：白・虹彩・光）
+  const eye = (ex) => {
+    box(ex, 9, 3, 3, '#fbfdff');           // 白目
+    box(ex, 10, 3, 2, f.eye);              // 虹彩
+    set(ex + 1, 10, darken(f.eye, 0.45));  // 瞳孔
+    set(ex, 9, '#ffffff');                 // ハイライト
+  };
+  eye(6); eye(11);
+  // 鼻
+  set(10, 12, skinD);
   // 頬の赤み
-  ctx.fillStyle = 'rgba(240,140,130,.30)';
-  for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sg * fw * 0.5, cy + fh * 0.34, fw * 0.22, fh * 0.13, 0, 0, Math.PI * 2); ctx.fill(); }
+  set(6, 12, '#f0a0a0'); set(13, 12, '#f0a0a0');
+  // 口
+  if (f.mouth === 0) { box(9, 13, 2, 1, '#b65a52'); }                 // 真一文字
+  else if (f.mouth === 1) { set(8, 13, '#b65a52'); box(9, 14, 2, 1, '#b65a52'); set(11, 13, '#b65a52'); }  // 笑み
+  else { box(9, 13, 2, 1, '#b65a52'); set(8, 14, '#b65a52'); set(11, 14, '#b65a52'); }
 
-  // 目（大きく澄んだ瞳）——下めに置くと幼くやわらかい
-  const ey = cy + fh * 0.16, ex = fw * 0.46, ew = fw * 0.30 * f.eyeW, eh = fh * 0.30;
-  for (const sgn of [-1, 1]) {
-    const exC = cx + sgn * ex;
-    // 白目
-    ctx.fillStyle = '#fdfdff'; ctx.beginPath(); ctx.ellipse(exC, ey, ew, eh, 0, 0, Math.PI * 2); ctx.fill();
-    // 虹彩（大きめ）
-    ctx.fillStyle = f.eye; ctx.beginPath(); ctx.arc(exC, ey + eh * 0.06, ew * 0.82, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = shade(f.eye, -0.4); ctx.beginPath(); ctx.arc(exC, ey + eh * 0.06, ew * 0.46, 0, Math.PI * 2); ctx.fill();   // 瞳孔
-    // 大きな光（生き生きと）
-    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(exC - ew * 0.3, ey - eh * 0.3, ew * 0.28, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(exC + ew * 0.28, ey + eh * 0.34, ew * 0.14, 0, Math.PI * 2); ctx.fill();
-    // 上まぶたの線（目もとを締める）
-    ctx.strokeStyle = shade(f.hair, -0.1); ctx.lineWidth = s * 0.02; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.ellipse(exC, ey, ew, eh, 0, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
-    // 眉（細く・やわらか）
-    ctx.strokeStyle = shade(f.hair, 0.05); ctx.lineWidth = s * 0.016;
-    const by = ey - eh * 1.5 + sgn * f.browAngle * 0.008 * s;
-    ctx.beginPath(); ctx.moveTo(exC - ew * 0.9, by + eh * 0.12); ctx.quadraticCurveTo(exC, by - eh * 0.18, exC + ew * 0.9, by); ctx.stroke();
+  // 描画（整数ピクセルで刻む）
+  for (let gy = 0; gy < R; gy++) for (let gx = 0; gx < R; gx++) {
+    const cc = grid[gy][gx]; if (!cc) continue;
+    ctx.fillStyle = cc; ctx.fillRect(Math.round(gx * c), Math.round(gy * c), Math.ceil(c), Math.ceil(c));
   }
-  // 鼻（ちいさな点）
-  ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.arc(cx, cy + fh * 0.4, s * 0.012, 0, Math.PI * 2); ctx.fill();
-  // 口（小さく）
-  ctx.strokeStyle = '#c0625a'; ctx.lineWidth = s * 0.018; ctx.lineCap = 'round';
-  ctx.beginPath();
-  const my = cy + fh * 0.62, mw = fw * 0.22;
-  if (f.mouth === 0) { ctx.moveTo(cx - mw, my); ctx.quadraticCurveTo(cx, my + fh * 0.14, cx + mw, my); }       // 微笑
-  else if (f.mouth === 1) { ctx.moveTo(cx - mw * 0.7, my); ctx.lineTo(cx + mw * 0.7, my); }                    // 真一文字
-  else { ctx.moveTo(cx - mw * 0.7, my + fh * 0.04); ctx.quadraticCurveTo(cx, my + fh * 0.16, cx + mw * 0.7, my + fh * 0.04); }  // にっこり
-  ctx.stroke();
-
-  // 前髪（型ちがい）——艶ハイライトつき
-  drawFringe(ctx, f, cx, cy, fw, fh);
   ctx.restore();
   // 枠
   ctx.strokeStyle = 'rgba(150,175,235,.35)'; ctx.lineWidth = 1.5; roundRect(ctx, 0.5, 0.5, s - 1, s - 1, s * 0.12); ctx.stroke();
   ctx.restore();
 }
 
-function drawFringe(ctx, f, cx, cy, fw, fh) {
-  ctx.fillStyle = f.hair;
-  const ty = cy - fh;
-  ctx.beginPath();
-  if (f.hairStyle === 0) {            // ぱっつん前髪
-    ctx.moveTo(cx - fw * 1.08, cy + fh * 0.05); ctx.quadraticCurveTo(cx - fw * 1.12, ty - fh * 0.05, cx, ty - fh * 0.12);
-    ctx.quadraticCurveTo(cx + fw * 1.12, ty - fh * 0.05, cx + fw * 1.08, cy + fh * 0.05);
-    ctx.lineTo(cx + fw * 0.95, cy - fh * 0.2); ctx.lineTo(cx + fw * 0.5, cy - fh * 0.02);
-    ctx.lineTo(cx + fw * 0.18, cy - fh * 0.22); ctx.lineTo(cx - fw * 0.18, cy - fh * 0.02);
-    ctx.lineTo(cx - fw * 0.5, cy - fh * 0.22); ctx.lineTo(cx - fw * 0.95, cy - fh * 0.02);
+function hairTop(box, set, f, hairD) {
+  const H = f.hair;
+  if (f.hairStyle === 0) {            // ぱっつん
+    box(5, 3, 10, 4, H); box(4, 5, 1, 4, H); box(15, 5, 1, 4, H);
+    // 毛先（前髪の段）
+    set(7, 7, H); set(10, 7, H); set(13, 7, H);
   } else if (f.hairStyle === 1) {     // 横分け
-    ctx.moveTo(cx - fw * 1.08, cy); ctx.quadraticCurveTo(cx - fw, ty - fh * 0.06, cx + fw * 0.2, ty - fh * 0.1);
-    ctx.quadraticCurveTo(cx + fw * 1.12, ty, cx + fw * 1.08, cy);
-    ctx.lineTo(cx + fw * 0.6, cy - fh * 0.18); ctx.quadraticCurveTo(cx - fw * 0.05, cy - fh * 0.5, cx - fw * 0.35, cy - fh * 0.02);
+    box(5, 3, 10, 3, H); box(4, 5, 1, 4, H); box(15, 5, 1, 4, H);
+    box(5, 6, 6, 1, H); set(11, 6, H);
   } else if (f.hairStyle === 2) {     // とげ髪
-    ctx.moveTo(cx - fw * 1.06, cy);
-    for (let i = -3; i <= 3; i++) { ctx.lineTo(cx + i * fw * 0.32, ty - fh * (0.06 + (i % 2 ? 0.2 : 0))); }
-    ctx.lineTo(cx + fw * 1.06, cy); ctx.lineTo(cx + fw * 0.92, cy - fh * 0.18); ctx.lineTo(cx - fw * 0.92, cy - fh * 0.18);
+    box(5, 4, 10, 2, H);
+    for (let i = 0; i < 5; i++) set(5 + i * 2, 2 + (i % 2), H);
+    box(4, 5, 1, 4, H); box(15, 5, 1, 4, H);
   } else if (f.hairStyle === 3) {     // ふんわり
-    ctx.moveTo(cx - fw * 1.14, cy + fh * 0.08); ctx.quadraticCurveTo(cx - fw * 1.2, ty - fh * 0.16, cx, ty - fh * 0.22);
-    ctx.quadraticCurveTo(cx + fw * 1.2, ty - fh * 0.16, cx + fw * 1.14, cy + fh * 0.08);
-    ctx.quadraticCurveTo(cx + fw * 0.5, cy - fh * 0.52, cx, cy - fh * 0.28); ctx.quadraticCurveTo(cx - fw * 0.5, cy - fh * 0.52, cx - fw * 1.14, cy + fh * 0.08);
+    box(4, 2, 12, 5, H); box(3, 5, 1, 5, hairD); box(16, 5, 1, 5, hairD);
+    set(6, 7, H); set(13, 7, H);
   } else {                            // 短め
-    ctx.moveTo(cx - fw * 1.04, cy - fh * 0.05); ctx.quadraticCurveTo(cx, ty - fh * 0.05, cx + fw * 1.04, cy - fh * 0.05);
-    ctx.quadraticCurveTo(cx, cy - fh * 0.5, cx - fw * 1.04, cy - fh * 0.05);
+    box(5, 3, 10, 3, H); box(4, 5, 1, 3, H); box(15, 5, 1, 3, H);
   }
-  ctx.closePath(); ctx.fill();
-  // 艶（前髪のハイライト）
-  ctx.fillStyle = shade(f.hair, 0.28);
-  ctx.beginPath(); ctx.ellipse(cx - fw * 0.35, cy - fh * 0.62, fw * 0.4, fh * 0.12, -0.3, 0, Math.PI * 2); ctx.fill();
+  // 艶（一段明るい粒）
+  set(7, 4, '#ffffff'); set(8, 4, hairD);
 }
