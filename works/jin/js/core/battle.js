@@ -44,6 +44,7 @@ export class Battle {
     this.victory = false;
     this.log = [];
     this.initiative = !!opts.initiative;
+    this.expectLord = !!opts.expectLord;     // 主君前提（盤から失われたら敗北＝詰み無限の保険）
     if (this.initiative) this.beginInitiative();
     else this.beginPhase('player');
   }
@@ -314,7 +315,8 @@ export class Battle {
     if (this.over) return;
     const players = this.board.unitsOf('player');
     const lord = this.lord();
-    // 敗北
+    // 敗北：主君が倒れた／盤上から失われた（再配置漏れ等の保険）、または全滅
+    if (this.expectLord && (!lord || !isAlive(lord))) { this.over = true; this.victory = false; this.reason = 'lord'; return; }
     if (lord && !isAlive(lord)) { this.over = true; this.victory = false; this.reason = 'lord'; return; }
     if (!players.length) { this.over = true; this.victory = false; this.reason = 'wipe'; return; }
     // 勝利

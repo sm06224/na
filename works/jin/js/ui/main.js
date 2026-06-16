@@ -1114,6 +1114,14 @@ $('randBtn').onclick = () => { $('seedInput').value = (Math.random() * 1e9) >>> 
 $('sortieBtn').onclick = sortie;
 $('massBtn').onclick = massBattle;
 $('skirmishBtn').onclick = startSkirmish;
+$('resignBtn').onclick = () => {
+  if (!S.battle || S.battle.over) return;
+  if (!confirm('この戦いを投了して、章を初めからやり直しますか？（倒れた仲間も立ち上がります）')) return;
+  S.busy = false; S.anim = null;
+  S.battle.over = true; S.battle.victory = false; S.battle.reason = 'resign';
+  hideMenu(); $('forecast').hidden = true; clearSel();
+  checkResult();
+};
 $('endTurn').onclick = endTurn;
 $('view3dBtn').onclick = () => { setView3d(!isView3d()); $('view3dBtn').classList.toggle('on', isView3d()); sfx('select'); };
 $('logBtn').onclick = () => { $('log').hidden = !$('log').hidden; if (!$('log').hidden) refreshLog(); };
