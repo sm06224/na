@@ -9,6 +9,7 @@ import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
+import { signatureSkillOf } from './flavor.js';
 import { placeTreasures, treasureCountFor } from './treasure.js';
 import { reinforcementSpecs } from './reinforce.js';
 import { applySupportsToUnits, awardSupportsAfterBattle } from './support.js';
@@ -136,7 +137,8 @@ export class Game {
     resetUid(1);
     const r = this.rng.derive('party');
     this.party = ROSTER.map((spec, i) => {
-      const u = createUnit({ ...spec, side: 'player' }, r.derive(spec.id));
+      const sig = signatureSkillOf(spec.name);
+      const u = createUnit({ ...spec, skills: [...(spec.skills || []), sig].filter(Boolean), side: 'player' }, r.derive(spec.id));
       u.isLord = !!spec.isLord;
       return u;
     });
@@ -155,7 +157,8 @@ export class Game {
     const r = this.rng.derive('recruit');
     for (const spec of EXTRA_ROSTER) {
       if (spec.joinAt <= index && !this.party.some(u => u.name === spec.name)) {
-        this.party.push(createUnit({ ...spec, side: 'player' }, r.derive(spec.id)));
+        const sig = signatureSkillOf(spec.name);
+        this.party.push(createUnit({ ...spec, skills: [...(spec.skills || []), sig].filter(Boolean), side: 'player' }, r.derive(spec.id)));
       }
     }
   }

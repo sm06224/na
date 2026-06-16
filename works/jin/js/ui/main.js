@@ -18,6 +18,7 @@ import { EXTRA_SUPPORTS } from '../core/script2.js';
 import { EXTRA_SUPPORTS2 } from '../core/script3.js';
 import { supportRank, supportPoints, rankLetter, SUPPORT_THRESHOLDS } from '../core/support.js';
 import { skill as skillDef } from '../core/skills.js';
+import { heroFlavor } from '../core/flavor.js';
 import { BESTIARY, WORLD, WEAPON_NOTES, TERRAIN_NOTES } from '../core/lore.js';
 import { WTYPE, WRANKS } from '../core/items.js';
 import { playMusic, stopMusic, setMusicMuted } from './music.js';
@@ -648,7 +649,14 @@ async function playEvents(events) {
     if (e.type === 'miss') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(340); }
     else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { const c = impactColor(by); popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.impact(tgt.pos.x, tgt.pos.y, c); S.fx.addShake(3); } sfx('hit'); await sleep(420); }
     else if (e.type === 'crit') { if (by) showCutin(by, '会心の一撃！', { crit: true, minGap: 0 }); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.star(tgt.pos.x, tgt.pos.y, '#ffd86a'); S.fx.flash('#fff3c8', 0.4); S.fx.addShake(12); } sfx('crit'); await sleep(560); }
-    else if (e.type === 'skill') { if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff'); await sleep(260); }
+    else if (e.type === 'skill') {
+      const fl = by && heroFlavor(by.name);
+      if (fl && fl.skill === e.id) {           // 固有の必殺技発動——決め台詞のカットイン
+        showCutin(by, fl.signature, { crit: true, minGap: 0, hold: 760 });
+        if (by.pos) popup(by.pos, fl.signature, fl.color || '#ffd86a', true);
+      } else if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff');
+      await sleep(by && heroFlavor(by.name) && heroFlavor(by.name).skill === e.id ? 380 : 260);
+    }
     else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
     else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
     else if (e.type === 'poison' || e.type === 'burn') { if (tgt && tgt.pos) popup(tgt.pos, String(e.dmg), '#b6e07c'); await sleep(220); }
@@ -938,9 +946,11 @@ function showInfo(u) {
   const items = u.items.map(it => itemDef(it.id) ? itemDef(it.id).name + (it.uses ? `×${it.uses}` : '') : '').filter(Boolean).join('、');
   const sk = (u.skills || []).map(s => (skillDef(s) ? skillDef(s).name : s)).join('・');
   const bond = (() => { let n = 0; for (const a of (S.board ? S.board.alliesOf(u) : [])) if (a.pos && u.pos && Math.abs(a.pos.x - u.pos.x) + Math.abs(a.pos.y - u.pos.y) === 1) n++; return Math.min(3, n); })();
+  const fl = heroFlavor(u.name);
   $('infoBody').innerHTML =
     `<canvas id="infoFace" width="72" height="72" style="float:right;width:64px;height:64px;border-radius:10px;margin-left:.5rem"></canvas>
      <h3>${u.name} <small>${cd.name} Lv${u.level}</small></h3>
+     ${fl ? `<div class="itemline" style="color:${fl.color}">「${fl.epithet}」　必殺：${fl.signature}</div>` : ''}
      <div class="hpline">HP ${u.hp}/${u.maxHp}　移動${u.mov}　信仰${u.faith ?? 5}${bond ? `　絆+${bond}` : ''}</div>
      <div class="statgrid">${statline}</div>
      <div class="itemline">得物：${w ? w.name : '—'}</div>
