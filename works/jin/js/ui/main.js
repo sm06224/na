@@ -125,19 +125,31 @@ function renderDlg() {
   }
 }
 let cutinAt = 0;
-function showCutin(u) {
+function showCutin(u, label, opts = {}) {
   if (!u || !u.name) return;
   const now = performance.now();
-  if (now - cutinAt < 1000) return;       // 連発しない（流星などで多重にならぬよう）
+  if (now - cutinAt < (opts.minGap ?? 1000)) return;   // 連発しない（流星などで多重にならぬよう）
   cutinAt = now;
   const c = $('cutin'); const cx = c.getContext('2d'); cx.clearRect(0, 0, 200, 200);
   const party = S.game && S.game.party.some(p => p.name === u.name);
-  drawPortrait(cx, u.name, 10, 10, 180, { color: party ? '#5f7cff' : '#c0463e' });
+  const accent = opts.crit ? '#ffd86a' : (party ? '#8fa6ff' : '#ff8a7a');
+  drawPortrait(cx, u.name, 10, 6, 168, { color: party ? '#5f7cff' : '#c0463e' });
+  // 斜めの閃光（スパロボ風の勢い）
+  cx.save(); cx.globalAlpha = 0.5; cx.strokeStyle = accent; cx.lineWidth = 4;
+  cx.beginPath(); cx.moveTo(-10, 40); cx.lineTo(200, 10); cx.stroke();
+  cx.beginPath(); cx.moveTo(-10, 170); cx.lineTo(200, 140); cx.stroke(); cx.restore();
+  // 名と技名の帯
+  cx.fillStyle = 'rgba(10,13,20,.82)'; cx.fillRect(0, 176, 200, 24);
+  cx.fillStyle = accent; cx.fillRect(0, 176, 200, 2);
+  cx.fillStyle = '#fff'; cx.font = 'bold 15px ui-sans-serif'; cx.textAlign = 'left';
+  cx.fillText(u.name, 8, 194);
+  if (label) { cx.fillStyle = accent; cx.font = 'bold 14px ui-sans-serif'; cx.textAlign = 'right'; cx.fillText(label, 194, 194); }
   c.hidden = false; c.style.transition = 'none'; c.style.transform = 'translateX(-90px)'; c.style.opacity = '0';
   requestAnimationFrame(() => { c.style.transition = ''; c.style.transform = 'translateX(0)'; c.style.opacity = '1'; });
+  const hold = opts.hold ?? 650;
   clearTimeout(showCutin._t1); clearTimeout(showCutin._t2);
-  showCutin._t1 = setTimeout(() => { c.style.opacity = '0'; c.style.transform = 'translateX(-50px)'; }, 650);
-  showCutin._t2 = setTimeout(() => { c.hidden = true; }, 950);
+  showCutin._t1 = setTimeout(() => { c.style.opacity = '0'; c.style.transform = 'translateX(-50px)'; }, hold);
+  showCutin._t2 = setTimeout(() => { c.hidden = true; }, hold + 300);
 }
 function advanceDlg() {
   if (!dlgState) return;
@@ -552,6 +564,10 @@ async function confirmAttack() {
   $('forecast').hidden = true;
   S.atkTiles = null;
   S.busy = true; S.mode = 'animating';
+  // スパロボ風：攻撃の前に、攻め手のカットイン（得物名つき）を一拍
+  const w = equippedWeapon(u);
+  showCutin(u, w ? w.name : '攻撃');
+  await sleep(360);
   const res = S.battle.doAttack(u, def);
   await playEvents(res.events);
   if (res.levelUps && res.levelUps.length) await showLevelUps(u, res.levelUps);
@@ -631,7 +647,7 @@ async function playEvents(events) {
     const by = e.by != null ? uOf(e.by) : null;
     if (e.type === 'miss') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) popup(tgt.pos, 'MISS', '#cfd6e6'); sfx('miss'); await sleep(340); }
     else if (e.type === 'hit') { if (by && tgt) attackFx(by, tgt, false); if (tgt && tgt.pos) { const c = impactColor(by); popup(tgt.pos, String(e.dmg), '#ffd0c0'); flashHit(tgt); S.fx.impact(tgt.pos.x, tgt.pos.y, c); S.fx.addShake(3); } sfx('hit'); await sleep(420); }
-    else if (e.type === 'crit') { if (by) showCutin(by); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.star(tgt.pos.x, tgt.pos.y, '#ffd86a'); S.fx.flash('#fff3c8', 0.4); S.fx.addShake(12); } sfx('crit'); await sleep(560); }
+    else if (e.type === 'crit') { if (by) showCutin(by, '会心の一撃！', { crit: true, minGap: 0 }); if (by && tgt) attackFx(by, tgt, true); if (tgt && tgt.pos) { popup(tgt.pos, String(e.dmg) + '!', '#ffd86a', true); flashHit(tgt); S.fx.star(tgt.pos.x, tgt.pos.y, '#ffd86a'); S.fx.flash('#fff3c8', 0.4); S.fx.addShake(12); } sfx('crit'); await sleep(560); }
     else if (e.type === 'skill') { if (by && by.pos) popup(by.pos, skillName(e.id), '#b79bff'); await sleep(260); }
     else if (e.type === 'drain') { if (by && by.pos) { popup(by.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(by.pos.x, by.pos.y); } await sleep(220); }
     else if (e.type === 'heal') { if (tgt && tgt.pos) { popup(tgt.pos, '+' + e.amount, '#9cf0c0'); S.fx.heal(tgt.pos.x, tgt.pos.y); } await sleep(220); }
@@ -657,9 +673,17 @@ function attackFx(by, tgt, crit) {
   const w = equippedWeapon(by);
   const dist = manhattan(by.pos, tgt.pos);
   if (w && w.magic) {
-    const c = w.wtype === 'light' ? '#ffe08a' : w.wtype === 'dark' ? '#c79bff' : '#ff9c6a';
+    const c = w.wtype === 'light' ? '#ffe08a' : w.wtype === 'dark' ? '#c79bff' : '#ff7a4a';
+    const id = (w.id || '') + (w.name || '');
+    const thunder = /雷|サンダー|levin|bolting|thunder|エルファイア?/i.test(id) || /雷/.test(w.name || '');
     S.fx.magicCircle(by.pos.x, by.pos.y, c);
-    S.fx.shoot(by.pos, tgt.pos, { kind: 'bolt', color: c, dur: 0.18, onArrive: () => { S.fx.ring(tgt.pos.x, tgt.pos.y, c, 1.3); S.fx.spark(tgt.pos.x, tgt.pos.y, c, 12, 3); } });
+    const burst = () => {
+      S.fx.ring(tgt.pos.x, tgt.pos.y, c, 1.6); S.fx.ring(tgt.pos.x, tgt.pos.y, '#ffffff', 0.9);
+      S.fx.star(tgt.pos.x, tgt.pos.y, c); S.fx.spark(tgt.pos.x, tgt.pos.y, c, 16, 4); S.fx.flash(c, 0.26); S.fx.addShake(7);
+    };
+    if (thunder) { S.fx.lightning(by.pos, tgt.pos, '#cfe6ff'); S.fx.flash('#dfeaff', 0.2); setTimeout(burst, 90); }
+    else if (w.wtype === 'light') { S.fx.beam(by.pos, tgt.pos, c); setTimeout(burst, 70); }
+    else S.fx.shoot(by.pos, tgt.pos, { kind: 'bolt', color: c, dur: 0.18, onArrive: burst });
   } else if (dist > 1) {
     S.fx.shoot(by.pos, tgt.pos, { kind: 'arrow', dur: 0.16 });
   } else {
