@@ -4,6 +4,7 @@
 import { terrainOf } from '../core/terrain.js';
 import { isAlive } from '../core/unit.js';
 import { drawToken, roundRect } from './sprites.js';
+import { drawTokenPixel } from './pixelsprite.js';
 import { key } from '../core/grid.js';
 
 export const BASE_TILE = 46;
@@ -21,6 +22,9 @@ function shade(hex, f) {
 let VIEW3D = false;
 export function setView3d(v) { VIEW3D = !!v; }
 export function isView3d() { return VIEW3D; }
+let PIXEL = true;                                  // ドット絵（既定）／なめらか図形
+export function setPixel(v) { PIXEL = !!v; }
+export function isPixel() { return PIXEL; }
 const ELEV = { peak: 16, mountain: 13, wall: 14, hill: 7, forest: 4, thicket: 5, fort: 5, gate: 5, throne: 6, ruins: 4, water: -4, shallow: -2, lava: -2, ice: -1, swamp: -2 };
 export function elevOf(id, T) { return (ELEV[id] || 0) * (T / 46); }
 
@@ -138,7 +142,7 @@ export function draw(ctx, state, now) {
     const e = VIEW3D ? elevOf(board.terrainAt(Math.round(px), Math.round(py)).id, T) : 0;
     const shake = (anim && anim.type === 'hit' && anim.uid === u.uid) ? Math.sin(now / 30) * 3 : 0;
     const ucx = s.x + T / 2 + shake, ucy = s.y + T / 2 - e;
-    drawToken(ctx, u, ucx, ucy, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
+    (PIXEL ? drawTokenPixel : drawToken)(ctx, u, ucx, ucy, T, { acted: u.side === 'player' && u.hasActed && !state.selected });
     // 向きの小印
     if (u.facing != null) {
       const dv = [[0, -1], [1, 0], [0, 1], [-1, 0]][u.facing];
