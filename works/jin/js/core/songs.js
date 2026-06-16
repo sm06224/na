@@ -189,29 +189,30 @@ export const SONGS = {
         'b3:4 d4:4 d4:4 g4:4 ' +
         'g3:16 '
       },
-      { inst: 'bass', vol: 0.42, data:
-        'g2 g2 d3 g2 ' +
-        'g2 g2 d3 d3 ' +
-        'g2 g2 d3 d3 ' +
-        'c3 c3 a2 a2 ' +
-        'g2 g2 d3 d3 ' +
-        'g2 g2 d3 d3 ' +
-        'd3 d3 b2 b2 ' +
-        'd3 d3 g2 g2 ' +
-        'g2 g2 d3 g2 ' +
-        'g2 g2 d3 d3 ' +
-        'c3 c3 g2 g2 ' +
-        'a2 a2 e3 e3 ' +
-        'd3 d3 a2 a2 ' +
-        'g2 d3 b2 g2 ' +
-        'd3 d3 g2 g2 ' +
-        'g2:8 g2:8 '
+      { inst: 'bass', vol: 0.46, data:
+        // 八分の刻みで突き進むベース（戦の駆動）
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 d3:2 d3:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 d3:2 d3:2 ' +
+        'c3:2 c3:2 c3:2 c3:2 a2:2 a2:2 a2:2 a2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 d3:2 d3:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 d3:2 d3:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 b2:2 b2:2 b2:2 b2:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 d3:2 d3:2 d3:2 d3:2 ' +
+        'c3:2 c3:2 c3:2 c3:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'a2:2 a2:2 a2:2 a2:2 e3:2 e3:2 e3:2 e3:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 a2:2 a2:2 a2:2 a2:2 ' +
+        'g2:2 g2:2 d3:2 d3:2 b2:2 b2:2 g2:2 g2:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 '
       },
-      { inst: 'drum', vol: 0.5, data:
-        D.march + ' ' + D.rock + ' ' + D.rock + ' ' + D.rockf + ' ' +
-        D.march + ' ' + D.rock + ' ' + D.rock + ' ' + D.rockf + ' ' +
-        D.march + ' ' + D.rock + ' ' + D.rock + ' ' + D.rockf + ' ' +
-        D.march + ' ' + D.rock + ' ' + D.rock + ' ' + D.crash
+      { inst: 'drum', vol: 0.52, data:
+        D.rock + ' ' + D.gallop + ' ' + D.rock + ' ' + D.rockf + ' ' +
+        D.rock + ' ' + D.gallop + ' ' + D.rock + ' ' + D.crash + ' ' +
+        D.rock + ' ' + D.gallop + ' ' + D.rock + ' ' + D.rockf + ' ' +
+        D.gallop + ' ' + D.rock + ' ' + D.gallop + ' ' + D.crash
       }
     ]
   },
@@ -262,7 +263,7 @@ export const SONGS = {
   /* 冷たく、張りつめた。雪の戦い。Eナチュラルマイナー、刺すような高音。 */
   battle_snow: {
     name: '戦 — 雪',
-    bpm: 124,
+    bpm: 134,
     loopSteps: 128,
     tracks: [
       { inst: 'square', vol: 0.28, data:
@@ -285,19 +286,19 @@ export const SONGS = {
         'a3:8 f#3:8 ' +
         'g3:4 f#3:4 e3:8 '
       },
-      { inst: 'bass', vol: 0.4, data:
-        'e2:4 e2:4 e2:4 b2:4 ' +
-        'g2:4 g2:4 b2:4 b2:4 ' +
-        'e2:4 e2:4 c3:4 c3:4 ' +
-        'd3:4 d3:4 b2:4 b2:4 ' +
-        'e2:4 e2:4 e2:4 b2:4 ' +
-        'd3:4 d3:4 g2:4 g2:4 ' +
-        'a2:4 a2:4 f#2:4 f#2:4 ' +
-        'b2:4 b2:4 e2:8 '
+      { inst: 'bass', vol: 0.44, data:
+        'e2:2 e2:2 e2:2 e2:2 e2:2 e2:2 b2:2 b2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 b2:2 b2:2 b2:2 b2:2 ' +
+        'e2:2 e2:2 e2:2 e2:2 c3:2 c3:2 c3:2 c3:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 b2:2 b2:2 b2:2 b2:2 ' +
+        'e2:2 e2:2 e2:2 e2:2 e2:2 e2:2 b2:2 b2:2 ' +
+        'd3:2 d3:2 d3:2 d3:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'a2:2 a2:2 a2:2 a2:2 f#2:2 f#2:2 f#2:2 f#2:2 ' +
+        'b2:2 b2:2 b2:2 b2:2 e2:2 e2:2 e2:2 e2:2 '
       },
-      { inst: 'drum', vol: 0.42, data:
-        D.spar + ' ' + D.spar + ' ' + D.spar + ' ' + D.rock + ' ' +
-        D.spar + ' ' + D.spar + ' ' + D.rock + ' ' + D.crash
+      { inst: 'drum', vol: 0.48, data:
+        D.rock + ' ' + D.gallop + ' ' + D.rock + ' ' + D.rockf + ' ' +
+        D.gallop + ' ' + D.rock + ' ' + D.gallop + ' ' + D.crash
       }
     ]
   },
@@ -305,7 +306,7 @@ export const SONGS = {
   /* 暗く、不気味な。遺跡の戦い。Cマイナー、半音のためらい。 */
   battle_ruins: {
     name: '戦 — 遺跡',
-    bpm: 112,
+    bpm: 128,
     loopSteps: 256,
     tracks: [
       { inst: 'square', vol: 0.27, data:
@@ -344,29 +345,29 @@ export const SONGS = {
         'g4:8 g4:8 ' +
         'c4:16 '
       },
-      { inst: 'bass', vol: 0.42, data:
-        'c2:4 c2:4 g2:4 c2:4 ' +
-        'g2:4 g2:4 c2:4 c2:4 ' +
-        'c2:4 c2:4 ab2:4 ab2:4 ' +
-        'g2:4 g2:4 g2:4 g2:4 ' +
-        'c2:4 c2:4 ab2:4 ab2:4 ' +
-        'g2:4 g2:4 c2:4 c2:4 ' +
-        'f2:4 f2:4 g2:4 g2:4 ' +
-        'c2:8 c2:8 ' +
-        'c3:4 c3:4 g2:4 g2:4 ' +
-        'g2:4 g2:4 g2:4 g2:4 ' +
-        'eb2:4 eb2:4 ab2:4 ab2:4 ' +
-        'g2:8 g2:8 ' +
-        'c2:4 c2:4 ab2:4 ab2:4 ' +
-        'f2:4 f2:4 g2:4 g2:4 ' +
-        'g2:4 g2:4 g2:4 g2:4 ' +
-        'c2:8 c2:8 '
+      { inst: 'bass', vol: 0.46, data:
+        'c2:2 c2:2 c2:2 c2:2 g2:2 g2:2 c2:2 c2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 c2:2 c2:2 c2:2 c2:2 ' +
+        'c2:2 c2:2 c2:2 c2:2 ab2:2 ab2:2 ab2:2 ab2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'c2:2 c2:2 c2:2 c2:2 ab2:2 ab2:2 ab2:2 ab2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 c2:2 c2:2 c2:2 c2:2 ' +
+        'f2:2 f2:2 f2:2 f2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 ' +
+        'c3:2 c3:2 c3:2 c3:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'eb2:2 eb2:2 eb2:2 eb2:2 ab2:2 ab2:2 ab2:2 ab2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'c2:2 c2:2 c2:2 c2:2 ab2:2 ab2:2 ab2:2 ab2:2 ' +
+        'f2:2 f2:2 f2:2 f2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 g2:2 ' +
+        'c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 c2:2 '
       },
-      { inst: 'drum', vol: 0.4, data:
-        D.spar + ' ' + D.spar + ' ' + D.spar + ' ' + D.half + ' ' +
-        D.spar + ' ' + D.spar + ' ' + D.spar + ' ' + D.half + ' ' +
-        D.spar + ' ' + D.spar + ' ' + D.spar + ' ' + D.half + ' ' +
-        D.spar + ' ' + D.spar + ' ' + D.rock + ' ' + D.crash
+      { inst: 'drum', vol: 0.48, data:
+        D.rock + ' ' + D.rock + ' ' + D.gallop + ' ' + D.rockf + ' ' +
+        D.rock + ' ' + D.gallop + ' ' + D.rock + ' ' + D.crash + ' ' +
+        D.rock + ' ' + D.rock + ' ' + D.gallop + ' ' + D.rockf + ' ' +
+        D.gallop + ' ' + D.rock + ' ' + D.gallop + ' ' + D.crash
       }
     ]
   },
