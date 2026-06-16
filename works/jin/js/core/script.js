@@ -399,6 +399,10 @@ SUPPORTS.push(...EXTRA_SUPPORTS6);
 import { EXTRA_SUPPORTS7 } from './script8.js';
 SUPPORTS.push(...EXTRA_SUPPORTS7);
 
+/* 最後の十組——これで主要な仲間すべての絆が綴られた。 */
+import { EXTRA_SUPPORTS8 } from './script9.js';
+SUPPORTS.push(...EXTRA_SUPPORTS8);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
