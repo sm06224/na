@@ -379,6 +379,10 @@ SUPPORTS.push(...EXTRA_SUPPORTS);
 import { ACT3_SCRIPTS } from './act3.js';
 for (const k in ACT3_SCRIPTS) CHAPTER_SCRIPTS[k] = ACT3_SCRIPTS[k];
 
+/* 第三幕の支援会話（新たな仲間を含む16組）を合流させる。 */
+import { EXTRA_SUPPORTS3 } from './script4.js';
+SUPPORTS.push(...EXTRA_SUPPORTS3);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
