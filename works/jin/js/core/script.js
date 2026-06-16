@@ -391,6 +391,10 @@ SUPPORTS.push(...EXTRA_SUPPORTS4);
 import { EXTRA_SUPPORTS5 } from './script6.js';
 SUPPORTS.push(...EXTRA_SUPPORTS5);
 
+/* さらに十二組——残された組み合わせの語り。 */
+import { EXTRA_SUPPORTS6 } from './script7.js';
+SUPPORTS.push(...EXTRA_SUPPORTS6);
+
 /* 安全な取得。範囲外なら空の台本を返す。 */
 export function chapterScript(i) {
   const s = CHAPTER_SCRIPTS[i];
