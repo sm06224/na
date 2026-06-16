@@ -38,6 +38,7 @@ export function serialize(game) {
   return {
     v: SAVE_VERSION, seed: game.seed, chapterIndex: game.chapterIndex,
     gold: game.gold, useSetpiece: !!game.useSetpiece, initiative: !!game.initiative,
+    difficulty: game.difficulty || 'normal',
     hired: (game.hired || []).slice(),
     tradeGoods: (game.tradeGoods || []).slice(),
     supports: { ...(game.supports || {}) },
@@ -48,7 +49,7 @@ export function serialize(game) {
 
 export function deserialize(data) {
   if (!data || !data.party) throw new Error('壊れた記録');
-  const g = new Game(data.seed >>> 0, { setpiece: !!data.useSetpiece, initiative: !!data.initiative });
+  const g = new Game(data.seed >>> 0, { setpiece: !!data.useSetpiece, initiative: !!data.initiative, difficulty: data.difficulty || 'normal' });
   g.chapterIndex = data.chapterIndex | 0;
   g.gold = data.gold | 0;
   g.hired = (data.hired || []).slice();

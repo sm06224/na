@@ -96,7 +96,7 @@ function loop(now) {
 
 /* ---------- ゲーム開始 ---------- */
 function startGame(seed) {
-  S.game = new Game(seed >>> 0, { setpiece: $('setpieceChk').checked, initiative: $('initChk').checked });
+  S.game = new Game(seed >>> 0, { setpiece: $('setpieceChk').checked, initiative: $('initChk').checked, difficulty: ($('diffSel') || {}).value || 'normal' });
   $('title').hidden = true;
   showIntro();
 }

@@ -122,6 +122,7 @@ export class Game {
     this.rng = new RNG(this.seed);
     this.useSetpiece = !!opts.setpiece;     // 手作りの設置マップで戦うか
     this.initiative = !!opts.initiative;    // 行動順＝速さ順で戦うか
+    this.difficulty = opts.difficulty || 'normal';   // easy | normal | hard（やさしさ＝救済）
     this.chapterIndex = 0;
     this.gold = 5000;
     this.hired = [];                        // 斡旋で雇い入れた候補id
@@ -142,6 +143,9 @@ export class Game {
   }
   get chapter() { return CHAPTERS[this.chapterIndex]; }
   get done() { return this.chapterIndex >= CHAPTERS.length; }
+  /* 難易度による敵レベルの増減（やさしい＝弱く、むずかしい＝強く） */
+  get levelOffset() { return this.difficulty === 'easy' ? -3 : this.difficulty === 'hard' ? 2 : 0; }
+  foeLevel(base) { return Math.max(1, (base | 0) + this.levelOffset); }
   /* 出撃できる仲間＝永久の死を迎えていない者。戦闘で倒れても（hp0）、
      勝利で確定するまでは「戻れる」——敗北・再戦では全員が立ち上がる。 */
   livingParty() { return this.party.filter(u => !u.dead); }
@@ -192,12 +196,12 @@ export class Game {
     });
 
     // 敵とボス
-    generateEnemies(cr, board, spawns, { chapter: index + 1, level: ch.level, monster: ch.monster });
+    generateEnemies(cr, board, spawns, { chapter: index + 1, level: this.foeLevel(ch.level), monster: ch.monster });
     if (ch.boss) {
       const bossPos = bossSeat || (objective.type === 'seize' ? { x: objective.x, y: objective.y }
         : spawns[spawns.length - 1] || { x: board.w - 2, y: (board.h / 2) | 0 });
       if (board.unitAt(bossPos.x, bossPos.y)) board.remove(board.unitAt(bossPos.x, bossPos.y));
-      const boss = placeBoss(cr, board, { ...ch.boss, pos: bossPos });
+      const boss = placeBoss(cr, board, { ...ch.boss, level: this.foeLevel(ch.boss.level), pos: bossPos });
       if (ch.objective === 'defeat_boss') objective = { type: 'defeat_boss', uid: boss.uid };
     }
     board.rebuildIndex();
@@ -209,7 +213,7 @@ export class Game {
     const rr = cr.derive('reinforce');
     const reinforce = reinforcementSpecs(this.seed, index, ch).map((wave, wi) => ({
       turn: wave.turn,
-      units: wave.specs.map((sp, i) => createUnit({ ...sp, side: 'enemy' }, rr.derive('w' + wi + 'u' + i))),
+      units: wave.specs.map((sp, i) => createUnit({ ...sp, level: this.foeLevel(sp.level), side: 'enemy' }, rr.derive('w' + wi + 'u' + i))),
     }));
 
     const battle = new Battle(board, {
@@ -230,9 +234,10 @@ export class Game {
     const reward = 1500 + this.chapterIndex * 500;
     this.gold += reward;
     const supportUps = this.battle ? awardSupportsAfterBattle(this, this.battle.board) : [];
-    // 勝利して初めて、この章で倒れた者の死が確定する（敗北では確定しない＝再戦で戻る）
+    // 勝利して初めて、この章で倒れた者の死が確定する（敗北では確定しない＝再戦で戻る）。
+    // やさしさ（easy）は救済——永久の死を負わせない（倒れても次章で立ち上がる）。
     const fallen = [];
-    for (const u of this.party) if (!u.dead && u.hp <= 0) { u.dead = true; fallen.push(u.name); }
+    if (this.difficulty !== 'easy') for (const u of this.party) if (!u.dead && u.hp <= 0) { u.dead = true; fallen.push(u.name); }
     this.chapterIndex++;
     return { reward, gold: this.gold, done: this.done, supportUps, fallen };
   }
