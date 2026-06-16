@@ -8,7 +8,12 @@ export const STATUS = {
   silence: { name: '沈黙', desc: '魔法と杖が使えない。', color: '#b07ccc' },
   berserk: { name: '狂乱', desc: '敵味方かまわず襲う。', color: '#cc6a5a' },
   freeze: { name: '凍結', desc: '動けない。', color: '#9cd0e4' },
+  slow: { name: '鈍足', desc: '攻速が落ち、追撃されやすい。', color: '#9a8a6a' },
+  blind: { name: '盲目', desc: '命中が大きく下がる。', color: '#6a6a78' },
 };
+
+export const SLOW_PENALTY = 5;     // 鈍足の攻速ペナルティ
+export const BLIND_PENALTY = 30;   // 盲目の命中ペナルティ
 
 export function addStatus(u, id, turns) {
   const ex = u.status.find(s => s.id === id);
