@@ -25,6 +25,7 @@ import { TRADE_GOODS, tradePrice, buyGood, sellGood, holdings, canBuyGood } from
 import { weatherForChapter } from '../core/weather.js';
 import { arenaOpponents, arenaFight } from '../core/arena.js';
 import { makeSkirmish, SKIRMISH_BIOMES, SKIRMISH_SIZES } from '../core/skirmish.js';
+import { treasureAt, canOpenChest, openChest, visitVillage } from '../core/treasure.js';
 import { item as itemDef2 } from '../core/items.js';
 
 const SAVE_KEY = 'jin.save.v2';
@@ -312,6 +313,12 @@ function openMenu() {
   if (unitHasSkill(u, 'arithmetic')) add('算術', () => beginArith(), 'primary');
   if (staffT.length) add('杖', () => beginStaff(staffT), 'primary');
   if (consum.length) add('道具', () => openItems(consum));
+  const obj = S.game && treasureAt(S.battle.board, u.pos.x, u.pos.y);
+  if (obj && obj.type === 'chest') {
+    if (canOpenChest(u, obj)) add(obj.locked ? '開ける（施錠）' : '開ける', () => takeTreasure(u, obj), 'primary');
+  } else if (obj && obj.type === 'village') {
+    add('訪れる', () => takeTreasure(u, obj), 'primary');
+  }
   add('待機', () => { sfx('select2'); S.battle.doWait(u); endAction(); });
   add('もどす', () => { undoMove(); }, 'ghost');
   menu.hidden = false;
@@ -333,6 +340,24 @@ function openItems(consum) {
     menu.appendChild(b);
   }
   const back = document.createElement('button'); back.textContent = 'もどる'; back.className = 'ghost'; back.onclick = openMenu; menu.appendChild(back);
+}
+/* 宝箱を開ける／村を訪れる。中身を金は所持へ、品は荷駄へ。 */
+function takeTreasure(u, obj) {
+  hideMenu();
+  const g = S.game;
+  const res = obj.type === 'chest' ? openChest(obj, u) : visitVillage(obj);
+  const reward = res.loot || res.gift;
+  let msg;
+  if (reward.gold) { g.gold += reward.gold; msg = `${reward.gold}G を得た`; }
+  else { g.convoy.push(reward.item); msg = `${itemDef(reward.item).name} を荷駄へ`; }
+  if (res.usedKey) msg += `（${itemDef(res.usedKey).name}を使った）`;
+  sfx(obj.type === 'chest' ? 'levelup' : 'heal');
+  S.fx.burst(u.pos.x, u.pos.y, obj.type === 'chest' ? '#ffd86a' : '#9cf0c0');
+  S.popups.push({ x: u.pos.x, y: u.pos.y, text: obj.type === 'chest' ? '宝箱！' : '村', color: '#ffe08a', t: performance.now(), big: true });
+  toast(msg);
+  autosave();
+  S.battle.doWait(u);
+  endAction();
 }
 
 /* ---------- 攻撃 ---------- */
