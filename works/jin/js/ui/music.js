@@ -8,15 +8,29 @@ import { parseTrack, stepSeconds } from '../core/notation.js';
 let ctx = null, master = null, muted = false;
 let cur = null;     // { id, seq, loopSteps, stepSec, loopSec, loopStart, i, timer, nodes }
 
+/* やわらかく歪ませて芯を太く（ソフトクリップ） */
+function driveCurve() {
+  const n = 1024, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i / n * 2 - 1; c[i] = Math.tanh(x * 1.7); }
+  return c;
+}
 function ac() {
   if (muted) return null;
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
     ctx = new C();
+    // 全声が集まるバス → ドライブ（芯の太さ）→ 出力
     master = ctx.createGain();
-    master.gain.value = 0.42;
-    master.connect(ctx.destination);
+    master.gain.value = 0.5;
+    const shaper = ctx.createWaveShaper(); shaper.curve = driveCurve(); shaper.oversample = '2x';
+    const out = ctx.createGain(); out.gain.value = 0.92;
+    master.connect(shaper).connect(out).connect(ctx.destination);
+    // ひろがり（短いディレイの残響）——勇壮さを増す
+    const delay = ctx.createDelay(0.4); delay.delayTime.value = 0.19;
+    const fb = ctx.createGain(); fb.gain.value = 0.24;
+    const wet = ctx.createGain(); wet.gain.value = 0.17;
+    master.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet).connect(out);
   }
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
@@ -41,13 +55,20 @@ function voice(inst, freq, t0, dur, vol) {
   g.gain.exponentialRampToValueAtTime(peak, t0 + atk);
   g.gain.setValueAtTime(peak, t0 + hold);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(hold + 0.02, dur - rel));
-  // パルス幅をずらした薄い重ねで芯を太く（detune）
-  if (inst === 'square2' || inst === 'pulse' || inst === 'saw') {
-    const o2 = a.createOscillator(); o2.type = type; o2.frequency.setValueAtTime(freq, t0); o2.detune.value = 8;
-    const g2 = a.createGain(); g2.gain.value = peak * 0.5;
-    g2.gain.setValueAtTime(0.0001, t0); g2.gain.exponentialRampToValueAtTime(peak * 0.5, t0 + atk);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o2.connect(g2).connect(master); o2.start(t0); o2.stop(t0 + dur + 0.02); track(o2);
+  // どの声にもわずかにずらした重ねを足し、厚く勇ましく（ユニゾンデチューン）
+  const det = (inst === 'square2' || inst === 'pulse' || inst === 'saw') ? 11 : 7;
+  const o2 = a.createOscillator(); o2.type = type; o2.frequency.setValueAtTime(freq, t0); o2.detune.value = det;
+  const g2 = a.createGain();
+  g2.gain.setValueAtTime(0.0001, t0); g2.gain.exponentialRampToValueAtTime(peak * 0.5, t0 + atk);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(hold + 0.02, dur - rel));
+  o2.connect(g2).connect(master); o2.start(t0); o2.stop(t0 + dur + 0.02); track(o2);
+  // ベース・三角は一オクターブ下のサインで土台を厚く
+  if (inst === 'bass' || inst === 'triangle') {
+    const sub = a.createOscillator(); sub.type = 'sine'; sub.frequency.setValueAtTime(freq / 2, t0);
+    const gs = a.createGain();
+    gs.gain.setValueAtTime(0.0001, t0); gs.gain.exponentialRampToValueAtTime(peak * 0.6, t0 + atk);
+    gs.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(hold + 0.02, dur - rel));
+    sub.connect(gs).connect(master); sub.start(t0); sub.stop(t0 + dur + 0.02); track(sub);
   }
   o.connect(g).connect(master);
   o.start(t0); o.stop(t0 + dur + 0.02);
@@ -69,12 +90,12 @@ function drum(kind, t0, vol) {
   }
   if (kind === 'kick' || kind === 'snare') {
     const o = a.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(kind === 'kick' ? 160 : 250, t0);
-    o.frequency.exponentialRampToValueAtTime(kind === 'kick' ? 42 : 110, t0 + 0.1);
+    o.frequency.setValueAtTime(kind === 'kick' ? 185 : 250, t0);
+    o.frequency.exponentialRampToValueAtTime(kind === 'kick' ? 38 : 110, t0 + (kind === 'kick' ? 0.09 : 0.1));
     const g = a.createGain();
-    g.gain.setValueAtTime(vol * (kind === 'kick' ? 1.0 : 0.45), t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
-    o.connect(g).connect(master); o.start(t0); o.stop(t0 + 0.18); track(o);
+    g.gain.setValueAtTime(vol * (kind === 'kick' ? 1.25 : 0.5), t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + (kind === 'kick' ? 0.2 : 0.16));
+    o.connect(g).connect(master); o.start(t0); o.stop(t0 + 0.22); track(o);
   }
 }
 
