@@ -120,6 +120,14 @@ export function draw(ctx, state, now) {
     ctx.strokeRect(s.x + 2, s.y + 2, T - 4, T - 4);
   }
 
+  // 宝箱と村（駒の下に敷く）
+  if (board.objects) for (const o of board.objects) {
+    if (o.done) continue;
+    const s = cam.worldToScreen(o.x, o.y);
+    const e = VIEW3D ? elevOf(board.terrainAt(o.x, o.y).id, T) : 0;
+    drawObject(ctx, o, s.x, s.y - e, T, now);
+  }
+
   // 駒（移動アニメ中のユニットはずらして描く）
   const anim = state.anim;
   for (const u of board.units) {
@@ -189,6 +197,28 @@ function drawWeather(ctx, wx, vw, vh, now) {
       const x = (((i * 6271) % vw) + now * 0.5) % vw;
       ctx.fillRect(x, y, 6, 1.4);
     }
+  }
+}
+
+/* 盤上のオブジェクト（宝箱・村）を描く。画像なし、図形だけ。 */
+function drawObject(ctx, o, x, y, T, now) {
+  const bob = Math.sin(now / 400 + (o.x + o.y)) * T * 0.03;     // ゆらり
+  const cx = x + T / 2, cy = y + T / 2 + bob;
+  if (o.type === 'chest') {
+    const w = T * 0.46, h = T * 0.34;
+    ctx.fillStyle = '#7a5a2c'; ctx.fillRect(cx - w / 2, cy - h * 0.2, w, h * 0.8);     // 箱
+    ctx.fillStyle = '#9a7236'; ctx.beginPath();                                         // 蓋
+    ctx.moveTo(cx - w / 2, cy - h * 0.2); ctx.lineTo(cx - w / 2, cy - h * 0.5);
+    ctx.lineTo(cx + w / 2, cy - h * 0.5); ctx.lineTo(cx + w / 2, cy - h * 0.2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8c24a'; ctx.fillRect(cx - T * 0.04, cy - h * 0.5, T * 0.08, h);  // 金具
+    ctx.fillStyle = o.locked ? '#caa23a' : '#e8e2cf';
+    ctx.beginPath(); ctx.arc(cx, cy - h * 0.18, T * 0.05, 0, Math.PI * 2); ctx.fill();  // 錠
+  } else {
+    const w = T * 0.5, h = T * 0.3;
+    ctx.fillStyle = '#caa26a'; ctx.fillRect(cx - w / 2, cy - h * 0.1, w, h);            // 家の壁
+    ctx.fillStyle = '#a0432e'; ctx.beginPath();                                         // 屋根
+    ctx.moveTo(cx - w * 0.6, cy - h * 0.1); ctx.lineTo(cx, cy - h * 0.7); ctx.lineTo(cx + w * 0.6, cy - h * 0.1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#6b4a2c'; ctx.fillRect(cx - T * 0.05, cy, T * 0.1, h * 0.6);       // 扉
   }
 }
 

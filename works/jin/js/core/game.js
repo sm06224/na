@@ -9,6 +9,7 @@ import { generateMap } from './mapgen.js';
 import { generateEnemies, placeBoss } from './enemies.js';
 import { Battle } from './battle.js';
 import { weatherForChapter } from './weather.js';
+import { placeTreasures, treasureCountFor } from './treasure.js';
 import { SETPIECES, parseMap } from './maps.js';
 import { EXTRA_SETPIECES } from './maps2.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
@@ -194,6 +195,8 @@ export class Game {
     }
     board.rebuildIndex();
     board.weather = weatherForChapter(this.seed, index, board.biome || ch.biome);   // 種と章から決まる空模様
+    const tc = treasureCountFor(index);
+    placeTreasures(board, cr.derive('treasure'), { chests: tc.chests, villages: tc.villages, chapterIndex: index });   // 宝箱と村
 
     const battle = new Battle(board, {
       rng: cr.derive('fight'),
