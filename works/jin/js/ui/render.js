@@ -18,6 +18,24 @@ function shade(hex, f) {
   return `rgb(${r | 0},${g | 0},${b | 0})`;
 }
 
+/* ドット絵の地面：タイルを粗い格子に割り、決定的なディザで陰影をつける。
+   なめらかなグラデの代わりに、レトロな粒の床に。 */
+const TILE_CELLS = 8;
+function drawTilePixel(ctx, t, x, y, T, gx, gy) {
+  const base = t.color || '#5c7a4a';
+  const cs = T / TILE_CELLS;
+  // 上をやや明るく、下をやや暗くする縦の段差（4 段）＋セルごとの微ディザ
+  for (let cy = 0; cy < TILE_CELLS; cy++) {
+    const band = 0.12 - (cy / (TILE_CELLS - 1)) * 0.3;     // +0.12 → -0.18
+    for (let cx = 0; cx < TILE_CELLS; cx++) {
+      const h = (((gx * 8 + cx) * 73856093) ^ ((gy * 8 + cy) * 19349663)) >>> 0;
+      const d = ((h & 7) - 3.5) / 3.5 * 0.06;              // ±0.06 のゆらぎ
+      ctx.fillStyle = shade(base, band + d);
+      ctx.fillRect((x + cx * cs) | 0, (y + cy * cs) | 0, Math.ceil(cs), Math.ceil(cs));
+    }
+  }
+}
+
 /* 立体（疑似クォータービュー）モード：地形を高さのある積み木として描く */
 let VIEW3D = false;
 export function setView3d(v) { VIEW3D = !!v; }
@@ -73,27 +91,32 @@ export function draw(ctx, state, now) {
         ctx.fillStyle = shade(t.color, -0.5);
         ctx.fillRect(s.x, s.y, T + 1, T + 1);
       }
-      // 天面：上を明るく下を暗く（縦グラデ）
-      const g2 = ctx.createLinearGradient(s.x, ty, s.x, ty + T);
-      g2.addColorStop(0, shade(t.color, 0.13));
-      g2.addColorStop(0.55, t.color || '#5c7a4a');
-      g2.addColorStop(1, shade(t.color, -0.2));
-      ctx.fillStyle = g2;
-      ctx.fillRect(s.x, ty, T + 1, T + 1);
-      // ざらり（決定的な斑点）
-      const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
-      ctx.fillStyle = (h & 1) ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)';
-      for (let k = 0; k < 3; k++) {
-        const px = s.x + ((h >> (k * 5)) & 31) / 31 * T;
-        const py = ty + ((h >> (k * 4 + 2)) & 31) / 31 * T;
-        ctx.fillRect(px, py, T * 0.12, T * 0.12);
+      if (PIXEL) {
+        drawTilePixel(ctx, t, s.x, ty, T, x, y);
+        decorate(ctx, t, s.x, ty, T, now, x, y);
+      } else {
+        // 天面：上を明るく下を暗く（縦グラデ）
+        const g2 = ctx.createLinearGradient(s.x, ty, s.x, ty + T);
+        g2.addColorStop(0, shade(t.color, 0.13));
+        g2.addColorStop(0.55, t.color || '#5c7a4a');
+        g2.addColorStop(1, shade(t.color, -0.2));
+        ctx.fillStyle = g2;
+        ctx.fillRect(s.x, ty, T + 1, T + 1);
+        // ざらり（決定的な斑点）
+        const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+        ctx.fillStyle = (h & 1) ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)';
+        for (let k = 0; k < 3; k++) {
+          const px = s.x + ((h >> (k * 5)) & 31) / 31 * T;
+          const py = ty + ((h >> (k * 4 + 2)) & 31) / 31 * T;
+          ctx.fillRect(px, py, T * 0.12, T * 0.12);
+        }
+        decorate(ctx, t, s.x, ty, T, now, x, y);
+        // 縁の面取り（上＝光、下＝影）
+        ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(s.x + 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + 0.5); ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,.18)';
+        ctx.beginPath(); ctx.moveTo(s.x + T - 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + T - 0.5); ctx.stroke();
       }
-      decorate(ctx, t, s.x, ty, T, now, x, y);
-      // 縁の面取り（上＝光、下＝影）
-      ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(s.x + 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + 0.5); ctx.stroke();
-      ctx.strokeStyle = 'rgba(0,0,0,.18)';
-      ctx.beginPath(); ctx.moveTo(s.x + T - 0.5, ty + 0.5); ctx.lineTo(s.x + T - 0.5, ty + T - 0.5); ctx.lineTo(s.x + 0.5, ty + T - 0.5); ctx.stroke();
     }
   }
 
