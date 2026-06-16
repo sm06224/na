@@ -4,6 +4,7 @@ import { Game } from '../core/game.js';
 import { isAlive, equippedWeapon, effectiveStats, unitRank, createUnit } from '../core/unit.js';
 import { makeArmy, resolveMassCombat, armyTroops } from '../core/masscombat.js';
 import { playMassBattle } from './massbattle.js';
+import { drawCamp, campLine } from './camp.js';
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
@@ -88,6 +89,8 @@ function loop(now) {
     S.fx.draw(ctx, S.cam);
     ctx.restore();
   }
+  // 拠点が開いていれば、野営シーンを揺らす
+  if (S.game && !$('base').hidden) { const cc = $('campScene'); if (cc) drawCamp(cc, S.game.livingParty(), now); }
 }
 
 /* ---------- ゲーム開始 ---------- */
@@ -941,6 +944,7 @@ function openBase() {
   S.mode = 'base';
   playMusic('prologue');
   $('baseTitle').textContent = `拠点 — 次は「${S.game.chapter.title}」`;
+  $('campLine').textContent = campLine(S.game.seed, S.game.chapterIndex);
   baseUnit = S.game.livingParty()[0];
   const tabs = $('baseTabs'); tabs.innerHTML = '';
   BASE_TABS.forEach(([label, id], i) => {
