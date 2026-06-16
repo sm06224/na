@@ -3,6 +3,7 @@
 import { Game } from '../core/game.js';
 import { isAlive, equippedWeapon, effectiveStats, unitRank, createUnit } from '../core/unit.js';
 import { makeArmy, resolveMassCombat, armyTroops } from '../core/masscombat.js';
+import { playMassBattle } from './massbattle.js';
 import { classDef } from '../core/classes.js';
 import { item as itemDef } from '../core/items.js';
 import { STAT_KEYS, STAT_NAMES } from '../core/stats.js';
@@ -217,7 +218,16 @@ function massBattle() {
   const enemyArmy = makeArmy(ch.boss ? ch.boss.name + '軍' : '敵軍', foes);
   const res = resolveMassCombat(partyArmy, enemyArmy, cr.derive('fight'));
   const win = res.winner === 'a';
-  stopMusic(); sfx(win ? 'victory' : 'defeat'); playMusic(win ? 'victory' : 'defeat');
+  // まず俯瞰ドット絵で軍勢のぶつかりを見せ、その後に戦果を表示する
+  stopMusic(); playMusic(win ? 'victory' : 'defeat');
+  $('massScene').hidden = false;
+  S.mode = 'massanim';
+  playMassBattle($('massCanvas'), res, {
+    nameA: '自軍', nameB: enemyArmy.name,
+    onDone: () => { $('massScene').hidden = true; showMassResult(); },
+  });
+  function showMassResult() {
+  sfx(win ? 'victory' : 'defeat');
   if (win) S.fx.confetti(60);
   $('resultTitle').textContent = win ? '会戦・勝利' : '会戦・敗北';
   const log = res.rounds.filter((_, i) => i % Math.ceil(res.rounds.length / 6) === 0 || i === res.rounds.length - 1).map(r => `R${r.round}　自軍 ${r.a}　敵 ${r.b}`).join('\n');
@@ -235,6 +245,7 @@ function massBattle() {
   }
   S.mode = 'result';
   $('result').hidden = false;
+  }
 }
 function refreshHud() {
   const b = S.battle;
