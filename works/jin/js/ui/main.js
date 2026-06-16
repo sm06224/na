@@ -102,6 +102,13 @@ function startGame(seed) {
   showIntro();
 }
 
+/* 章に合う戦闘曲。第三幕（16〜）は天の戦、終々章（23）は最終戦の曲。 */
+function battleTune(chapterIndex, biome) {
+  if (chapterIndex === 23) return 'finalboss';
+  if (chapterIndex >= 16) return 'battle_sky';
+  return 'battle_' + (biome || 'green');
+}
+
 /* ---- 台詞の再生（タップで送る） ---- */
 let dlgState = null;
 function playDialogue(lines) {
@@ -183,7 +190,7 @@ async function sortie() {
   $('intro').hidden = true;
   await playDialogue(chapterScript(S.game.chapterIndex).open);
   const biome = S.game.chapter.biome || 'green';
-  playMusic('battle_' + biome);
+  playMusic(battleTune(S.game.chapterIndex, biome));
   const { battle } = S.game.startChapter();
   S.battle = battle; S.board = battle.board;
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
@@ -1250,7 +1257,11 @@ function wakeAudio() {
 function resumeMusic() {
   // ミュート解除や画面復帰のとき、いまの場面に合う曲へ
   if (S.mode === 'title') playMusic('title');
-  else if (S.mode === 'play' || S.mode === 'idle' || S.mode === 'selected' || S.mode === 'menu' || S.mode === 'target') playMusic('battle_' + ((S.skirmish && S.skirmish.biome) || (S.game && S.game.chapter && S.game.chapter.biome) || (S.board && S.board.biome) || 'green'));
+  else if (S.mode === 'play' || S.mode === 'idle' || S.mode === 'selected' || S.mode === 'menu' || S.mode === 'target') {
+    if (S.skirmish) playMusic('battle_' + (S.skirmish.biome || 'green'));
+    else if (S.game) playMusic(battleTune(S.game.chapterIndex, (S.game.chapter && S.game.chapter.biome) || (S.board && S.board.biome) || 'green'));
+    else playMusic('battle_green');
+  }
 }
 window.addEventListener('pointerdown', wakeAudio);
 

@@ -624,4 +624,8 @@ export const SONGS = {
 
 };
 
+/* 第三幕の曲（天の戦・最終戦）を合流させる。 */
+import { EXTRA_SONGS } from './songs2.js';
+Object.assign(SONGS, EXTRA_SONGS);
+
 export function song(id) { return SONGS[id] || null; }
