@@ -632,4 +632,8 @@ Object.assign(SONGS, EXTRA_SONGS);
 import { EXTRA_SONGS3 } from './songs3.js';
 Object.assign(SONGS, EXTRA_SONGS3);
 
+/* 凱歌・安らぎ・急襲の曲を合流させる。 */
+import { EXTRA_SONGS4 } from './songs4.js';
+Object.assign(SONGS, EXTRA_SONGS4);
+
 export function song(id) { return SONGS[id] || null; }

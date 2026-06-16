@@ -18,6 +18,7 @@ import { EXTRA_SETPIECES } from './maps2.js';
 import { EXTRA_SETPIECES3 } from './maps3.js';
 import './expansion.js';            // 追加の職・素質を登録簿へ
 import './expansion2.js';           // 第三幕の上級職を登録簿へ
+import './expansion3.js';           // さらなる上級職を登録簿へ
 import './items_extra.js';          // 追加の得物を登録簿へ
 import './items_extra2.js';         // 終盤の伝説装備を登録簿へ
 import './items_extra3.js';         // 連射（ブレイブ）武器と名品を登録簿へ

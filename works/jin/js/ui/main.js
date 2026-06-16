@@ -173,7 +173,7 @@ $('dialogue').addEventListener('pointerdown', advanceDlg);
 function showIntro() {
   const g = S.game;
   if (g.done) return showClear();
-  playMusic('prologue');
+  playMusic('peace');   // 出撃前の語り——戦間の安らぎ
   const ch = g.chapter;
   $('introTitle').textContent = ch.title;
   const wx = weatherForChapter(g.seed, g.chapterIndex, ch.biome || 'green');
@@ -193,7 +193,7 @@ async function sortie() {
   const biome = S.game.chapter.biome || 'green';
   playMusic(battleTune(S.game.chapterIndex, biome));
   const { battle } = S.game.startChapter();
-  S.battle = battle; S.board = battle.board;
+  S.battle = battle; S.board = battle.board; S._ambushAt = null;
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
   clearSel(); S.mode = 'idle';
   $('hud').hidden = false;
@@ -768,8 +768,21 @@ async function endTurn() {
   await animateTurns(turns);
   S.busy = false; S.mode = 'idle';
   refreshHud(); refreshLog();
+  maybeAmbushCue();
   checkResult();
   maybeAuto();
+}
+/* 増援が現れた回——不意打ちの曲と報せで、迫る危機を告げる。次の手番で常の戦曲へ戻す。 */
+function maybeAmbushCue() {
+  if (!S.battle || S.battle.over) return;
+  if (S.battle.reinforcedTurn === S.battle.turn && S._ambushAt !== S.battle.turn) {
+    S._ambushAt = S.battle.turn;
+    if (!isMuted()) playMusic('ambush');
+    toast('増援出現！', 1600);
+  } else if (S._ambushAt != null && S.battle.turn > S._ambushAt) {
+    S._ambushAt = null;
+    if (!isMuted()) resumeMusic();      // 危機は去った——常の戦曲へ
+  }
 }
 /* オート：自軍を AI に任せる */
 async function autoPlayerPhase() {
@@ -779,6 +792,7 @@ async function autoPlayerPhase() {
   await animateTurns(turns);
   S.busy = false; S.mode = 'idle';
   refreshHud(); refreshLog();
+  maybeAmbushCue();
   checkResult();
   if (!S.battle.over) endTurn();          // 続けて敵フェイズへ
 }
@@ -814,7 +828,8 @@ async function showOutcome() {
   stopMusic();
   sfx(win ? 'victory' : 'defeat');
   if (win) S.fx.confetti(70);
-  playMusic(win ? 'victory' : 'defeat');
+  // 演習・外伝・塔の勝利は短い凱歌で。本編は従来の勝鬨で。
+  playMusic(win ? (S.skirmish ? 'fanfare' : 'victory') : 'defeat');
   if (S.skirmish) {
     const tw = S.skirmish.tower;
     if (tw) {

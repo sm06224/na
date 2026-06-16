@@ -12,6 +12,7 @@ import { CHAPTER_SCRIPTS, SUPPORTS, chapterScript } from '../js/core/script.js';
 import { SETPIECES, parseMap, setpiece } from '../js/core/maps.js';
 import { EXPANSION_CLASSES, EXPANSION_SKILLS } from '../js/core/expansion.js';
 import { EXPANSION2_CLASSES } from '../js/core/expansion2.js';
+import { EXPANSION3_CLASSES } from '../js/core/expansion3.js';
 import { Game, CHAPTERS, ROSTER, EXTRA_ROSTER } from '../js/core/game.js';
 import { EXTRA_SETPIECES } from '../js/core/maps2.js';
 
@@ -42,7 +43,7 @@ test('拡張の職：登録され、bases/growths/移動がそろう', () => {
 test('魔物誌：基本職をすべて網羅し、欄がそろう', () => {
   for (const id of Object.keys(CLASSES)) {
     // 拡張職は別登録なので、lore は基本職を最低限カバーしていればよい
-    if (EXPANSION_CLASSES.includes(id) || EXPANSION2_CLASSES.includes(id)) continue;
+    if (EXPANSION_CLASSES.includes(id) || EXPANSION2_CLASSES.includes(id) || EXPANSION3_CLASSES.includes(id)) continue;
     assert.ok(bestiaryOf(id), `魔物誌に ${id} がある`);
   }
   for (const b of BESTIARY) assert.ok(b.classId && b.name && b.blurb && b.tactics);

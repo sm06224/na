@@ -329,7 +329,7 @@ export class Battle {
         spawned.push(u);
       }
     }
-    if (spawned.length) { this.board.rebuildIndex(); this.record(`増援 ${spawned.length} 体が現れた！`); }
+    if (spawned.length) { this.board.rebuildIndex(); this.record(`増援 ${spawned.length} 体が現れた！`); this.reinforcedTurn = this.turn; }
     return spawned;
   }
 
