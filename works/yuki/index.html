@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>雪 — yuki</title>
+<meta name="description" content="種ひとつから、空の手紙を一片おろす。温度と湿りが晶癖を決め、六方格子のセルオートマトンが雪の結晶を育てる。誰も形を描かない。同じ種なら同じひとひら。依存ゼロ・オフライン。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>雪 <small>yuki</small></h1>
+  <p class="lead">種ひとつから、空の手紙を一片おろす。<br>
+  その日の空——温度と湿り——が晶癖を決め、水蒸気が結晶のふちで凍る。<br>
+  誰も形を描いていない。規則がほどけるだけで、おのずと六方の華になる。</p>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="canvas-wrap"><canvas id="snow"></canvas></div>
+  </section>
+
+  <aside class="side">
+    <div class="controls">
+      <label>種 <input id="seed" value="hatsuyuki" inputmode="text" spellcheck="false"></label>
+      <div class="row">
+        <button id="fall">降らせる</button>
+        <button id="another" class="ghost">別のひとひら</button>
+      </div>
+      <button id="share" class="wide ghost">この一片のリンクをうつす</button>
+      <p class="hint">同じ種なら、いつ誰が降らせても寸分たがわぬ同じひとひら。<br>
+      —— けれど、世に二つと同じ雪はない。</p>
+    </div>
+
+    <div class="card">
+      <div class="naming">
+        <span id="name" class="cname">—</span>
+        <span id="mei" class="mei"></span>
+      </div>
+      <div class="facts">
+        <span id="habit" class="habit">—</span>
+        <span id="weather" class="weather"></span>
+      </div>
+      <p id="letter" class="letter"></p>
+    </div>
+
+    <p class="quote">「雪は天から送られた手紙である。」<br><span>——中谷宇吉郎</span></p>
+  </aside>
+</main>
+
+<footer>
+  <p>結晶はライター(Reiter)の六方格子モデルで育つ。乱数は形を描かない——種が選ぶのは「その日の空」だけ。<br>
+  依存パッケージはゼロ、すべてこの画面の中だけで。</p>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

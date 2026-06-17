@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪**
 
 </div>
 
@@ -203,6 +203,24 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 **斬撃/矢/魔法/火花**の演出・**BGM 11曲**・章のあいだの**店/編成/転職/セーブ**つき。約 7,000 行。
 （目標二万行の大作のため、なお登りつづける。）
 
+### ⛰ [層 `sou`](./works/sou/) — *a year becomes a layer; a cliff remembers*
+**種ひとつから、地の記憶を積む**。一年に一枚、地層が降り積もる——**雨の年は厚く粗く**（礫・砂）、
+**乾いた年は薄く細かい**（泥・粘土）。気候はいくつかの正弦波の重ね合わせで、まれな**大水・火山灰・
+旱魃・地震・繁茂**が、ひと筋の際立った縞となって残る。積もった層は**己の上に載る重みで圧密**され、
+下の古い層ほど薄く締まる。やがて**侵食が崖を切る**と、地表（今）から岩盤（最古）まで、深い時間が
+そのまま縞の重なりとして立ちあらわれる。`蛍`・`波` と同じく、理屈はコアにあり画面には静けさだけ。
+縞に触れれば、その年と粒度がわかる。同じ種なら寸分たがわぬ同じ大地。コアは DOM 非依存・**8 tests**。
+
+### ❄ [雪 `yuki`](./works/yuki/) — *a snowflake is a letter from the sky*
+**種ひとつから、空の手紙を一片おろす**。その日の**空——温度と湿り**——が**晶癖**（角板・扇板・星形・
+樹枝・羊歯状）を決め、水蒸気が**ライター(Reiter)の六方格子セルオートマトン**で結晶のふちに凍りつく。
+**誰も形を描かない**——乱数は形に触れず、種が選ぶのは「その日の空」だけ。規則がほどけるだけで、
+おのずと**六方の華**になる（この**六回対称は、コアが六方の和を整列して足すことでビット単位で保証**し、
+テストが見張る）。結晶は**おのれの名を名のり、空からの手紙を綴る**——`中谷宇吉郎`の言うとおり、
+**雪は天から送られた手紙である**。同じ種なら寸分たがわぬ同じひとひら（`#s=種` で渡せる）——けれど、
+世に二つと同じ雪はない。`生`・`星`・`雷`・`種` と続く「**ひとりでに生まれる**」系譜の、冬の章。
+コアは DOM 非依存で、決定性・**六回対称**・成長の単調・連結性・健全性まで**ヘッドレス検証**・**11 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -323,11 +341,21 @@ na/
 │  │  ├─ js/core/water.js   高さの場・波動方程式・反射壁・傾き
 │  │  ├─ js/ui/             render（屈折と caustics）· audio · main
 │  │  └─ tests/
-│  └─ jin/                  ⚔ 陣（種から生まれるタクティクスRPG）
+│  ├─ jin/                  ⚔ 陣（種から生まれるタクティクスRPG）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/           rng/grid/pathfind/terrain/stats · classes/items/skills/
+│  │  │                     unit/status/board/combat/ai · mapgen/enemies/battle/game
+│  │  ├─ js/ui/             render · sprites · audio · main（タッチ操作）
+│  │  └─ tests/
+│  ├─ sou/                  ⛰ 層（種から積もる地層・崖で読む深い時間）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/strata.js  堆積・圧密・侵食・年代記
+│  │  ├─ js/ui/             render（崖の刷り）· main
+│  │  └─ tests/
+│  └─ yuki/                 ❄ 雪（種から育つ六方の雪結晶）
 │     ├─ index.html · style.css
-│     ├─ js/core/           rng/grid/pathfind/terrain/stats · classes/items/skills/
-│     │                     unit/status/board/combat/ai · mapgen/enemies/battle/game
-│     ├─ js/ui/             render · sprites · audio · main（タッチ操作）
+│     ├─ js/core/yuki.js    六方格子・ライターの結晶成長・空と晶癖・命名・手紙
+│     ├─ js/ui/             render（氷の華）· main
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
@@ -341,7 +369,7 @@ na/
 ## 番人と公開
 
 - **gitleaks** が push / PR / 毎週の巡回で git 履歴と作業ツリーを走査（初回スキャンは漏洩ゼロ）
-- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟`・`種`・`籤`・`波`・`陣` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
+- **test** が `生`・`史`・`番`・`言`・`歌`・`備`・`奏`・`苔`・`織`・`算`・`針`・`狐`・`星`・`雷`・`陽`・`割`・`窟`・`種`・`籤`・`波`・`陣`・`層`・`雪` のコアをブラウザなしで検証、`蛍` は光るかどうかだけ
 - **koke** が毎週月曜の朝、庭に苔を描き足してコミットする（このリポジトリは放っておいても育つ）
 - **pages** で `main` への push ごとに自動公開。**Settings → Pages → Source** を
   `GitHub Actions` にすると `https://sm06224.github.io/na/` で全作品が開けます
