@@ -1,0 +1,10 @@
+{
+  "name": "sou",
+  "version": "1.0.0",
+  "description": "層 — a year becomes a layer; a cliff remembers. From a seed, a deposit each year: thick and coarse in wet years, thin and fine in dry ones, with the rare flood, ashfall, drought, quake or bloom striped into the rock. Deeper layers compact under their own burial; erosion cuts a cliff you can read like deep time. Zero dependencies, offline, deterministic.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>層 — sou</title>
+<meta name="description" content="種ひとつから、地の記憶を積む。一年に一枚、地層が降り積もり、侵食が崖を切り、断面に深い時間があらわになる。依存ゼロ・オフライン。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>層 <small>sou</small></h1>
+  <p class="lead">一年に一枚、地が降り積もる。雨の年は厚く粗く、乾いた年は薄く細かい。<br>
+  まれな大水・火山灰・旱魃・地震・繁茂が、ひと筋の縞となって残る。<br>
+  下の層ほど己の重みに圧され、やがて侵食が崖を切り、断面に深い時間があらわになる。</p>
+</header>
+
+<main>
+  <section class="face">
+    <div class="canvas-wrap"><canvas id="cliff"></canvas><div id="tip" hidden></div></div>
+  </section>
+
+  <aside class="side">
+    <div class="controls">
+      <label>種 <input id="seed" value="nagori" inputmode="text" spellcheck="false"></label>
+      <div class="row">
+        <button id="dig">掘る</button>
+        <button id="another" class="ghost">別の地を</button>
+      </div>
+      <label class="span">歳月 <input id="span" type="range" min="60" max="900" value="320" step="20">
+        <span id="spanv">320年</span></label>
+      <p class="hint">縞に触れると、その年がわかる。右の物差しは深さ＝時間。</p>
+    </div>
+
+    <div class="record-box">
+      <h2>地の年代記 <span id="count" class="quiet"></span></h2>
+      <ul id="record"></ul>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <p>同じ種なら、何度でも同じ大地。依存パッケージはゼロ、すべてこの画面の中だけで。</p>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
