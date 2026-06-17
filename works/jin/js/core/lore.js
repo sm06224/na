@@ -384,6 +384,21 @@ WORLD.push(...EXTRA_WORLD12);
 import { EXTRA_BESTIARY13, EXTRA_WORLD13 } from './lore_extra13.js';
 BESTIARY.push(...EXTRA_BESTIARY13);
 WORLD.push(...EXTRA_WORLD13);
+import { EXTRA_BESTIARY14, EXTRA_WORLD14 } from './lore_extra14.js';
+BESTIARY.push(...EXTRA_BESTIARY14);
+WORLD.push(...EXTRA_WORLD14);
+import { EXTRA_BESTIARY15, EXTRA_WORLD15 } from './lore_extra15.js';
+BESTIARY.push(...EXTRA_BESTIARY15);
+WORLD.push(...EXTRA_WORLD15);
+import { EXTRA_BESTIARY16, EXTRA_WORLD16 } from './lore_extra16.js';
+BESTIARY.push(...EXTRA_BESTIARY16);
+WORLD.push(...EXTRA_WORLD16);
+import { EXTRA_BESTIARY17, EXTRA_WORLD17 } from './lore_extra17.js';
+BESTIARY.push(...EXTRA_BESTIARY17);
+WORLD.push(...EXTRA_WORLD17);
+import { EXTRA_BESTIARY18, EXTRA_WORLD18 } from './lore_extra18.js';
+BESTIARY.push(...EXTRA_BESTIARY18);
+WORLD.push(...EXTRA_WORLD18);
 
 /* ------------------------------------------------------------
    bestiaryOf — classId から図鑑の一葉を引く。
