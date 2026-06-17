@@ -288,6 +288,18 @@ jobs:
         working-directory: works/yuki
         run: node --test tests/*.test.js
 
+  hibiki:
+    name: hibiki — resonance born from nothing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cast resonant objects from a seed and check the struck waveforms headless
+        working-directory: works/hibiki
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
