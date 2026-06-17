@@ -244,7 +244,9 @@ function startTower(floor, seed) {
   const { battle } = makeTowerFloor(seed, floor, { initiative });
   S.battle = battle; S.board = battle.board;
   $('title').hidden = true;
-  playMusic(spec.isBoss ? 'boss' : 'battle_' + spec.biome);
+  // 塔守の層は層ごとに将の曲を巡らせる（boss / boss2 / boss3）。
+  const bossTunes = ['boss', 'boss2', 'boss3'];
+  playMusic(spec.isBoss ? bossTunes[((floor / 5 | 0) - 1) % bossTunes.length] || 'boss' : 'battle_' + spec.biome);
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
   clearSel(); S.mode = 'idle';
   $('hud').hidden = false;
@@ -276,7 +278,8 @@ function startGaiden(scenario) {
   const { battle } = makeGaiden(scenario, seed, { initiative });
   S.battle = battle; S.board = battle.board;
   $('title').hidden = true;
-  playMusic('battle_' + scenario.biome);
+  // 魔物相手の外伝は、野の戦いの荒々しい曲で。
+  playMusic(scenario.monster ? 'battle_wild' : 'battle_' + scenario.biome);
   S.cam.scale = 1; S.cam.center(S.board, S.vw, S.vh); S.cam.clamp(S.board, S.vw, S.vh);
   clearSel(); S.mode = 'idle';
   $('hud').hidden = false;

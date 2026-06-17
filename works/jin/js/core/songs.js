@@ -636,4 +636,8 @@ Object.assign(SONGS, EXTRA_SONGS3);
 import { EXTRA_SONGS4 } from './songs4.js';
 Object.assign(SONGS, EXTRA_SONGS4);
 
+/* 別なる将の曲・野の戦いの曲を合流させる。 */
+import { EXTRA_SONGS5 } from './songs5.js';
+Object.assign(SONGS, EXTRA_SONGS5);
+
 export function song(id) { return SONGS[id] || null; }
