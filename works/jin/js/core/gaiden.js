@@ -15,6 +15,7 @@ import { EXTRA_GAIDEN2 } from './gaiden_extra2.js';
 import { EXTRA_GAIDEN3 } from './gaiden_extra3.js';
 import { EXTRA_GAIDEN4 } from './gaiden_extra4.js';
 import { EXTRA_GAIDEN5 } from './gaiden_extra5.js';
+import { EXTRA_GAIDEN6 } from './gaiden_extra6.js';
 
 /* 外伝シナリオ（純粋なデータ）。 */
 export const GAIDEN = [
@@ -42,6 +43,7 @@ GAIDEN.push(...EXTRA_GAIDEN2);
 GAIDEN.push(...EXTRA_GAIDEN3);
 GAIDEN.push(...EXTRA_GAIDEN4);
 GAIDEN.push(...EXTRA_GAIDEN5);
+GAIDEN.push(...EXTRA_GAIDEN6);
 
 export function gaidenById(id) { return GAIDEN.find(s => s.id === id) || null; }
 
