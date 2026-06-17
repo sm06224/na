@@ -1,0 +1,10 @@
+{
+  "name": "hibiki",
+  "version": "1.0.0",
+  "description": "響 — resonance born from nothing. From a seed, cast resonant objects (bell, singing bowl, glass, wood, stone, gong): the material sets the inharmonicity and decay of the overtones, the size sets the pitch. Struck, each rings with a living timbre — no samples, pure modal synthesis (a sum of decaying sinusoids). Pitches quantise to a pentatonic scale, so any objects sounding together stay consonant. Zero dependencies, offline, deterministic.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
