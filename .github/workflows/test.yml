@@ -252,6 +252,18 @@ jobs:
         working-directory: works/nami
         run: node --test tests/*.test.js
 
+  sou:
+    name: sou — a year becomes a layer; a cliff remembers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Lay down deep time from a seed and read the cliff headless
+        working-directory: works/sou
+        run: node --test tests/*.test.js
+
   jin:
     name: jin — a tactics RPG born from a seed
     runs-on: ubuntu-latest
