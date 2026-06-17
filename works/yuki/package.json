@@ -1,0 +1,10 @@
+{
+  "name": "yuki",
+  "version": "1.0.0",
+  "description": "雪 — a snowflake is a letter from the sky. From a seed, the sky's weather (temperature and supersaturation) sets the crystal habit, and Reiter's hexagonal cellular automaton grows the flake: vapor diffuses, freezes at the rim, and a six-fold flower unfolds on its own. No randomness draws the form; the seed only chooses the day's sky. Exactly six-fold symmetric (the core guarantees it bit-for-bit). Zero dependencies, offline, deterministic.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

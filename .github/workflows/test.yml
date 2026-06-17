@@ -276,6 +276,18 @@ jobs:
         working-directory: works/jin
         run: node --test tests/*.test.js
 
+  yuki:
+    name: yuki — a snowflake is a letter from the sky
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Grow a snowflake from a seed; check it is six-fold and grows headless
+        working-directory: works/yuki
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
