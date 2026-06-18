@@ -1,0 +1,10 @@
+{
+  "name": "sora",
+  "version": "1.0.0",
+  "description": "宙 — a space megademo, conjured from nothing. A single looping production: starfield warp, plasma nebula, a spinning vector-ball planet, a wormhole tunnel, and a greetings sine-scroller — all synced to a self-synthesized chiptune soundtrack. No assets, no samples, no dependencies; stars, effects and music are computed in the browser. The timeline, music and 3D math are DOM-independent and headless-tested.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

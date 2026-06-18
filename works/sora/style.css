@@ -1,0 +1,22 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#02030a}
+#screen{display:block;width:100vw;height:100vh}
+
+#overlay{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(80% 70% at 50% 40%, #0a1024 0%, #02030a 70%);
+  color:#dff1ff;font-family:ui-sans-serif,system-ui,"Hiragino Kaku Gothic ProN",sans-serif;
+  text-align:center;cursor:pointer;transition:opacity .8s;z-index:10;
+}
+#overlay.gone{opacity:0;pointer-events:none}
+.card{padding:30px}
+.glyph{font-size:84px;font-weight:800;letter-spacing:.1em;
+  text-shadow:0 0 30px rgba(110,200,255,.6)}
+h1{font:300 22px ui-monospace,monospace;letter-spacing:.6em;margin:.1em 0 .2em;color:#9fc7e6}
+.sub{color:#7f9ec0;font-size:13px;margin-bottom:20px}
+#launch{background:#6cf;color:#04121f;border:0;border-radius:999px;
+  padding:12px 30px;font-size:17px;font-weight:800;cursor:pointer;
+  box-shadow:0 0 24px rgba(110,200,255,.5)}
+#launch:active{transform:translateY(1px)}
+.note{color:#8aa6c4;font-size:12px;line-height:1.8;margin-top:20px}
+.keys{color:#5a7090;font-size:11px;margin-top:12px;font-family:ui-monospace,monospace;letter-spacing:.05em}
