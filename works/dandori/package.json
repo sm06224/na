@@ -1,0 +1,10 @@
+{
+  "name": "dandori",
+  "version": "1.0.0",
+  "description": "段取り — get every dish hot at once. From a menu of dishes (each a chain of timed steps that need your hands, a burner, or the oven) and a serving time, it schedules backwards under your real kitchen's limits (cooks, burners, oven) so nothing asks you to be in two places at once and everything lands by serving time — fragile dishes closest to the end. Tells you what to do, minute by minute. Zero dependencies, offline; the menu never leaves your device.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
