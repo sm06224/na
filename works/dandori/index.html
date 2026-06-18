@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="段取り (dandori) — 複数の料理を、限られたこんろ・オーブン・人数で、配膳の時刻にいっせいに熱々で出すための段取り表。何時に何をするかを逆算。登録なし・サーバーなし・献立は端末から出ない。">
+<meta name="theme-color" content="#0e141b">
+<title>段取り — みんな熱いうちに、いっせいに</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>段取り <span class="en">/ dandori</span></h1>
+  <p class="tagline">配膳の時刻から逆算。みんな、熱いうちに、いっせいに。</p>
+</header>
+
+<main>
+  <section class="panel setup">
+    <div class="row2">
+      <label class="fld">配膳 <input id="serve" type="time" value="19:00"></label>
+      <div class="kit">
+        <span class="stepper">👤<button data-k="cooks" data-d="-1">−</button><b id="cooks">1</b><button data-k="cooks" data-d="1">＋</button></span>
+        <span class="stepper">🔥<button data-k="burners" data-d="-1">−</button><b id="burners">2</b><button data-k="burners" data-d="1">＋</button></span>
+        <span class="stepper">🔲<button data-k="ovens" data-d="-1">−</button><b id="ovens">1</b><button data-k="ovens" data-d="1">＋</button></span>
+      </div>
+    </div>
+
+    <h2>献立にくわえる</h2>
+    <div id="palette" class="palette"></div>
+
+    <details class="custom">
+      <summary>自分の料理をつくる</summary>
+      <div class="cform">
+        <input id="cname" placeholder="料理名" autocomplete="off">
+        <div id="csteps"></div>
+        <button id="caddstep" class="ghost mini">＋ 工程</button>
+        <button id="cadd" class="add">献立にくわえる</button>
+        <p class="hint">各工程に、かかる分と「要るもの」をつける。手＝あなた、🔥＝こんろ、🔲＝オーブン／グリル。どれも付けなければ「放っておける時間」。</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel menu-panel">
+    <div class="phead"><h2>こんやの献立</h2>
+      <label class="live-toggle"><input type="checkbox" id="live"> いま実行</label>
+    </div>
+    <div id="menu" class="menu"></div>
+    <p id="empty" class="empty">上から料理をえらぶと、ここに段取りが出ます。</p>
+  </section>
+
+  <section class="panel result" id="result" hidden>
+    <div id="summary" class="summary"></div>
+    <div id="warnings" class="warnings"></div>
+    <div class="canvas-wrap"><canvas id="gantt"></canvas></div>
+    <h2>やること <button id="print" class="ghost mini">印刷</button></h2>
+    <ol id="steps" class="steps"></ol>
+  </section>
+</main>
+
+<footer>
+  <p>料理は逆算でいちばん遅く（＝熱いうちに）置く。手は同時に一つ、こんろもオーブンも数まで。
+  傷みやすい品ほど配膳ぎわに。<b>献立は端末から一歩も出ません</b>・登録なし・オフライン。</p>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
