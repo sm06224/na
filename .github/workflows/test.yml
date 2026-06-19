@@ -324,6 +324,18 @@ jobs:
         working-directory: works/sora
         run: node --test tests/*.test.js
 
+  koe:
+    name: koe — a voice born from nothing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Synthesize vowels and check pitch periodicity and formant peaks headless
+        working-directory: works/koe
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
