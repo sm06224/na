@@ -1,0 +1,10 @@
+{
+  "name": "koe",
+  "version": "1.0.0",
+  "description": "声 — a voice born from nothing. No samples: a source-filter model synthesizes vowels and choirs from scratch — a glottal buzz shaped by vocal-tract resonances (formants), where F1/F2 set あいうえお. Play vowels on a formant pad and pitch on a pentatonic keyboard (so chords stay consonant), or let a seed's choir sing a wordless song. The synthesis core is DOM- and Web-Audio-independent and headless-tested (pitch periodicity, formant peaks). Zero dependencies, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
