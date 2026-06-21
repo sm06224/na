@@ -336,6 +336,18 @@ jobs:
         working-directory: works/koe
         run: node --test tests/*.test.js
 
+  hi:
+    name: hi — a stone that remembers the names
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the append-only ledger and the deterministic engraving headless
+        working-directory: works/hi
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
