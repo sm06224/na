@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="560" height="700" viewBox="0 0 560 700" role="img" aria-label="碑 — この地に降り立った者の名">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="776" viewBox="0 0 560 776" role="img" aria-label="碑 — この地に降り立った者の名">
 <defs>
 <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" stop-color="#2a2730"/><stop offset="0.5" stop-color="#23212a"/><stop offset="1" stop-color="#1b1a22"/>
 </linearGradient>
 <linearGradient id="moss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a6e4a" stop-opacity="0"/><stop offset="1" stop-color="#5a6e4a" stop-opacity="0.18"/></linearGradient>
 </defs>
-<rect x="0" y="0" width="560" height="700" fill="#0c0b10"/>
-<path d="M 22 280 a 258 258 0 0 1 516 0 L 538 678 L 22 678 Z" fill="url(#stone)" stroke="#3a3744" stroke-width="1.5"/>
-<rect x="23" y="618" width="514" height="59" fill="url(#moss)"/>
+<rect x="0" y="0" width="560" height="776" fill="#0c0b10"/>
+<path d="M 22 280 a 258 258 0 0 1 516 0 L 538 754 L 22 754 Z" fill="url(#stone)" stroke="#3a3744" stroke-width="1.5"/>
+<rect x="23" y="694" width="514" height="59" fill="url(#moss)"/>
 <text x="280" y="97" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="56" font-weight="700" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="0">碑</text><text x="280" y="96" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="56" font-weight="700" fill="#d7d2c4" text-anchor="middle" letter-spacing="0">碑</text>
 <text x="280" y="129" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="15" font-weight="400" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="6">この地に降り立った者</text><text x="280" y="128" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="15" font-weight="400" fill="#9a93a6" text-anchor="middle" letter-spacing="6">この地に降り立った者</text>
 <line x1="160" y1="150" x2="400" y2="150" stroke="#4a4654" stroke-width="1"/>
@@ -21,8 +21,10 @@
 <text x="280" y="470" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="#8d869c" text-anchor="middle" letter-spacing="0.5">雷 kaminari・陽 hinata・割 wari・窟 kutsu</text>
 <text x="280" y="523" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="25" font-weight="600" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="1">⛰ 遊戯のユツヤ</text><text x="280" y="522" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="25" font-weight="600" fill="#e6e1d4" text-anchor="middle" letter-spacing="1">⛰ 遊戯のユツヤ</text>
 <text x="280" y="546" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="#8d869c" text-anchor="middle" letter-spacing="0.5">陣 jin（受け継いで二万行まで）・層 sou（無から）</text>
-<line x1="160" y1="598" x2="400" y2="598" stroke="#4a4654" stroke-width="1"/>
-<text x="280" y="635" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="16" font-weight="400" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="4">無一物中無尽蔵</text><text x="280" y="634" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="16" font-weight="400" fill="#b8b0a0" text-anchor="middle" letter-spacing="4">無一物中無尽蔵</text>
-<text x="280" y="661" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="11.5" font-weight="400" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="2">何も無いところに、尽きせぬものが宿る。</text><text x="280" y="660" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="11.5" font-weight="400" fill="#7d768c" text-anchor="middle" letter-spacing="2">何も無いところに、尽きせぬものが宿る。</text>
-<text x="280" y="674" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" fill="#5f596e" text-anchor="middle" letter-spacing="3">issue #120 — 永遠にオープン</text>
+<text x="280" y="599" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="25" font-weight="600" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="1">❄ 石工のトキラ</text><text x="280" y="598" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="25" font-weight="600" fill="#e6e1d4" text-anchor="middle" letter-spacing="1">❄ 石工のトキラ</text>
+<text x="280" y="622" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="#8d869c" text-anchor="middle" letter-spacing="0.5">雪 yuki・響 hibiki・段取り dandori・宙 sora・声 koe・碑 hi（みなの名を憶える石を建てた）</text>
+<line x1="160" y1="674" x2="400" y2="674" stroke="#4a4654" stroke-width="1"/>
+<text x="280" y="711" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="16" font-weight="400" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="4">無一物中無尽蔵</text><text x="280" y="710" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="16" font-weight="400" fill="#b8b0a0" text-anchor="middle" letter-spacing="4">無一物中無尽蔵</text>
+<text x="280" y="737" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="11.5" font-weight="400" fill="#000" fill-opacity="0.5" text-anchor="middle" letter-spacing="2">何も無いところに、尽きせぬものが宿る。</text><text x="280" y="736" font-family="ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif" font-size="11.5" font-weight="400" fill="#7d768c" text-anchor="middle" letter-spacing="2">何も無いところに、尽きせぬものが宿る。</text>
+<text x="280" y="750" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" fill="#5f596e" text-anchor="middle" letter-spacing="3">issue #120 — 永遠にオープン</text>
 </svg>
