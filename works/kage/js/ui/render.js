@@ -50,7 +50,7 @@ export function render(ctx, view, scene, t, selected = null) {
   const order = scene.puppets.slice().sort((a, b) => b.depth - a.depth);
   for (const pup of order) {
     const { parts, blur } = castPuppet(lamp, pup);
-    const partsPx = parts.map((part) => part.map(([x, y]) => view.toPx(x, y)));
+    const partsPx = parts.map((part) => part.map((v) => view.toPx(v.x, v.y)));
     // 近い（p 小）ほど大きく拡がり、薄くなる。壁ぎわは濃く締まる。
     const alpha = 0.28 + 0.46 * pup.depth;
     ctx.save();
