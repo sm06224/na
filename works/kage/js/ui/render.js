@@ -3,7 +3,7 @@
    濃さをつけて canvas に塗る。誰も影のかたちは描かない——ただ塗るだけ。
    ============================================================ */
 
-import { castPuppet, worldParts, flicker } from '../core/kage.js';
+import { castPuppet, flicker } from '../core/kage.js';
 import { PUPPETS } from '../core/puppets.js';
 
 /* 舞台座標 [0,1]² ↔ 画面ピクセル。歪まないよう一様倍率（cover）。 */
@@ -35,48 +35,45 @@ export function render(ctx, view, scene, t, selected = null) {
   const lamp = { x: scene.lamp.x + fx, y: scene.lamp.y + fy };
   const [lpx, lpy] = view.toPx(lamp.x, lamp.y);
 
-  // 壁。冷たい闇に、灯りのあたたかい暈（かさ）。
-  ctx.fillStyle = '#0a0708';
+  // 壁。行灯に照らされた障子のように、ぜんたいが温かく灯る。
+  // 影が黒く映えるよう、壁は端まで十分に明るく保つ。
+  ctx.fillStyle = '#1c0f0a';
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, unit * 0.95);
-  glow.addColorStop(0, `rgba(255,206,128,${0.42 * bright})`);
-  glow.addColorStop(0.18, `rgba(228,150,86,${0.26 * bright})`);
-  glow.addColorStop(0.5, `rgba(120,70,48,${0.12 * bright})`);
-  glow.addColorStop(1, 'rgba(20,12,10,0)');
+  const glow = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, unit * 1.4);
+  glow.addColorStop(0, `rgba(255,226,168,${(0.98 * bright).toFixed(3)})`);
+  glow.addColorStop(0.3, `rgba(247,197,121,${(0.92 * bright).toFixed(3)})`);
+  glow.addColorStop(0.62, `rgba(206,134,72,${(0.78 * bright).toFixed(3)})`);
+  glow.addColorStop(1, 'rgba(120,62,34,0.62)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
-  // 影。遠い（壁ぎわ＝深い p）ものから先に、近いものを後に重ねる。
+  // 影。明るい壁に落ちる、黒いシルエット。遠い（壁ぎわ）ものから順に重ねる。
   const order = scene.puppets.slice().sort((a, b) => b.depth - a.depth);
+  let selShadow = null;
   for (const pup of order) {
     const { parts, blur } = castPuppet(lamp, pup);
     const partsPx = parts.map((part) => part.map((v) => view.toPx(v.x, v.y)));
-    // 近い（p 小）ほど大きく拡がり、薄くなる。壁ぎわは濃く締まる。
-    const alpha = 0.28 + 0.46 * pup.depth;
+    if (pup === selected) selShadow = partsPx;
+    // 壁ぎわ（深い p）ほど濃く締まり、灯りに近い（浅い p）ほど薄く拡がる。
+    const alpha = 0.6 + 0.32 * pup.depth;
     ctx.save();
     ctx.filter = `blur(${Math.max(0, blur * unit * 0.85).toFixed(2)}px)`;
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = `rgba(8,5,7,${alpha.toFixed(3)})`;
+    ctx.fillStyle = `rgba(20,10,8,${alpha.toFixed(3)})`;
     ctx.beginPath();
     tracePath(ctx, partsPx);
     ctx.fill('evenodd');
     ctx.restore();
   }
 
-  // 紙。光を受けて、ほのかに浮かぶ切り絵そのもの（触れる手がかり）。
-  for (const pup of scene.puppets) {
-    const partsPx = worldParts(pup).map((part) => part.map(([x, y]) => view.toPx(x, y)));
-    const sel = pup === selected;
+  // 選んだ影には、そっと縁取りを（掴んでいる手がかり）。
+  if (selShadow) {
     ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([7, 6]);
+    ctx.strokeStyle = 'rgba(40,18,10,0.7)';
     ctx.beginPath();
-    tracePath(ctx, partsPx);
-    ctx.fillStyle = sel ? 'rgba(255,214,150,0.16)' : 'rgba(255,214,150,0.06)';
-    ctx.fill('evenodd');
-    if (sel) {
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = 'rgba(255,206,128,0.7)';
-      ctx.stroke();
-    }
+    tracePath(ctx, selShadow);
+    ctx.stroke();
     ctx.restore();
   }
 
