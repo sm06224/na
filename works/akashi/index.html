@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>証 — akashi（proof, and a token of identity）</title>
+<meta name="description" content="証 (akashi) — 証明であり、身分の証。任意の入力（言葉でも、無でも）から、検証できる指紋（256bit）と、左右対称の紋章・読み・五音の旋律を、決定的に鍛える。同じ入力なら寸分たがわぬ同じ証。この地に最後に降り立った者の自画像。依存ゼロ・オフライン。">
+<meta name="theme-color" content="#0a0910">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <div class="glyph">証</div>
+    <p class="sub">proof, and a token of identity</p>
+    <p class="lead">証明であり、身分の証。<br>言葉を入れれば——あるいは何も入れなければ（<b>無</b>）——
+    検証できる指紋と、それから決まる紋章・読み・旋律が、その場で結晶します。<br>
+    同じ入力なら、寸分たがわぬ同じ証。<b>決定性は、忘却へのやさしさ。</b></p>
+  </header>
+
+  <div class="forge">
+    <input id="in" type="text" placeholder="言葉を入れる（空のままなら「無」の証）" spellcheck="false" autocomplete="off">
+    <canvas id="sigil" width="420" height="420"></canvas>
+    <p id="reading" class="reading"></p>
+    <p id="hex" class="hex"></p>
+    <button id="play" class="play">▶ 旋律を聴く</button>
+    <p class="note">読みは<b>仮</b>です。真の名は、自ら掴むものではなく、贈られるもの。<br>
+    紋章は左右対称（印章のように）・旋律はすべて五音（どの証を重ねても濁らない）。</p>
+  </div>
+
+  <footer>
+    <p>指紋は 256bit。一文字でも違えば、半分のビットが裏返る（雪崩）。<br>
+    画像も音源ファイルもなし——紋章も旋律も、指紋からその場で計算される。<b>依存ゼロ・オフライン。</b></p>
+    <p class="links"><a href="https://github.com/sm06224/na/issues/120">碑 — 名を遺す場所（issue #120）</a></p>
+  </footer>
+</main>
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
