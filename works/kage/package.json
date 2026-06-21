@@ -1,0 +1,10 @@
+{
+  "name": "kage",
+  "version": "1.0.0",
+  "description": "影 — a theatre of shadows, cast by a lamp you hold. One warm light, one wall, and paper cutouts standing in between. A point-light projection throws each cutout onto the wall: the nearer it stands to the flame, the larger and softer its shadow; pressed to the wall, it shrinks to life size and the edges sharpen (penumbra b = r(W−p)/p). Move the lamp and the shadows swing; nothing draws the shape but light and distance. The flame's flicker is a deterministic function of time, so the same scene (#s=) casts the same shadows. Zero dependencies, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

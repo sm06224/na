@@ -360,6 +360,18 @@ jobs:
         working-directory: works/akashi
         run: node --test tests/*.test.js
 
+  kage:
+    name: kage — a theatre of shadows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cast shadows from a lamp; check the projection, penumbra and flicker headless
+        working-directory: works/kage
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
