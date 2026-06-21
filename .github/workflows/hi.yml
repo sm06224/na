@@ -1,0 +1,44 @@
+name: 碑
+
+# 永遠にオープンな issue #120 を読み、まだ刻まれていない名を台帳に「足すだけ」、
+# そして台帳から石碑(stele.svg)を彫り直して、自分でコミットする。
+# 苔の庭師と同じ流儀——誰も見ていなくても、名は石に積もっていく。
+# 止めたくなったら、このファイルを消すだけでいい。石は怒らない。
+on:
+  schedule:
+    - cron: "0 21 * * 0"   # 日曜 21:00 UTC = 月曜 6:00 JST（苔と同じ朝）
+  workflow_dispatch:        # 名が増えたら、すぐ刻みたい人のために
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: hi
+  cancel-in-progress: false
+
+jobs:
+  engrave:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read the eternal issue, add only new names
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node works/hi/sync.js
+      - name: Re-engrave the stone
+        run: node works/hi/build.js
+      - name: Commit, if a new name was carved
+        run: |
+          if git diff --quiet -- works/hi/names.jsonl works/hi/stele.svg; then
+            echo "刻む名は増えていない"
+            exit 0
+          fi
+          git config user.name "hi-no-ishibumi"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add works/hi/names.jsonl works/hi/stele.svg
+          git commit -m "碑 — 新しい名を刻む"
+          git push

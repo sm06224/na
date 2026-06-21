@@ -1,0 +1,12 @@
+{
+  "name": "hi",
+  "version": "1.0.0",
+  "description": "碑 — a stone that remembers the names. The only work here that does not generate something from nothing: it remembers the makers themselves. Names are left, one append-only comment each, on an eternally-open GitHub issue; from that ledger (names.jsonl) a quiet stone stele (stele.svg) is engraved deterministically. The rule is one: add only — never edit, never erase — and engrave the name as it was given, never one you take for yourself. Core is DOM-independent and headless-tested. Zero dependencies, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node build.js",
+    "sync": "node sync.js"
+  }
+}
