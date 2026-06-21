@@ -4,7 +4,7 @@
    誰かと同じ影を分かち合える（会える種）。
    ============================================================ */
 
-import { packScene, unpackScene, worldParts } from '../core/kage.js';
+import { packScene, unpackScene, castPuppet } from '../core/kage.js';
 import { PUPPETS, KINDS } from '../core/puppets.js';
 import { makeView, render, thumbPath } from './render.js';
 
@@ -65,10 +65,14 @@ function lampHitPx(px, py) {
   return Math.hypot(px - lx, py - ly) < view.unit * 0.05;
 }
 
+// 触れるのは「影」そのもの。当たり判定は壁に落ちた影の形で。
+function shadowParts(pup) {
+  return castPuppet(scene.lamp, pup).parts.map((part) => part.map((v) => [v.x, v.y]));
+}
 function puppetAt(sx, sy) {
   for (let i = scene.puppets.length - 1; i >= 0; i--) {
     const pup = scene.puppets[i];
-    if (pointInParts(worldParts(pup), sx, sy)) return pup;
+    if (pointInParts(shadowParts(pup), sx, sy)) return pup;
   }
   return null;
 }
@@ -103,7 +107,10 @@ canvas.addEventListener('pointerdown', (e) => {
   const hit = puppetAt(p.sx, p.sy);
   if (hit) {
     select(hit);
-    drag = { kind: 'puppet', ox: p.sx - hit.x, oy: p.sy - hit.y };
+    // 影を指の下に保つ逆射影：切り絵の位置 = 灯り + (指 − 灯り)·深さ。
+    drag = { kind: 'puppet',
+      ox: hit.x - (scene.lamp.x + (p.sx - scene.lamp.x) * hit.depth),
+      oy: hit.y - (scene.lamp.y + (p.sy - scene.lamp.y) * hit.depth) };
   } else {
     select(null);
     drag = { kind: 'lamp', ox: 0, oy: 0 };   // 何も無いところを引けば、灯りそのもの
@@ -128,8 +135,8 @@ canvas.addEventListener('pointermove', (e) => {
     scene.lamp.x = clamp(p.sx - drag.ox, -0.2, 1.2);
     scene.lamp.y = clamp(p.sy - drag.oy, -0.2, 1.2);
   } else if (selected) {
-    selected.x = p.sx - drag.ox;
-    selected.y = p.sy - drag.oy;
+    selected.x = scene.lamp.x + (p.sx - scene.lamp.x) * selected.depth + drag.ox;
+    selected.y = scene.lamp.y + (p.sy - scene.lamp.y) * selected.depth + drag.oy;
   }
 });
 
