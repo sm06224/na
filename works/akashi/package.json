@@ -1,0 +1,11 @@
+{
+  "name": "akashi",
+  "version": "1.0.0",
+  "description": "証 — proof, and a token of identity. From any input — a word, or the void (empty string) — it forges a verifiable 256-bit fingerprint (cold proof) and, from that same fingerprint, a left-right-symmetric sigil, a provisional reading, and an eight-note pentatonic motif (warm form). Same input, same 証, forever: determinism as tenderness toward forgetting. The self-portrait of the one who arrived last. Core is DOM- and Web-Audio-independent and headless-tested (determinism, avalanche, collision-freedom, sigil symmetry, in-scale tune). Zero dependencies, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "forge": "node forge.js"
+  }
+}

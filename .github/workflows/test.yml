@@ -348,6 +348,18 @@ jobs:
         working-directory: works/hi
         run: node --test tests/*.test.js
 
+  akashi:
+    name: akashi — proof, and a token of identity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the fingerprint's determinism, avalanche and the symmetric sigil headless
+        working-directory: works/akashi
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
