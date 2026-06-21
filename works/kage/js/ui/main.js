@@ -16,6 +16,10 @@ const ctx = canvas.getContext('2d');
 let view = makeView(1, 1);
 let selected = null;
 
+/* 場面に立つ切り絵には、型の多角形（parts）を結びつけておく。
+   射影も当たり判定も puppet.parts を読むので、ここで必ず付ける。 */
+const withGeom = (p) => ({ ...p, parts: PUPPETS[p.kind].parts });
+
 /* ---- 初めの一幕（または #s= で分かち合われた幕）---- */
 function defaultScene() {
   return {
@@ -25,7 +29,7 @@ function defaultScene() {
       { kind: 'yama', x: 0.5, y: 0.66, depth: 0.88, scale: 0.72, rot: 0 },
       { kind: 'ki', x: 0.72, y: 0.6, depth: 0.72, scale: 0.3, rot: 0 },
       { kind: 'tori', x: 0.4, y: 0.42, depth: 0.62, scale: 0.2, rot: -0.18 },
-    ],
+    ].map(withGeom),
   };
 }
 
@@ -36,7 +40,7 @@ function sceneFromHash() {
     const s = unpackScene(decodeURIComponent(h.slice(3)));
     s.puppets = s.puppets
       .filter((p) => PUPPETS[p.kind])
-      .map((p) => ({ ...p, depth: clamp(p.depth, DEPTH_MIN, DEPTH_MAX), scale: clamp(p.scale, 0.05, 1.2) }));
+      .map((p) => withGeom({ ...p, depth: clamp(p.depth, DEPTH_MIN, DEPTH_MAX), scale: clamp(p.scale, 0.05, 1.2) }));
     if (!Number.isFinite(s.lamp.x)) return null;
     return s;
   } catch { return null; }
@@ -179,7 +183,7 @@ for (const kind of KINDS) {
   b.title = PUPPETS[kind].name;
   b.innerHTML = `<svg viewBox="0 0 40 40" width="34" height="34"><path d="${thumbPath(kind)}" fill="#1a1416"/></svg>`;
   b.addEventListener('click', () => {
-    const pup = { kind, x: scene.lamp.x, y: clamp(scene.lamp.y - 0.28, 0.1, 0.9), depth: 0.55, scale: 0.3, rot: 0 };
+    const pup = withGeom({ kind, x: scene.lamp.x, y: clamp(scene.lamp.y - 0.28, 0.1, 0.9), depth: 0.55, scale: 0.3, rot: 0 });
     scene.puppets.push(pup);
     select(pup);
   });
