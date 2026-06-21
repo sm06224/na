@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="影 (kage) — 灯りひとつ、壁ひとつ。あいだに切り絵を立てると影が落ちる。灯りに近いほど影は大きく惚け、壁ぎわで締まる。誰も影を描かない、点光源の射影。同じ場面（#s=）なら同じ影。依存ゼロ・オフライン。">
+<meta name="theme-color" content="#0a0708">
+<title>影 — a theatre of shadows</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="wall"></canvas>
+
+<div id="hud">
+  <h1>影 <span class="en">/ kage</span></h1>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>暗がりに、灯りがひとつ。<br>
+       あいだに切り絵を立てると、壁に影が落ちる。<br>
+       灯りに近いほど影は大きく、ふちは惚ける。<br>
+       壁に寄せれば、影は実物大に締まる。<br>
+       誰も、影のかたちを描いてはいない。</p>
+    <button id="b-open">灯をともす</button>
+    <p class="fine">下の切り絵を足す。掴んで動かす。灯りを引けば影が振れる。<br>
+       選んだ切り絵は、ホイール／二本指で奥へ送れる。</p>
+  </div>
+</div>
+
+<div id="panel" hidden>
+  <label>奥 <input id="s-depth" type="range" min="0.18" max="0.95" step="0.005"> 手前</label>
+  <label>小 <input id="s-scale" type="range" min="0.08" max="0.7" step="0.005"> 大</label>
+  <label>回 <input id="s-rot" type="range" min="-3.14159" max="3.14159" step="0.01"></label>
+  <button id="b-del" title="この切り絵をしまう">しまう</button>
+</div>
+
+<div id="dock">
+  <div id="tray"></div>
+  <button id="b-share" title="この影へのリンクを写す">分かち合う</button>
+</div>
+
+<div id="toast"></div>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

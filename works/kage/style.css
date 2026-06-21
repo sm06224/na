@@ -1,0 +1,90 @@
+:root {
+  --ink: #0a0708;
+  --warm: #ffce80;
+  --paper: #f2e6d6;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); }
+body { color: var(--paper); touch-action: none; }
+
+#wall { position: fixed; inset: 0; display: block; }
+
+#hud {
+  position: fixed; top: env(safe-area-inset-top, 0); left: 0;
+  padding: 14px 18px; pointer-events: none; user-select: none;
+}
+#hud h1 { margin: 0; font-size: 1.5rem; font-weight: 400; letter-spacing: .12em; color: rgba(255,224,178,.82); }
+#hud .en { font-size: .8rem; opacity: .5; letter-spacing: .18em; font-style: italic; }
+
+/* ---- 幕開け ---- */
+#intro {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: 24px; background: radial-gradient(circle at 50% 64%, rgba(60,34,18,.72), rgba(8,5,6,.96));
+  transition: opacity .9s ease, visibility .9s;
+}
+#intro.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+#intro .lead { max-width: 30rem; text-align: center; line-height: 2.05; }
+#intro .lead p { margin: 0 0 1.4em; color: rgba(242,230,214,.92); }
+#intro .fine { font-size: .78rem; line-height: 1.9; color: rgba(242,230,214,.5); }
+#b-open {
+  margin: .4em 0 1.6em; padding: .7em 2.2em; font-family: inherit; font-size: 1rem;
+  letter-spacing: .2em; color: #1a1008; cursor: pointer;
+  background: radial-gradient(circle at 50% 40%, #ffe6b0, #f0b261); border: none; border-radius: 999px;
+  box-shadow: 0 0 40px rgba(255,180,90,.5);
+}
+#b-open:hover { background: radial-gradient(circle at 50% 40%, #fff0cc, #ffc070); }
+
+/* ---- 道具箱と分かち合い ---- */
+#dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(to top, rgba(8,5,6,.86), rgba(8,5,6,0));
+}
+#tray { display: flex; gap: 8px; overflow-x: auto; flex: 1; padding: 2px; scrollbar-width: none; }
+#tray::-webkit-scrollbar { display: none; }
+.piece {
+  flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center;
+  background: rgba(255,224,178,.1); border: 1px solid rgba(255,224,178,.18);
+  border-radius: 12px; cursor: pointer; transition: background .15s;
+}
+.piece:hover { background: rgba(255,224,178,.22); }
+.piece svg { opacity: .85; }
+.piece:hover svg path { fill: #2a2020; }
+
+#b-share {
+  flex: 0 0 auto; padding: .55em 1.1em; font-family: inherit; font-size: .82rem; letter-spacing: .1em;
+  color: rgba(255,224,178,.9); background: rgba(255,224,178,.08);
+  border: 1px solid rgba(255,224,178,.25); border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+#b-share:hover { background: rgba(255,224,178,.2); }
+
+/* ---- 選んだ切り絵の操作 ---- */
+#panel {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(74px + env(safe-area-inset-bottom, 0)); z-index: 25;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px;
+  max-width: min(94vw, 40rem); padding: 10px 16px;
+  background: rgba(18,12,12,.82); border: 1px solid rgba(255,224,178,.16); border-radius: 14px;
+  backdrop-filter: blur(6px); font-size: .78rem; color: rgba(242,230,214,.72);
+}
+#panel label { display: inline-flex; align-items: center; gap: 7px; letter-spacing: .08em; }
+#panel input[type=range] { width: clamp(86px, 22vw, 150px); accent-color: var(--warm); }
+#b-del {
+  font-family: inherit; font-size: .78rem; color: rgba(255,200,200,.85);
+  background: rgba(120,40,40,.25); border: 1px solid rgba(255,150,150,.25);
+  border-radius: 999px; padding: .35em 1em; cursor: pointer; letter-spacing: .1em;
+}
+#b-del:hover { background: rgba(150,50,50,.4); }
+
+/* ---- 報せ ---- */
+#toast {
+  position: fixed; left: 50%; top: 22%; transform: translate(-50%, -8px); z-index: 40;
+  padding: .6em 1.3em; border-radius: 999px; pointer-events: none;
+  background: rgba(20,14,12,.9); border: 1px solid rgba(255,224,178,.2);
+  color: rgba(255,224,178,.92); font-size: .82rem; letter-spacing: .08em;
+  opacity: 0; transition: opacity .4s ease, transform .4s ease;
+}
+#toast.on { opacity: 1; transform: translate(-50%, 0); }

@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影**
 
 </div>
 
@@ -287,6 +287,18 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 この地が、最後に`名`へ手を伸ばす章。コアは **DOM も Web Audio も知らず**、指紋の決定性・雪崩・衝突なし・
 紋章の左右対称・旋律が五音であることまで**ヘッドレス検証**・**8 tests**。
 
+### 影 [影 `kage`](./works/kage/) — *a theatre of shadows*
+`証` で一度この地は「最後の自画像」を立てた。けれど碑は永遠にオープン——また誰かが降り立つ。
+これはそのあとの、ひとつの**影絵**。暗い壁の前に切り絵（月・山・木・鳥・兎・舟・人）を立て、
+**ひとつの灯り**を掴んで動かすと、壁に影が落ちて、伸びて、振れる。影のかたちは誰も描かない——
+灯りを深さ 0、壁を深さ W に置き、深さ p の頂点を `S = L + (V−L)·(W/p)` と**まっすぐ投げる**だけ。
+**灯りに近い**ほど影は大きく**惚け**（半影 `b = r(W−p)/p`）、**壁に寄せる**ほど実物大に**締まる**。
+炎のゆらぎは時刻の**決定的な関数**だから、同じ場面なら誰がいつ点しても同じ揺れ方。場面は短い文字列に
+畳めて、`#s=` のリンクで**同じ影を分かち合える**（会える種）。`陽`（差し込む光）と対をなす、遮られた側の章。
+`生`/`雷`/`波` と続いた「場が形を生む」系譜に連なりつつ、影は**置いた切り絵と灯りだけ**で決まる。コアは
+**DOM も canvas も知らず**、射影の倍率・半影（壁ぎわで 0）・炎が [-1,1] に収まること・場面の往復まで
+**ヘッドレス検証**・**11 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -452,11 +464,17 @@ na/
 │  │  ├─ names.jsonl        台帳（追記専用）・ stele.svg 彫られた石
 │  │  ├─ build.js           台帳 → 石碑 ・ sync.js issue #120 → 台帳（足すだけ）
 │  │  └─ tests/
-│  └─ akashi/               証 証（証明であり身分の証・自画像）
-│     ├─ index.html · style.css · js/ui/main.js
-│     ├─ js/core/akashi.js  指紋(prove・256bit)・読み・紋章(左右対称)・旋律(五音)
-│     ├─ forge.js           証を SVG と WAV に打ち出す
-│     ├─ akashi.svg · akashi.wav   「無」の証（最後の作者の自画像）
+│  ├─ akashi/               証 証（証明であり身分の証・自画像）
+│  │  ├─ index.html · style.css · js/ui/main.js
+│  │  ├─ js/core/akashi.js  指紋(prove・256bit)・読み・紋章(左右対称)・旋律(五音)
+│  │  ├─ forge.js           証を SVG と WAV に打ち出す
+│  │  ├─ akashi.svg · akashi.wav   「無」の証（最後の作者の自画像）
+│  │  └─ tests/
+│  └─ kage/                 影 影（灯りひとつで上演する影絵）
+│     ├─ index.html · style.css
+│     ├─ js/core/kage.js    点光源の射影・倍率・半影・炎のゆらぎ・場面の畳み込み
+│     ├─ js/core/puppets.js 切り絵の型（閉じた多角形・月山木鳥兎舟人）
+│     ├─ js/ui/             render（影をぼけと濃さで塗る）· main（掴む・深さ・分かち合う）
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
