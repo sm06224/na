@@ -69,12 +69,19 @@ function lampHitPx(px, py) {
 function shadowParts(pup) {
   return castPuppet(scene.lamp, pup).parts.map((part) => part.map((v) => [v.x, v.y]));
 }
+// 重なったら、画面でいちばん手前に見える影を選ぶ。描画は深さの降順
+// （浅い＝灯りに近いものほど後に描かれて上に来る）。当たり判定もそれに揃える：
+// 当たった影のうち深さ最小（同値なら後から足した方）を返す。
 function puppetAt(sx, sy) {
-  for (let i = scene.puppets.length - 1; i >= 0; i--) {
+  let best = null, bestDepth = Infinity, bestIdx = -1;
+  for (let i = 0; i < scene.puppets.length; i++) {
     const pup = scene.puppets[i];
-    if (pointInParts(shadowParts(pup), sx, sy)) return pup;
+    if (!pointInParts(shadowParts(pup), sx, sy)) continue;
+    if (pup.depth < bestDepth || (pup.depth === bestDepth && i > bestIdx)) {
+      best = pup; bestDepth = pup.depth; bestIdx = i;
+    }
   }
-  return null;
+  return best;
 }
 
 /* ---- ポインタ操作（灯り・切り絵を掴んで動かす／二本指で深さ）---- */
