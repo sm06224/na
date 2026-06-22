@@ -22,15 +22,8 @@ const withGeom = (p) => ({ ...p, parts: PUPPETS[p.kind].parts });
 
 /* ---- 初めの一幕（または #s= で分かち合われた幕）---- */
 function defaultScene() {
-  return {
-    lamp: { x: 0.5, y: 0.82 },
-    puppets: [
-      { kind: 'tsuki', x: 0.24, y: 0.18, depth: 0.92, scale: 0.24, rot: 0 },
-      { kind: 'yama', x: 0.5, y: 0.66, depth: 0.88, scale: 0.72, rot: 0 },
-      { kind: 'ki', x: 0.72, y: 0.6, depth: 0.72, scale: 0.3, rot: 0 },
-      { kind: 'tori', x: 0.4, y: 0.42, depth: 0.62, scale: 0.2, rot: -0.18 },
-    ].map(withGeom),
-  };
+  // 影絵の舞台は、照らされた空の screen から始まる。図は自分で立てる。
+  return { lamp: { x: 0.5, y: 0.82 }, puppets: [] };
 }
 
 function sceneFromHash() {

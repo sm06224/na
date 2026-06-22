@@ -35,16 +35,16 @@ export function render(ctx, view, scene, t, selected = null) {
   const lamp = { x: scene.lamp.x + fx, y: scene.lamp.y + fy };
   const [lpx, lpy] = view.toPx(lamp.x, lamp.y);
 
-  // 壁。行灯に照らされた障子のように、ぜんたいが温かく灯る。
-  // 影が黒く映えるよう、壁は端まで十分に明るく保つ。
-  ctx.fillStyle = '#1c0f0a';
+  // 壁。行灯に照らされた和紙のように、ぜんたいが温かく灯る。
+  ctx.fillStyle = '#180c06';
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, unit * 1.4);
-  glow.addColorStop(0, `rgba(255,226,168,${(0.98 * bright).toFixed(3)})`);
-  glow.addColorStop(0.3, `rgba(247,197,121,${(0.92 * bright).toFixed(3)})`);
-  glow.addColorStop(0.62, `rgba(206,134,72,${(0.78 * bright).toFixed(3)})`);
-  glow.addColorStop(1, 'rgba(120,62,34,0.62)');
-  ctx.fillStyle = glow;
+  const halo = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, unit * 1.35);
+  halo.addColorStop(0, `rgba(255,231,180,${(1.0 * bright).toFixed(3)})`);
+  halo.addColorStop(0.18, `rgba(251,208,137,${(0.96 * bright).toFixed(3)})`);
+  halo.addColorStop(0.42, `rgba(233,168,94,${(0.82 * bright).toFixed(3)})`);
+  halo.addColorStop(0.72, `rgba(176,106,58,${(0.55 * bright).toFixed(3)})`);
+  halo.addColorStop(1, 'rgba(94,51,32,0.32)');
+  ctx.fillStyle = halo;
   ctx.fillRect(0, 0, W, H);
 
   // 影。明るい壁に落ちる、黒いシルエット。遠い（壁ぎわ）ものから順に重ねる。
@@ -77,16 +77,35 @@ export function render(ctx, view, scene, t, selected = null) {
     ctx.restore();
   }
 
-  // 灯り。掴める小さな焔。
-  const r = unit * 0.018 * bright;
-  const flame = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, r * 3);
-  flame.addColorStop(0, 'rgba(255,244,214,0.95)');
-  flame.addColorStop(0.5, 'rgba(255,196,110,0.6)');
-  flame.addColorStop(1, 'rgba(255,150,70,0)');
-  ctx.fillStyle = flame;
-  ctx.beginPath();
-  ctx.arc(lpx, lpy, r * 3, 0, Math.PI * 2);
-  ctx.fill();
+  // 焔。芯のまわりの暈、ゆらぐ炎、白い芯。ここが「動いて、生きている」ところ。
+  const fh = unit * 0.05 * (0.82 + 0.3 * flicker(t * 1.3, 4));
+  const fw = unit * 0.015;
+  const lean = flicker(t * 1.7, 5) * unit * 0.006;
+  const aura = ctx.createRadialGradient(lpx, lpy, 0, lpx, lpy, unit * 0.13 * bright);
+  aura.addColorStop(0, 'rgba(255,246,221,0.9)');
+  aura.addColorStop(0.5, 'rgba(255,210,138,0.42)');
+  aura.addColorStop(1, 'rgba(255,176,96,0)');
+  ctx.fillStyle = aura;
+  ctx.fillRect(lpx - unit * 0.13, lpy - unit * 0.13, unit * 0.26, unit * 0.26);
+  const drawFlame = (h, w, color) => {
+    ctx.beginPath();
+    ctx.moveTo(lpx + lean, lpy - h);
+    ctx.bezierCurveTo(lpx - w * 1.7, lpy - h * 0.42, lpx - w * 1.2, lpy + w * 0.9, lpx, lpy + w * 1.2);
+    ctx.bezierCurveTo(lpx + w * 1.2, lpy + w * 0.9, lpx + w * 1.7, lpy - h * 0.42, lpx + lean, lpy - h);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  drawFlame(fh, fw, 'rgba(255,170,70,0.95)');
+  drawFlame(fh * 0.6, fw * 0.6, 'rgba(255,245,212,0.95)');
+
+  // ヴィネット。縁を静かに落として、灯りに目を集める。
+  const vig = ctx.createRadialGradient(lpx, lpy, unit * 0.2, lpx, lpy, unit * 0.95);
+  vig.addColorStop(0, 'rgba(18,8,2,0)');
+  vig.addColorStop(0.7, 'rgba(18,8,2,0)');
+  vig.addColorStop(1, 'rgba(18,8,2,0.66)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
 }
 
 /* 道具箱に並べる、切り絵の小さな見本（影絵らしく黒で）。 */
