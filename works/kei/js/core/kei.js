@@ -157,29 +157,35 @@ class Parser {
     let v = this.primary();
     if (v._rawNumber) {
       if (this.isUnitTok(this.peek())) {
-        v = V.quantity(v.n, this.next().v);      // 5 km・2 泊・24 時間
-        v = this.foldUnits(v);                   // 50 MB/s・時間/日 のような複合単位
+        v = V.mul(V.scalar(v.n), this.unitExpr());   // 数 × 単位式（5 m²・9.8 m/s²・100 km/h）
       } else {
         v = v.pct ? V.percent(v.n / 100) : V.scalar(v.n);
       }
-    } else {
-      v = this.foldUnits(v);                     // 裸の単位（m/s 等）
+    } else if (v._bareUnit) {
+      v = this.unitExprFrom(v);                       // 裸の単位（m/s 等）も続けて畳む
     }
     return v;
   }
-  // 単位どうしの掛け割り（数を挟まない）を、ひとつの単位に畳む：MB/s・時間/日・m/s²…
-  foldUnits(v) {
+  // 単位式：単位の原子を * / でつないだもの（数は挟まない）。MB/s・時間/日・kg·m/s²…
+  unitExpr() { return this.unitExprFrom(this.unitAtom()); }
+  unitExprFrom(v) {
     for (;;) {
       const p = this.peek(), q = this.toks[this.i + 1];
       if (p && p.t === 'op' && (p.v === '*' || p.v === '/') && this.isUnitTok(q)) {
-        this.next(); this.next();
-        v = p.v === '/' ? V.div(v, V.unitValue(q.v)) : V.mul(v, V.unitValue(q.v));
-      } else if (p && p.t === 'op' && p.v === '^' && q && q.t === 'num' && Number.isInteger(q.v)) {
-        this.next(); this.next();
-        v = V.pow(v, V.scalar(q.v));
+        this.next(); const a = this.unitAtom();
+        v = p.v === '/' ? V.div(v, a) : V.mul(v, a);
       } else break;
     }
     return v;
+  }
+  // 単位の原子：単位ひとつ＋（あれば）整数の指数。^ は単位ひとつだけに掛かる。
+  unitAtom() {
+    let a = V.unitValue(this.next().v);
+    const p = this.peek(), q = this.toks[this.i + 1];
+    if (p && p.t === 'op' && p.v === '^' && q && q.t === 'num' && Number.isInteger(q.v)) {
+      this.next(); this.next(); a = V.pow(a, V.scalar(q.v));
+    }
+    return a;
   }
   primary() {
     const k = this.next();
@@ -208,8 +214,8 @@ class Parser {
       if (name === 'prev' || name === 'ans') return this.env.prev();
       if (name === 'sum' || name === 'total') return this.env.sumAbove();
       if (name === 'line') { const num = this.expect('num'); return this.env.line(num.v); }
-      // 単位そのもの（km, h …）
-      if (V.isUnit(name)) return V.unitValue(name);
+      // 単位そのもの（km, h …）。後続の /s などを畳めるよう印をつける。
+      if (V.isUnit(name)) return { ...V.unitValue(name), _bareUnit: true };
       // 変数
       return this.env.getVar(name);
     }

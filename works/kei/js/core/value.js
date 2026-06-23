@@ -27,6 +27,27 @@ def(['B', 'byte', 'bytes'], 'data', 1); def(['bit'], 'data', 0.125);
 def(['KB', 'kB'], 'data', 1e3); def(['MB'], 'data', 1e6); def(['GB'], 'data', 1e9); def(['TB'], 'data', 1e12);
 def(['KiB'], 'data', 1024); def(['MiB'], 'data', 1024 ** 2); def(['GiB'], 'data', 1024 ** 3); def(['TiB'], 'data', 1024 ** 4);
 def(['rad', 'radian'], 'angle', 1); def(['deg', 'degree'], 'angle', Math.PI / 180);
+def(['A', 'amp', 'ampere'], 'current', 1); def(['mA'], 'current', 0.001); def(['kA'], 'current', 1000);
+
+// 組み立て単位（SI 由来）。基準次元の組で表すから、変換も計算もおのずと合う。
+const defD = (names, dim, factor) => { for (const nm of names) U[nm] = { dim: { ...dim }, factor }; };
+const FORCE = { mass: 1, length: 1, time: -2 };
+const ENERGY = { mass: 1, length: 2, time: -2 };
+const POWER = { mass: 1, length: 2, time: -3 };
+const PRESS = { mass: 1, length: -1, time: -2 };
+const VOLT = { mass: 1, length: 2, time: -3, current: -1 };
+defD(['Hz', 'hertz'], { time: -1 }, 1); defD(['kHz'], { time: -1 }, 1e3); defD(['MHz'], { time: -1 }, 1e6); defD(['GHz'], { time: -1 }, 1e9); defD(['rpm'], { time: -1 }, 1 / 60);
+defD(['N', 'newton'], FORCE, 1); defD(['kN'], FORCE, 1e3); defD(['mN'], FORCE, 1e-3);
+defD(['Pa', 'pascal'], PRESS, 1); defD(['hPa'], PRESS, 100); defD(['kPa'], PRESS, 1e3); defD(['MPa'], PRESS, 1e6); defD(['bar'], PRESS, 1e5); defD(['atm'], PRESS, 101325);
+defD(['J', 'joule'], ENERGY, 1); defD(['kJ'], ENERGY, 1e3); defD(['MJ'], ENERGY, 1e6);
+defD(['Wh'], ENERGY, 3600); defD(['kWh'], ENERGY, 3.6e6); defD(['MWh'], ENERGY, 3.6e9);
+defD(['cal'], ENERGY, 4.184); defD(['kcal', 'Cal'], ENERGY, 4184);
+defD(['W', 'watt'], POWER, 1); defD(['kW'], POWER, 1e3); defD(['MW'], POWER, 1e6); defD(['GW'], POWER, 1e9); defD(['hp'], POWER, 745.6998715822702);
+defD(['C', 'coulomb'], { current: 1, time: 1 }, 1);
+defD(['V', 'volt'], VOLT, 1); defD(['mV'], VOLT, 1e-3); defD(['kV'], VOLT, 1e3);
+defD(['ohm', 'Ω'], { mass: 1, length: 2, time: -3, current: -2 }, 1);
+defD(['L', 'liter', 'litre'], { length: 3 }, 1e-3); defD(['mL'], { length: 3 }, 1e-6); defD(['dL'], { length: 3 }, 1e-4); defD(['kL'], { length: 3 }, 1);
+defD(['ha', 'hectare'], { length: 2 }, 1e4); defD(['acre'], { length: 2 }, 4046.8564224);
 
 // 通貨：それぞれ独立した次元（だから混ぜると拒む）。記号も別名で。
 const CUR = { JPY: ['¥', '円', 'yen'], USD: ['$', 'dollar', 'usd'], EUR: ['€', 'euro'], GBP: ['£', 'gbp'], KRW: ['₩', 'won'] };
