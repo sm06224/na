@@ -91,6 +91,12 @@ test('散文・見出しは黙る／本当の計算ミスは知らせる', () =>
   assert.ok(bad[1].error, '未完の式はエラーになる');
 });
 
+test('できない変換は、黙らずに正直に断る（嘘をつかない）', () => {
+  const r = run('100 USD in JPY')[0];                            // 為替を持たないので変換不可
+  assert.ok(r.error && /変換できません/.test(r.error), '無言で素通りしてはいけない');
+  assert.equal(run('100 km in kg')[0].error ? true : false, true);  // 次元違いも断る
+});
+
 test('決定的：同じノートは寸分たがわず同じ答え', () => {
   const nb = 'a = 3 m\nb = 4 m\nsqrt(a*a + b*b)';
   assert.deepEqual(run(nb).map((r) => r.result), run(nb).map((r) => r.result));

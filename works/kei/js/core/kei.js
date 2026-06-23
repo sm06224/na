@@ -273,10 +273,13 @@ export function run(notebook) {
       if (!(e instanceof CalcError)) throw e;
       // 「計算らしさ」がなければ、ただの散文／見出しとみなして黙る。
       // 計算らしさ＝代入・演算子・既知の変数や参照語を含むこと。
-      const looksCalc = name !== null
-        || /[+\-*/^]/.test(body)
-        || exprToks.some((tk) => tk.t === 'id' && !V.isUnit(tk.v) &&
-          (vars.has(tk.v) || ['prev', 'sum', 'total', 'ans', 'line'].includes(tk.v)));
+      const hasNum = exprToks.some((tk) => tk.t === 'num');
+      const hasOp = exprToks.some((tk) => tk.t === 'op');
+      const hasUnitOrConv = exprToks.some((tk) => tk.t === 'id' &&
+        (V.isUnit(tk.v) || ['in', 'to', 'as', 'per', 'of'].includes(tk.v)));
+      const hasRefOrVar = exprToks.some((tk) => tk.t === 'id' && !V.isUnit(tk.v) &&
+        (vars.has(tk.v) || ['prev', 'sum', 'total', 'ans', 'line'].includes(tk.v)));
+      const looksCalc = name !== null || hasOp || hasRefOrVar || (hasNum && hasUnitOrConv);
       if (looksCalc) { results.push({ value: null, kind: 'error' }); out.push({ input: raw, result: null, error: e.message, kind: 'error' }); }
       else { results.push({ value: null, kind: 'label' }); out.push({ input: raw, result: null, error: null, kind: 'label' }); }
     }
