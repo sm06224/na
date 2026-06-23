@@ -20,9 +20,9 @@ def(['yd', 'yard'], 'length', 0.9144); def(['mi', 'mile'], 'length', 1609.344);
 def(['kg'], 'mass', 1); def(['g', 'gram'], 'mass', 0.001); def(['mg'], 'mass', 1e-6);
 def(['t', 'ton', 'tonne'], 'mass', 1000); def(['lb', 'lbs', 'pound'], 'mass', 0.45359237);
 def(['oz', 'ounce'], 'mass', 0.0283495231);
-def(['s', 'sec', 'second'], 'time', 1); def(['ms'], 'time', 0.001);
-def(['min', 'minute'], 'time', 60); def(['h', 'hr', 'hour'], 'time', 3600);
-def(['day', 'days'], 'time', 86400); def(['week', 'wk'], 'time', 604800);
+def(['s', 'sec', 'second', '秒'], 'time', 1); def(['ms'], 'time', 0.001);
+def(['min', 'minute', '分'], 'time', 60); def(['h', 'hr', 'hour', '時間'], 'time', 3600);
+def(['day', 'days', '日'], 'time', 86400); def(['week', 'wk', '週'], 'time', 604800);
 def(['B', 'byte', 'bytes'], 'data', 1); def(['bit'], 'data', 0.125);
 def(['KB', 'kB'], 'data', 1e3); def(['MB'], 'data', 1e6); def(['GB'], 'data', 1e9); def(['TB'], 'data', 1e12);
 def(['KiB'], 'data', 1024); def(['MiB'], 'data', 1024 ** 2); def(['GiB'], 'data', 1024 ** 3); def(['TiB'], 'data', 1024 ** 4);
@@ -59,7 +59,9 @@ export const scalar = (n) => ({ n, dim: {}, du: {}, percent: false });
 export const percent = (n) => ({ n, dim: {}, du: {}, percent: true });
 export function quantity(n, unitName) {
   const u = U[unitName];
-  if (!u) throw new CalcError(`知らない単位: ${unitName}`);
+  // 知らない語は「数え単位（ad-hoc）」——それ自身を次元に持つ、係数 1 の単位。
+  // だから 区間・個・人・回 …が、割り算で 区間/日 のように生きて運ばれる。
+  if (!u) return { n, dim: { ['u:' + unitName]: 1 }, du: { [unitName]: 1 }, percent: false };
   // 通貨は記号でも漢字でも、表示はコードに揃える（¥・円 → JPY）
   const key = isCurrency(unitName) ? Object.keys(u.dim)[0].slice(4) : unitName;
   return { n: n * u.factor, dim: { ...u.dim }, du: { [key]: 1 }, percent: false };
@@ -73,7 +75,7 @@ export const isDimensionless = (v) => Object.keys(v.dim).length === 0;
 // 表示単位 du から、基準への換算係数（基準 = 表示値 × uf）
 function dispFactor(du) {
   let f = 1;
-  for (const nm in du) f *= U[nm].factor ** du[nm];
+  for (const nm in du) f *= (U[nm] ? U[nm].factor : 1) ** du[nm];   // 数え単位は係数 1
   return f;
 }
 

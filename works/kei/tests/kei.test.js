@@ -65,6 +65,15 @@ test('関数', () => {
   assert.equal(val('avg(2, 4, 6)'), '4');
 });
 
+test('日本語の時間単位と、数え単位（ad-hoc）が割り算で運ばれる', () => {
+  assert.equal(val('3 時間 in min'), '180 min');
+  assert.equal(val('24 時間/日 * 1 区間/8時間'), '3 区間/日');   // 1日のシフト数
+  assert.equal(val('24 時間/日 / (8 時間/区間)'), '3 区間/日');
+  assert.equal(val('12 個 / 4 人'), '3 個/人');
+  assert.equal(val('500 円/個 * 12 個'), '6,000 JPY');           // 数え単位は約分される
+  assert.equal(val('8 時間 * 3 区間'), '24 時間·区間');
+});
+
 test('変数・前行参照（prev / sum / total / line）', () => {
   assert.equal(val('x = 10\nx * 3'), '30');
   assert.equal(val('10\nprev + 5'), '15');

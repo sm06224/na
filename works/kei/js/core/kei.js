@@ -147,16 +147,18 @@ class Parser {
     }
     return base;
   }
+  // 単位の語か？ 既知の単位、または「数え単位」になれる未知語（変数・予約語・関数を除く）。
+  isUnitTok(t) {
+    if (!t || t.t !== 'id') return false;
+    if (V.isUnit(t.v)) return true;
+    return !RESERVED.has(t.v) && !FUNCS[t.v] && !this.env.hasVar(t.v);
+  }
   postfix() {
     let v = this.primary();
     if (v._rawNumber) {
-      const p = this.peek();
-      if (p && p.t === 'id' && V.isUnit(p.v) && !KW_CONV.has(p.v) && p.v !== 'per' && p.v !== 'of') {
-        v = V.quantity(v.n, this.next().v);     // 5 km
-        v = this.foldUnits(v);                   // 50 MB/s のような複合単位
-      } else if (p && p.t === 'id' && !V.isUnit(p.v) && !RESERVED.has(p.v) && !this.env.hasVar(p.v)) {
-        this.next();                             // 2 泊・3 個…未知の数え言葉は飾りとして読み飛ばす
-        v = v.pct ? V.percent(v.n / 100) : V.scalar(v.n);
+      if (this.isUnitTok(this.peek())) {
+        v = V.quantity(v.n, this.next().v);      // 5 km・2 泊・24 時間
+        v = this.foldUnits(v);                   // 50 MB/s・時間/日 のような複合単位
       } else {
         v = v.pct ? V.percent(v.n / 100) : V.scalar(v.n);
       }
@@ -165,11 +167,11 @@ class Parser {
     }
     return v;
   }
-  // 単位どうしの掛け割り（数を挟まない）を、ひとつの単位に畳む：MB/s, m/s², N·m …
+  // 単位どうしの掛け割り（数を挟まない）を、ひとつの単位に畳む：MB/s・時間/日・m/s²…
   foldUnits(v) {
     for (;;) {
       const p = this.peek(), q = this.toks[this.i + 1];
-      if (p && p.t === 'op' && (p.v === '*' || p.v === '/') && q && q.t === 'id' && V.isUnit(q.v)) {
+      if (p && p.t === 'op' && (p.v === '*' || p.v === '/') && this.isUnitTok(q)) {
         this.next(); this.next();
         v = p.v === '/' ? V.div(v, V.unitValue(q.v)) : V.mul(v, V.unitValue(q.v));
       } else if (p && p.t === 'op' && p.v === '^' && q && q.t === 'num' && Number.isInteger(q.v)) {
