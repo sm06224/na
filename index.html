@@ -81,6 +81,7 @@
   .c-akashi:hover { background: linear-gradient(160deg, rgba(202,169,255,.15), rgba(154,245,224,.07)); }
   .c-kage:hover { background: linear-gradient(160deg, rgba(255,206,128,.14), rgba(40,28,22,.08)); }
   .c-kei:hover { background: linear-gradient(160deg, rgba(176,106,28,.13), rgba(47,125,110,.06)); }
+  .c-nazo:hover { background: linear-gradient(160deg, rgba(200,162,90,.16), rgba(20,16,12,.10)); }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -90,7 +91,7 @@
   <header>
     <h1>na</h1>
     <p>無から生まれた、小さな作品集</p>
-    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計</div>
+    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎</div>
   </header>
 
   <div class="works">
@@ -348,6 +349,14 @@
       <p>読める電卓。メモ帳に書くように計算を綴ると、各行の右に答えが並ぶ。単位（km・kg・h・GB…）は次元を背負い、混ぜても割っても正しくなる（100 km / 2 h → 50 km/h、2 TB / 50 MB/s in min）。通貨（円・$・USD…）はそれぞれ独立した次元で USD+JPY を拒み、為替を持たないから決して嘘の数字を出さない。% と変数と前行参照（80+8%・prev・sum）、関数つき。見出しやメモは黙って素通り。算（無から作った計算機）が機械なら、これは人のための、ことばに近い電卓。CLI でもそのまま走る。</p>
       <div class="tags"><span class="tag">runtime</span><span class="tag">units · dimensions</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
       <span class="go">計算する →</span>
+    </a>
+
+    <a class="card c-nazo" href="works/nazo/">
+      <span class="glyph">謎</span>
+      <h2>謎 <span class="en">/ nazo</span></h2>
+      <p>第二次大戦の暗号機 Enigma を、無から忠実に組み直した。鍵を押すと電流がプラグボード→三つのローター→反射器→ローターを逆順に巡り、ランプが灯る。ローター I–V・反射器 B/C・リング設定・プラグボード、そして史実のダブルステッピングまで。暗号化と復号は同じ操作で、どの文字も自分自身には化けない——Enigma の宿命の弱点。正しさは公開テストベクタが保証する（AAAAA → BDZGO）。鍵（#k=）を分かち合えば、同じ機械だけが文を開く。証（現代のハッシュ）と対をなす歴史の暗号。CLI でもそのまま回る。</p>
+      <div class="tags"><span class="tag">enigma</span><span class="tag">cipher</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
+      <span class="go">機械を回す →</span>
     </a>
   </div>
 

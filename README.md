@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎**
 
 </div>
 
@@ -309,7 +309,18 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 変数と前行参照（`prev`・`sum`・`line 3`）、関数（`sqrt round min …`）。見出しやメモは黙って素通りし、
 演算子つきの本当の書き間違いだけ知らせる。CLI（`node kei.js examples/旅費.kei`）でそのまま試せ、
 コアは **DOM もネットワークも知らず**、同じノートは寸分たがわず同じ答え。四則・桁区切り・単位・複合単位・
-通貨・%・関数・前行参照・散文の扱い・決定性まで**ヘッドレス検証**・**12 tests**。
+通貨・%・関数・前行参照・散文の扱い・決定性まで**ヘッドレス検証**・**18 tests**（温度・SI接頭辞・組み立て単位も）。
+
+### 謎 [謎 `nazo`](./works/nazo/) — *the Enigma, rebuilt from nothing*
+第二次大戦の暗号機 **Enigma** を、無から忠実に組み直した。鍵を押すと電流がプラグボード →
+三つのローター → 反射器 → ローターを逆順に巡り、ランプが灯る。**ローター I–V・反射器 B/C・
+リング設定・プラグボード**、そして史実の**ダブルステッピング**（爪機構の癖で中央ローターが連続して
+進む）まで。**暗号化と復号は同じ操作**（可逆）で、**どの文字も自分自身には化けない**——Enigma の
+宿命の弱点。正しさは想像ではなく**公開テストベクタ**が保証する（`I-II-III/B/AAA/AAA` で
+`AAAAA → BDZGO`）。鍵（設定）は一本の文字列に畳めて `#k=` で渡せる——**同じ機械を組んだ者だけ**が
+文を開き、一文字でも違えば永遠にノイズ（会える種）。`証`(現代の一方向ハッシュ)と対をなす、巡って
+戻る歴史の暗号。CLI（`node nazo.js`）でもそのまま回り、コアは **DOM もネットワークも知らず**、
+ベクタ一致・可逆・自己無写像・ダブルステッピング・鍵の往復まで**ヘッドレス検証**・**10 tests**。
 
 ```bash
 git clone https://github.com/sm06224/na.git
@@ -488,11 +499,16 @@ na/
 │  │  ├─ js/core/puppets.js 切り絵の型（関節リグ・月山木鳥兎舟人）
 │  │  ├─ js/ui/             render（影をぼけと濃さで塗る）· main（掴む・深さ・分かち合う）
 │  │  └─ tests/
-│  └─ kei/                  計 計（読める電卓・単位つきノート言語）
-│     ├─ index.html · style.css · kei.js（CLI）· examples/
-│     ├─ js/core/value.js   量（次元つき）・単位表・通貨・表示
-│     ├─ js/core/kei.js     字句 → 構文(Pratt) → 評価 ・ run(ノート)
-│     ├─ js/ui/main.js      左に式・右に答え（行は一対一でそろう）
+│  ├─ kei/                  計 計（読める電卓・単位つきノート言語）
+│  │  ├─ index.html · style.css · kei.js（CLI）· examples/
+│  │  ├─ js/core/value.js   量（次元つき）・単位表・通貨・表示
+│  │  ├─ js/core/kei.js     字句 → 構文(Pratt) → 評価 ・ run(ノート)
+│  │  ├─ js/ui/main.js      左に式・右に答え（行は一対一でそろう）
+│  │  └─ tests/
+│  └─ nazo/                 謎 謎（Enigma を無から・戦中の暗号機）
+│     ├─ index.html · style.css · nazo.js（CLI）
+│     ├─ js/core/enigma.js  配線・ステッピング・反射・プラグ・鍵の畳み込み
+│     ├─ js/ui/main.js      打鍵→ローターが進み、ランプが灯り、テープに積もる
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
