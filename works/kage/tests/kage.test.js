@@ -99,6 +99,30 @@ test('packScene — 空の舞台も往復できる', () => {
   assert.ok(near(back.lamp.x, 0.5, 1e-3));
 });
 
+test('worldParts — 生きた図は時とともに動き、rest(t=0,drive=0) では静止に戻る', () => {
+  const bird = { ...PUPPETS.tori, x: 0, y: 0, scale: 1, rot: 0, alive: true };
+  const rest = worldParts(bird, 0, 0);
+  const rest2 = worldParts(bird, 0, 0);
+  // 決定的：同じ (t,drive) なら寸分たがわず同じ
+  assert.deepEqual(rest2, rest);
+  // 時が進めば翼の先が動く（左翼の先＝limb[1] の或る頂点）
+  const later = worldParts(bird, 0.18, 0.5);
+  let moved = false, finite = true;
+  for (let i = 0; i < rest.length; i++)
+    for (let j = 0; j < rest[i].length; j++) {
+      const [ax, ay] = rest[i][j], [bx, by] = later[i][j];
+      if (Math.abs(ax - bx) > 1e-4 || Math.abs(ay - by) > 1e-4) moved = true;
+      if (!Number.isFinite(bx) || !Number.isFinite(by)) finite = false;
+    }
+  assert.ok(moved, '時が進めば図は動くはず');
+  assert.ok(finite, '動いても座標は有限');
+});
+
+test('worldParts — 動かない図（山）は時が経っても微動だにしない', () => {
+  const mt = { ...PUPPETS.yama, x: 0, y: 0, scale: 1, rot: 0, alive: false };
+  assert.deepEqual(worldParts(mt, 2.5, 1), worldParts(mt, 0, 0));
+});
+
 test('puppets — どの型も、閉じた多角形の部品でできている', () => {
   assert.ok(KINDS.length >= 5);
   for (const kind of KINDS) {
