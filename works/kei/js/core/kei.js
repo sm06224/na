@@ -43,8 +43,8 @@ function tokenize(line) {
       i = j; continue;
     }
     if (OPS[c]) { toks.push({ t: 'op', v: OPS[c] }); i++; continue; }
-    // 識別子（数字を含まない。日本語・記号通貨も可）
-    if (isLetter(c) || /[¥$€£₩_"]/.test(c)) {
+    // 識別子（数字を含まない。日本語・記号通貨・度記号も可）
+    if (isLetter(c) || /[¥$€£₩_"°℃℉]/.test(c)) {
       let j = i, s = '';
       while (j < n) {
         const d = line[j];
@@ -72,8 +72,26 @@ const FUNCS = {
   min: (a) => a.reduce((p, q) => (q.n < p.n ? q : p)),
   max: (a) => a.reduce((p, q) => (q.n > p.n ? q : p)),
   avg: (a) => scaleDiv(a),
+  exp: (a) => { req0(a[0]); return V.scalar(Math.exp(a[0].n)); },
+  mod: (a) => ({ ...a[0], n: ((a[0].n % a[1].n) + a[1].n) % a[1].n }),
+  hypot: (a) => ({ ...a[0], n: Math.hypot(...a.map((x) => x.n)) }),
+  sin: (a) => V.scalar(Math.sin(angleRad(a[0]))),
+  cos: (a) => V.scalar(Math.cos(angleRad(a[0]))),
+  tan: (a) => V.scalar(Math.tan(angleRad(a[0]))),
+  asin: (a) => { req0(a[0]); return V.quantity(Math.asin(a[0].n), 'rad'); },
+  acos: (a) => { req0(a[0]); return V.quantity(Math.acos(a[0].n), 'rad'); },
+  atan: (a) => { req0(a[0]); return V.quantity(Math.atan(a[0].n), 'rad'); },
 };
+// 円周率など、書ける定数。変数で上書きされていなければ使える。
+const CONSTS = { pi: Math.PI, 'π': Math.PI, tau: Math.PI * 2, e: Math.E };
 function req0(v) { if (!V.isDimensionless(v)) throw new CalcError('単位つきの値には使えません'); }
+// 角度：無次元ならラジアンとして、角度の次元なら基準（ラジアン）の値として読む。
+function angleRad(v) {
+  if (V.isDimensionless(v)) return v.n;
+  const d = v.dim, ks = Object.keys(d);
+  if (ks.length === 1 && d.angle === 1) return v.n;
+  throw new CalcError('角度かラジアンを渡してください');
+}
 function scaleDiv(a) { let s = a[0]; for (let k = 1; k < a.length; k++) s = V.add(s, a[k]); return V.div(s, V.scalar(a.length)); }
 function roundFn(a, f) {
   const v = a[0]; const nd = a[1] ? a[1].n : 0; const p = 10 ** nd;
@@ -156,7 +174,10 @@ class Parser {
   postfix() {
     let v = this.primary();
     if (v._rawNumber) {
-      if (this.isUnitTok(this.peek())) {
+      const p = this.peek();
+      if (p && p.t === 'id' && V.isTemperature(p.v)) {
+        v = V.quantity(v.n, this.next().v);          // 温度はアフィン：数×単位ではない（180 °C）
+      } else if (this.isUnitTok(p)) {
         v = V.mul(V.scalar(v.n), this.unitExpr());   // 数 × 単位式（5 m²・9.8 m/s²・100 km/h）
       } else {
         v = v.pct ? V.percent(v.n / 100) : V.scalar(v.n);
@@ -210,6 +231,8 @@ class Parser {
         if (name === 'min' || true) { /* min はここでは関数 */ }
         return FUNCS[name](args);
       }
+      // 定数（変数で上書きされていなければ）
+      if (CONSTS[name] !== undefined && !this.env.hasVar(name)) return V.scalar(CONSTS[name]);
       // 前行参照
       if (name === 'prev' || name === 'ans') return this.env.prev();
       if (name === 'sum' || name === 'total') return this.env.sumAbove();
@@ -295,6 +318,7 @@ export function run(notebook) {
   return out;
 }
 
-const RESERVED = new Set(['prev', 'ans', 'sum', 'total', 'line', 'per', 'of', 'in', 'to', 'as', ...Object.keys(FUNCS)]);
+const RESERVED = new Set(['prev', 'ans', 'sum', 'total', 'line', 'per', 'of', 'in', 'to', 'as',
+  ...Object.keys(FUNCS), ...Object.keys(CONSTS)]);
 
 export { tokenize };

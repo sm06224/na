@@ -55,7 +55,32 @@ for (const [code, syms] of Object.entries(CUR)) {
   for (const nm of [code, ...syms]) U[nm] = { dim: { ['cur:' + code]: 1 }, factor: 1 };
 }
 
-export function isUnit(name) { return Object.prototype.hasOwnProperty.call(U, name); }
+// SI 接頭辞。既知の単位の前につけると、その倍率になる（µm・ns・GHz・mΩ…）。
+const PREFIX = { Y: 1e24, Z: 1e21, E: 1e18, P: 1e15, T: 1e12, G: 1e9, M: 1e6, k: 1e3, h: 1e2, da: 1e1,
+  d: 1e-1, c: 1e-2, m: 1e-3, 'µ': 1e-6, u: 1e-6, n: 1e-9, p: 1e-12, f: 1e-15 };
+// 接頭辞をつけてよい基準単位（通貨・データ・数え単位・時刻系は対象外）。
+const PREFIXABLE = new Set(['m', 'g', 's', 'N', 'Pa', 'J', 'W', 'Hz', 'V', 'A', 'Ω', 'C', 'L', 'bar', 'cal', 'Wh', 'rad']);
+
+// 温度（アフィン：Kelvin = a·X + b）。掛け算ではなく、ずらして変換する。
+const TEMP = {};
+const defT = (names, a, b) => { for (const nm of names) TEMP[nm] = { a, b }; };
+defT(['K', 'kelvin'], 1, 0);
+defT(['degC', '°C', '℃', 'celsius'], 1, 273.15);
+defT(['degF', '°F', '℉', 'fahrenheit'], 5 / 9, 273.15 - 32 * 5 / 9);
+
+// 単位の正体（次元と基準係数）。既知 → 接頭辞つき → なければ null（＝数え単位）。
+export function unitInfo(name) {
+  if (U[name]) return U[name];
+  for (const p in PREFIX) {
+    if (name.length > p.length && name.startsWith(p)) {
+      const base = name.slice(p.length);
+      if (PREFIXABLE.has(base) && U[base]) return { dim: U[base].dim, factor: PREFIX[p] * U[base].factor };
+    }
+  }
+  return null;
+}
+export function isUnit(name) { return !!unitInfo(name) || !!TEMP[name]; }
+export function isTemperature(name) { return !!TEMP[name]; }
 export function isCurrency(name) { return U[name] && Object.keys(U[name].dim).some((d) => d.startsWith('cur:')); }
 
 // マップの足し引き（指数）。0 は消す。
@@ -79,7 +104,9 @@ function dimEqual(a, b) {
 export const scalar = (n) => ({ n, dim: {}, du: {}, percent: false });
 export const percent = (n) => ({ n, dim: {}, du: {}, percent: true });
 export function quantity(n, unitName) {
-  const u = U[unitName];
+  // 温度はアフィン：基準（Kelvin）へずらして持つ。
+  if (TEMP[unitName]) { const { a, b } = TEMP[unitName]; return { n: a * n + b, dim: { temp: 1 }, du: { [unitName]: 1 }, temp: true, percent: false }; }
+  const u = unitInfo(unitName);
   // 知らない語は「数え単位（ad-hoc）」——それ自身を次元に持つ、係数 1 の単位。
   // だから 区間・個・人・回 …が、割り算で 区間/日 のように生きて運ばれる。
   if (!u) return { n, dim: { ['u:' + unitName]: 1 }, du: { [unitName]: 1 }, percent: false };
@@ -96,12 +123,14 @@ export const isDimensionless = (v) => Object.keys(v.dim).length === 0;
 // 表示単位 du から、基準への換算係数（基準 = 表示値 × uf）
 function dispFactor(du) {
   let f = 1;
-  for (const nm in du) f *= (U[nm] ? U[nm].factor : 1) ** du[nm];   // 数え単位は係数 1
+  for (const nm in du) { const u = unitInfo(nm); f *= (u ? u.factor : 1) ** du[nm]; }   // 数え単位は係数 1
   return f;
 }
+const TEMP_GUARD = '温度は変換だけできます（差を測るなら K で）';
 
 // 演算
 export function add(a, b) {
+  if (a.temp || b.temp) throw new CalcError(TEMP_GUARD);
   if (a.percent && !b.percent) return add(b, scaleVal(b, a.n));   // 80 を基準に…は呼ばれない経路
   if (b.percent && !a.percent) return { ...a, n: a.n * (1 + b.n) };   // X + 15%
   if (a.percent && b.percent) return percent(a.n + b.n);
@@ -109,6 +138,7 @@ export function add(a, b) {
   return { n: a.n + b.n, dim: { ...a.dim }, du: pickDu(a, b), percent: false };
 }
 export function sub(a, b) {
+  if (a.temp || b.temp) throw new CalcError(TEMP_GUARD);
   if (b.percent && !a.percent) return { ...a, n: a.n * (1 - b.n) };   // X − 15%
   if (a.percent && b.percent) return percent(a.n - b.n);
   if (!dimEqual(a.dim, b.dim)) throw new CalcError(`引けない単位どうし：${unitStr(a) || '数'} と ${unitStr(b) || '数'}`);
@@ -118,9 +148,11 @@ function pickDu(a, b) { return Object.keys(a.du).length ? a.du : b.du; }
 function scaleVal(v, k) { return { ...v, n: v.n * k }; }
 
 export function mul(a, b) {
+  if (a.temp || b.temp) throw new CalcError(TEMP_GUARD);
   return { n: a.n * b.n, dim: combine(a.dim, b.dim, 1), du: combine(a.du, b.du, 1), percent: false };
 }
 export function div(a, b) {
+  if (a.temp || b.temp) throw new CalcError(TEMP_GUARD);
   if (b.n === 0) throw new CalcError('0 で割れません');
   return { n: a.n / b.n, dim: combine(a.dim, b.dim, -1), du: combine(a.du, b.du, -1), percent: false };
 }
@@ -140,6 +172,10 @@ export function applyOf(a, b) { return mul(scalar(a.n), b); }
 
 // 変換：a を、target の単位すがたに着替える
 export function convertTo(a, target) {
+  if (a.temp || target.temp) {   // 温度はアフィン変換（Kelvin 経由でずらす）
+    if (!a.temp || !target.temp) throw new CalcError(`変換できません：${unitStr(a) || '数'} → ${unitStr(target) || '数'}`);
+    return { n: a.n, dim: { temp: 1 }, du: { ...target.du }, temp: true, percent: false };
+  }
   if (!dimEqual(a.dim, target.dim)) throw new CalcError(`変換できません：${unitStr(a) || '数'} → ${unitStr(target) || '数'}`);
   return { n: a.n, dim: { ...a.dim }, du: { ...target.du }, percent: false };
 }
@@ -179,6 +215,7 @@ export function formatNumber(x) {
 }
 
 export function format(v) {
+  if (v.temp) { const name = Object.keys(v.du)[0]; const { a, b } = TEMP[name]; return formatNumber((v.n - b) / a) + ' ' + name; }
   if (v.percent) return formatNumber(v.n * 100) + '%';
   const us = unitStr(v);
   if (!us) return formatNumber(v.n);

@@ -86,6 +86,33 @@ test('組み立て単位（N・J・W・kWh…）と、^ は単位ひとつに掛
   assert.equal(val('1 kWh in J'), '3,600,000 J');
 });
 
+test('温度（°C ↔ °F ↔ K）はアフィン変換、足し算は断る', () => {
+  assert.equal(val('180 °C in °F'), '356 °F');
+  assert.equal(val('100 degC in degF'), '212 degF');
+  assert.equal(val('98.6 degF in degC'), '37 degC');
+  assert.equal(val('300 K in degC'), '26.85 degC');
+  assert.equal(val('0 degC in K'), '273.15 K');
+  assert.ok(val('20 degC + 5 degC').error, '温度の足し算は断る');
+});
+
+test('定数と三角関数（角度対応）', () => {
+  assert.equal(val('2 * pi'), '6.283185');
+  assert.equal(val('sin(30 deg)'), '0.5');
+  assert.equal(val('cos(60 deg)'), '0.5');
+  assert.equal(val('sin(pi/2)'), '1');
+  assert.equal(val('asin(0.5) in deg'), '30 deg');
+  assert.equal(val('hypot(3, 4)'), '5');
+  assert.equal(val('mod(17, 5)'), '2');
+});
+
+test('SI 接頭辞エンジン（µm・ns・GHz・mΩ…何にでも）', () => {
+  assert.equal(val('5 µm in nm'), '5,000 nm');
+  assert.equal(val('2 GHz in MHz'), '2,000 MHz');
+  assert.equal(val('3 mΩ in Ω'), '0.003 Ω');
+  assert.equal(val('500 ns in µs'), '0.5 µs');
+  assert.equal(val('10 cL in mL'), '100 mL');
+});
+
 test('変数・前行参照（prev / sum / total / line）', () => {
   assert.equal(val('x = 10\nx * 3'), '30');
   assert.equal(val('10\nprev + 5'), '15');
