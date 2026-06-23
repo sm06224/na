@@ -372,6 +372,18 @@ jobs:
         working-directory: works/kage
         run: node --test tests/*.test.js
 
+  kei:
+    name: kei — a calculator you can read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Reckon units, currencies, percents and back-references headless
+        working-directory: works/kei
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

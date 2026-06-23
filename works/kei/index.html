@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="計 (kei) — 読める電卓。プレーンテキストで書くノート式の計算。単位・変数・パーセント・前行参照を解釈し、左に式、右に答え。為替のような嘘はつかない。依存ゼロ・オフライン・端末から出ない。">
+<meta name="theme-color" content="#f3ead8">
+<title>計 — a calculator you can read</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>計 <span class="en">/ kei</span></h1>
+  <p class="sub">読める電卓。書いた式の右に、答えが出る。</p>
+  <nav id="examples" aria-label="例">
+    <button data-ex="旅費">旅費</button>
+    <button data-ex="単位">単位</button>
+    <button data-ex="暮らし">暮らし</button>
+    <span class="spacer"></span>
+    <button id="share" title="このノートへのリンクを写す">分かち合う</button>
+    <button id="clear" title="まっさらにする">消す</button>
+  </nav>
+</header>
+
+<main class="note">
+  <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"
+            aria-label="計算ノート"></textarea>
+  <div id="out" aria-hidden="true"></div>
+</main>
+
+<footer>
+  <p>単位（km・kg・h・GB…）／通貨（円・$・USD…）／%（<code>80 + 8%</code>）／前行（<code>prev・sum</code>）。
+     <code>5 km in mi</code>、<code>2 TB / 50 MB/s in min</code>。
+     データは端末から一歩も出ません。</p>
+</footer>
+
+<div id="toast"></div>
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "kei",
+  "version": "1.0.0",
+  "description": "計 — a calculator you can read. A plain-text notebook language and runtime: each line is an expression, the answer appears to its right. It understands units (km, kg, h, GB…), currencies (¥, $, USD…), percentages (80 + 8%) and back-references (prev, sum, total, line N). Units carry full dimensions, so 100 km / 2 h becomes 50 km/h on its own, and JPY refuses to be added to USD. It holds no exchange rates, so it never lies. Zero dependencies, offline, deterministic; the core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "kei": "kei.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

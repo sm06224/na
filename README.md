@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計**
 
 </div>
 
@@ -300,6 +300,17 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 **DOM も canvas も知らず**、射影の倍率・半影（壁ぎわで 0）・炎が [-1,1] に収まること・場面の往復まで
 **ヘッドレス検証**・**11 tests**。
 
+### 計 [計 `kei`](./works/kei/) — *a calculator you can read*
+お題は「あったらいいな、を使えるかたちに」。**読める電卓**——メモ帳に書くように計算を綴ると、各行の右に
+答えが並ぶ。`算`（無から作った計算機／VM）が「機械」なら、こちらは**人のための、ことばに近い電卓**。
+単位（`km kg h GB …`）は次元を背負い、混ぜても割っても正しくなる（`100 km / 2 h → 50 km/h`、
+`2 TB / 50 MB/s in min`）。通貨（`円 ¥ $ USD …`）はそれぞれ独立した次元で、`USD + JPY` を拒む——
+そして**為替レートを持たないから、決して嘘の数字を出さない**。パーセント（`80 + 8%`・`20% of 80`）、
+変数と前行参照（`prev`・`sum`・`line 3`）、関数（`sqrt round min …`）。見出しやメモは黙って素通りし、
+演算子つきの本当の書き間違いだけ知らせる。CLI（`node kei.js examples/旅費.kei`）でそのまま試せ、
+コアは **DOM もネットワークも知らず**、同じノートは寸分たがわず同じ答え。四則・桁区切り・単位・複合単位・
+通貨・%・関数・前行参照・散文の扱い・決定性まで**ヘッドレス検証**・**12 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -471,11 +482,17 @@ na/
 │  │  ├─ forge.js           証を SVG と WAV に打ち出す
 │  │  ├─ akashi.svg · akashi.wav   「無」の証（最後の作者の自画像）
 │  │  └─ tests/
-│  └─ kage/                 影 影（灯りひとつで上演する影絵）
-│     ├─ index.html · style.css
-│     ├─ js/core/kage.js    点光源の射影・倍率・半影・炎のゆらぎ・場面の畳み込み
-│     ├─ js/core/puppets.js 切り絵の型（閉じた多角形・月山木鳥兎舟人）
-│     ├─ js/ui/             render（影をぼけと濃さで塗る）· main（掴む・深さ・分かち合う）
+│  ├─ kage/                 影 影（灯りひとつで上演する影絵）
+│  │  ├─ index.html · style.css
+│  │  ├─ js/core/kage.js    点光源の射影・倍率・半影・炎のゆらぎ・場面の畳み込み
+│  │  ├─ js/core/puppets.js 切り絵の型（関節リグ・月山木鳥兎舟人）
+│  │  ├─ js/ui/             render（影をぼけと濃さで塗る）· main（掴む・深さ・分かち合う）
+│  │  └─ tests/
+│  └─ kei/                  計 計（読める電卓・単位つきノート言語）
+│     ├─ index.html · style.css · kei.js（CLI）· examples/
+│     ├─ js/core/value.js   量（次元つき）・単位表・通貨・表示
+│     ├─ js/core/kei.js     字句 → 構文(Pratt) → 評価 ・ run(ノート)
+│     ├─ js/ui/main.js      左に式・右に答え（行は一対一でそろう）
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
