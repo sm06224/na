@@ -48,10 +48,13 @@ export function render(ctx, view, scene, t, selected = null) {
   ctx.fillRect(0, 0, W, H);
 
   // 影。明るい壁に落ちる、黒いシルエット。遠い（壁ぎわ）ものから順に重ねる。
+  const nowMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t * 1000;
   const order = scene.puppets.slice().sort((a, b) => b.depth - a.depth);
   let selShadow = null;
   for (const pup of order) {
-    const { parts, blur } = castPuppet(lamp, pup);
+    // 掴んで動かした直後ほど活発に（勢いは指を離すとゆっくり鎮まる）。
+    const energy = pup._lastMove ? Math.exp(-(nowMs - pup._lastMove) / 300) : 0;
+    const { parts, blur } = castPuppet(lamp, pup, { t, drive: Math.min(1, energy) });
     const partsPx = parts.map((part) => part.map((v) => view.toPx(v.x, v.y)));
     if (pup === selected) selShadow = partsPx;
     // 壁ぎわ（深い p）ほど濃く締まり、灯りに近い（浅い p）ほど薄く拡がる。

@@ -43,22 +43,39 @@ function placeVertex(vx, vy, cos, sin, scale, ox, oy) {
   ];
 }
 
-/* 切り絵（局所座標の部品の集まり）を舞台に立てて、舞台座標の部品を返す。
-   puppet = { parts:[[[x,y],…],…], x, y, scale, rot } */
-export function worldParts(puppet) {
+/* 切り絵（手足の集まり）を、時刻 t（秒）に合わせて生かし、舞台に立てる。
+   手足は支点まわりに揺れ（羽ばたき・そよぎ）、生き物はそっと息をする。
+   drive は「動きの勢い」(0=休み, 1=活発)。掴んで動かすほど大きく速く動く。
+   t=0・drive=0 なら rest 姿（静止）に戻る。
+   puppet = { limbs:[{points,pivot,swing}], x, y, scale, rot, alive, phase } */
+export function worldParts(puppet, t = 0, drive = 0) {
   const cos = Math.cos(puppet.rot || 0);
   const sin = Math.sin(puppet.rot || 0);
   const scale = puppet.scale == null ? 1 : puppet.scale;
-  return puppet.parts.map((part) =>
-    part.map(([vx, vy]) => placeVertex(vx, vy, cos, sin, scale, puppet.x, puppet.y))
-  );
+  const ph = puppet.phase || 0;
+  const breath = puppet.alive ? 1 + 0.022 * Math.sin(2 * Math.PI * 0.55 * t + ph) : 1;
+  const limbs = puppet.limbs || (puppet.parts || []).map((points) => ({ points }));
+  return limbs.map((limb) => {
+    let pts = limb.points;
+    if (limb.swing && limb.pivot) {
+      const sw = limb.swing;
+      const d = sw.wind ? 1 : 0.32 + 0.68 * drive;          // 風・波は常に、生き物は勢いで
+      const a = sw.amp * d * Math.sin(2 * Math.PI * sw.hz * t * (1 + 0.7 * drive) + (sw.phase || 0) + ph);
+      const [px, py] = limb.pivot, c2 = Math.cos(a), s2 = Math.sin(a);
+      pts = pts.map(([x, y]) => {
+        const dx = x - px, dy = y - py;
+        return [px + dx * c2 - dy * s2, py + dx * s2 + dy * c2];
+      });
+    }
+    return pts.map(([vx, vy]) => placeVertex(vx, vy * breath, cos, sin, scale, puppet.x, puppet.y));
+  });
 }
 
 /* 切り絵ひとつの影。壁の上のポリゴン群・ぼけ幅・倍率を返す。 */
 export function castPuppet(lamp, puppet, opts = {}) {
-  const { wall = WALL, flameRadius = FLAME_RADIUS } = opts;
+  const { wall = WALL, flameRadius = FLAME_RADIUS, t = 0, drive = 0 } = opts;
   const p = puppet.depth;
-  const parts = worldParts(puppet).map((part) =>
+  const parts = worldParts(puppet, t, drive).map((part) =>
     part.map(([x, y]) => castPoint(lamp, x, y, p, wall))
   );
   return { parts, blur: penumbra(p, flameRadius, wall), magnification: wall / p };

@@ -15,10 +15,18 @@ const canvas = document.getElementById('wall');
 const ctx = canvas.getContext('2d');
 let view = makeView(1, 1);
 let selected = null;
+let clock = 0;            // 上演の時計（秒）。当たり判定も今の姿に合わせる。
 
-/* 場面に立つ切り絵には、型の多角形（parts）を結びつけておく。
-   射影も当たり判定も puppet.parts を読むので、ここで必ず付ける。 */
-const withGeom = (p) => ({ ...p, parts: PUPPETS[p.kind].parts });
+/* 場面に立つ切り絵には、型のリグ（手足・生死・揺れの位相）を結びつける。
+   射影・当たり判定・命の動きは、これらを読む。位相は位置から決まるので
+   分かち合っても同じ揺れ方になり、図どうしは少しずつずれて息をする。 */
+const withGeom = (p) => ({
+  ...p,
+  parts: PUPPETS[p.kind].parts,
+  limbs: PUPPETS[p.kind].limbs,
+  alive: PUPPETS[p.kind].alive,
+  phase: p.phase != null ? p.phase : (p.x * 7.1 + p.y * 13.3) % (Math.PI * 2),
+});
 
 /* ---- 初めの一幕（または #s= で分かち合われた幕）---- */
 function defaultScene() {
@@ -60,7 +68,7 @@ function lampHitPx(px, py) {
 
 // 触れるのは「影」そのもの。当たり判定は壁に落ちた影の形で。
 function shadowParts(pup) {
-  return castPuppet(scene.lamp, pup).parts.map((part) => part.map((v) => [v.x, v.y]));
+  return castPuppet(scene.lamp, pup, { t: clock }).parts.map((part) => part.map((v) => [v.x, v.y]));
 }
 // 重なったら、画面でいちばん手前に見える影を選ぶ。描画は深さの降順
 // （浅い＝灯りに近いものほど後に描かれて上に来る）。当たり判定もそれに揃える：
@@ -137,6 +145,7 @@ canvas.addEventListener('pointermove', (e) => {
   } else if (selected) {
     selected.x = scene.lamp.x + (p.sx - scene.lamp.x) * selected.depth + drag.ox;
     selected.y = scene.lamp.y + (p.sy - scene.lamp.y) * selected.depth + drag.oy;
+    selected._lastMove = performance.now();   // 動かすほど生き生きと暴れる
   }
 });
 
@@ -223,7 +232,8 @@ resize();
 /* ---- 上演（毎フレーム、炎は揺れる）---- */
 const start = performance.now();
 function loop(now) {
-  render(ctx, view, scene, (now - start) / 1000, selected);
+  clock = (now - start) / 1000;
+  render(ctx, view, scene, clock, selected);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
