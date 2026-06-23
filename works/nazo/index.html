@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="謎 (nazo) — 第二次大戦の暗号機 Enigma を、依存ゼロで忠実に再現。ローター・反射器・プラグボード・ダブルステッピングまで。打てばランプが灯り、暗号化と復号は同じ操作。同じ鍵だけが、文を開く。オフライン・端末から出ない。">
+<meta name="theme-color" content="#1a1410">
+<title>謎 — the Enigma, rebuilt from nothing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>謎 <span class="en">/ nazo</span></h1>
+  <p class="sub">打てば灯る。暗号化と復号は、同じ操作。同じ鍵だけが、文を開く。</p>
+</header>
+
+<main>
+  <section id="rotors" class="rotors" aria-label="ローター"></section>
+
+  <section class="tapes">
+    <div class="tape"><span class="lbl">入力</span><output id="in"></output></div>
+    <div class="tape out"><span class="lbl">出力</span><output id="out"></output></div>
+  </section>
+
+  <section id="lamps" class="board lamps" aria-label="ランプ盤"></section>
+  <section id="keys" class="board keys" aria-label="鍵盤"></section>
+
+  <section class="plugs">
+    <h2>プラグボード <span id="plughint" class="hint">二文字を選んでつなぐ</span></h2>
+    <div id="plugboard" class="board plug"></div>
+  </section>
+
+  <nav class="bar">
+    <button id="reset" title="ローターを初期位置へ">位置を戻す</button>
+    <button id="clear" title="テープを消す">テープを消す</button>
+    <button id="random" title="鍵を無作為に">鍵を振る</button>
+    <span class="spacer"></span>
+    <code id="keytext" title="いまの鍵"></code>
+    <button id="share" title="この鍵へのリンクを写す">分かち合う</button>
+  </nav>
+</main>
+
+<footer>
+  <p>ローター I–V・反射器 B/C・リング設定・プラグボード、そして史実の<b>ダブルステッピング</b>まで。
+     どの文字も自分自身には化けない——Enigma の宿命の弱点。鍵： <code>I-II-III.B.AAA.AAA.AB CD</code>。
+     全部この端末の中だけ。</p>
+</footer>
+
+<div id="toast"></div>
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

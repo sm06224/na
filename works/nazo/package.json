@@ -1,0 +1,11 @@
+{
+  "name": "nazo",
+  "version": "1.0.0",
+  "description": "謎 — the Enigma machine, rebuilt from nothing. A faithful, dependency-free recreation of the WWII cipher machine: rotors I–V, reflectors B/C, ring settings, plugboard, and the historically accurate double-stepping anomaly. Encryption and decryption are the same operation (reciprocal), and no letter ever encodes to itself — Enigma's fatal flaw. Verified against published test vectors (I-II-III/B/AAA/AAA: AAAAA → BDZGO). Deterministic: the same key yields the same machine; share a key and only that machine reads the message. Core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "nazo": "nazo.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
