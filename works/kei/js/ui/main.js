@@ -57,7 +57,11 @@ const EXAMPLES = {
 
 100 km/h in m/s
 2000 kcal in kJ
-500 mL + 1.5 L in L`,
+
+# 温度・定数・SI接頭辞
+180 °C in °F
+2 GHz in MHz
+円の面積 = pi * (3 cm)^2 in cm^2`,
 };
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
