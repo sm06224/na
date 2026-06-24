@@ -1,0 +1,11 @@
+{
+  "name": "han",
+  "version": "1.0.0",
+  "description": "反 — Reversi (Othello) with a mind built from nothing. A dependency-free board and a genuine opponent: negamax with alpha-beta pruning, a positional weight map (corners are treasure, the squares beside them are traps), mobility, and an exact endgame solver that reads to the last empty square. No randomness — the same position always yields the same best move. Verifiably strong: it loses to no random player over hundreds of games, and deeper search beats shallower. Core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "han": "han.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

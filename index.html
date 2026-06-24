@@ -82,6 +82,7 @@
   .c-kage:hover { background: linear-gradient(160deg, rgba(255,206,128,.14), rgba(40,28,22,.08)); }
   .c-kei:hover { background: linear-gradient(160deg, rgba(176,106,28,.13), rgba(47,125,110,.06)); }
   .c-nazo:hover { background: linear-gradient(160deg, rgba(200,162,90,.16), rgba(20,16,12,.10)); }
+  .c-han:hover { background: linear-gradient(160deg, rgba(120,220,180,.14), rgba(14,90,68,.10)); }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -91,7 +92,7 @@
   <header>
     <h1>na</h1>
     <p>無から生まれた、小さな作品集</p>
-    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎</div>
+    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎 — 反</div>
   </header>
 
   <div class="works">
@@ -357,6 +358,14 @@
       <p>第二次大戦の暗号機 Enigma を、無から忠実に組み直した。鍵を押すと電流がプラグボード→三つのローター→反射器→ローターを逆順に巡り、ランプが灯る。ローター I–V・反射器 B/C・リング設定・プラグボード、そして史実のダブルステッピングまで。暗号化と復号は同じ操作で、どの文字も自分自身には化けない——Enigma の宿命の弱点。正しさは公開テストベクタが保証する（AAAAA → BDZGO）。鍵（#k=）を分かち合えば、同じ機械だけが文を開く。証（現代のハッシュ）と対をなす歴史の暗号。CLI でもそのまま回る。</p>
       <div class="tags"><span class="tag">enigma</span><span class="tag">cipher</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
       <span class="go">機械を回す →</span>
+    </a>
+
+    <a class="card c-han" href="works/han/">
+      <span class="glyph">反</span>
+      <h2>反 <span class="en">/ han</span></h2>
+      <p>リバーシ（オセロ）——ただの盤ではなく、無から立ち上がる「考える相手」つき。ネガマックス＋α-β枝刈りで先を読み、位置評価（隅は宝、隅の隣は罠）と機動力を量り、終盤は最後の一マスまで読み切る。乱数なし＝同じ局面では同じ最善手。強さは誇らず数で示す——ランダム相手に何百局戦わせても負けなし、深く読むほど強い。あなたは黒で打ち、打てる場所に印が出る。手番も強さも選べる。算（無から作った計算機）が機械なら、これは無から作った盤上の知性。CLI でもそのまま戦う。</p>
+      <div class="tags"><span class="tag">othello</span><span class="tag">alpha-beta AI</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
+      <span class="go">対局する →</span>
     </a>
   </div>
 

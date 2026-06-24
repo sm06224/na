@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反**
 
 </div>
 
@@ -322,6 +322,16 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 戻る歴史の暗号。CLI（`node nazo.js`）でもそのまま回り、コアは **DOM もネットワークも知らず**、
 ベクタ一致・可逆・自己無写像・ダブルステッピング・鍵の往復まで**ヘッドレス検証**・**10 tests**。
 
+### 反 [反 `han`](./works/han/) — *Reversi, a mind built from nothing*
+**リバーシ（オセロ）**——ただの盤ではなく、**無から立ち上がる「考える相手」**つき。`算`(無から作った計算機)が
+機械なら、こちらは**無から作った盤上の知性**。**ネガマックス＋α-β枝刈り**で先を読み、**位置評価**（隅は宝 +120、
+隅の隣は罠 −40）と**機動力**を量り、**終盤は最後の一マスまで読み切って**石差を最大化する。**乱数を使わない**から、
+同じ局面からはいつも同じ最善手（決定的）。強さは誇らず**数で示す**——`node han.js --bench` でランダムに何百局
+戦わせても**負けなし**、深く読むほど強い。あなたは黒で打ち、打てる場所に印が出る。手番も強さ（やさしい／ふつう／
+つよい／鬼）も選べる。`陣`(種から生まれる戦記)・`窟`(ローグライク)と続く盤上の系譜の、対面の一局。コアは
+**DOM もネットワークも知らず**、規則・勝者・対ランダム無敗・深い読みほど強い・終盤の読み切りまで
+**ヘッドレス検証**・**10 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -505,10 +515,16 @@ na/
 │  │  ├─ js/core/kei.js     字句 → 構文(Pratt) → 評価 ・ run(ノート)
 │  │  ├─ js/ui/main.js      左に式・右に答え（行は一対一でそろう）
 │  │  └─ tests/
-│  └─ nazo/                 謎 謎（Enigma を無から・戦中の暗号機）
-│     ├─ index.html · style.css · nazo.js（CLI）
-│     ├─ js/core/enigma.js  配線・ステッピング・反射・プラグ・鍵の畳み込み
-│     ├─ js/ui/main.js      打鍵→ローターが進み、ランプが灯り、テープに積もる
+│  ├─ nazo/                 謎 謎（Enigma を無から・戦中の暗号機）
+│  │  ├─ index.html · style.css · nazo.js（CLI）
+│  │  ├─ js/core/enigma.js  配線・ステッピング・反射・プラグ・鍵の畳み込み
+│  │  ├─ js/ui/main.js      打鍵→ローターが進み、ランプが灯り、テープに積もる
+│  │  └─ tests/
+│  └─ han/                  反 反（リバーシ・無から立ち上がる考える相手）
+│     ├─ index.html · style.css · han.js（CLI）
+│     ├─ js/core/reversi.js 盤・合法手・反転・パス・終局・勝者
+│     ├─ js/core/ai.js      ネガマックス＋α-β・位置評価・機動力・終盤の読み切り
+│     ├─ js/ui/main.js      置く→相手が考えて返す・候補表示・手番と強さ
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

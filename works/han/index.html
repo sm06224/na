@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="反 (han) — リバーシ（オセロ）。無から立ち上がる「考える相手」と打つ。α-β探索・位置評価・終盤の完全読み。対ランダムは負けなし。盤も相手も、依存ゼロ。端末から出ない。">
+<meta name="theme-color" content="#0c3b2e">
+<title>反 — Reversi, a mind built from nothing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>反 <span class="en">/ han</span></h1>
+  <p class="sub">無から立ち上がる、考える相手。隅を制する者が勝つ。</p>
+</header>
+
+<main>
+  <div class="scorebar">
+    <div class="who black" id="s-black"><span class="disc"></span><b id="n-black">2</b></div>
+    <div class="status" id="status">あなたの番</div>
+    <div class="who white" id="s-white"><b id="n-white">2</b><span class="disc"></span></div>
+  </div>
+
+  <div id="board" class="board" aria-label="盤"></div>
+
+  <nav class="bar">
+    <label>強さ
+      <select id="level">
+        <option value="1">やさしい</option>
+        <option value="3" selected>ふつう</option>
+        <option value="5">つよい</option>
+        <option value="7">鬼</option>
+      </select>
+    </label>
+    <label>手番
+      <select id="side">
+        <option value="1" selected>● 黒（先手）</option>
+        <option value="2">○ 白（後手）</option>
+      </select>
+    </label>
+    <button id="newgame">新しい対局</button>
+    <button id="hint" class="toggle on">候補を表示</button>
+  </nav>
+</main>
+
+<footer>
+  <p>相手は <b>α-β探索</b>＋位置評価で読み、終盤は最後まで読み切る。乱数なし——同じ局面では同じ最善手。
+     隅は宝、隅の隣は罠。AI を <code>node han.js --bench</code> でいじめても、ランダムには負けない。
+     対局はこの端末の中だけ。</p>
+</footer>
+
+<div id="toast"></div>
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
