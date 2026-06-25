@@ -83,6 +83,7 @@
   .c-kei:hover { background: linear-gradient(160deg, rgba(176,106,28,.13), rgba(47,125,110,.06)); }
   .c-nazo:hover { background: linear-gradient(160deg, rgba(200,162,90,.16), rgba(20,16,12,.10)); }
   .c-han:hover { background: linear-gradient(160deg, rgba(120,220,180,.14), rgba(14,90,68,.10)); }
+  .c-kyo:hover { background: linear-gradient(160deg, rgba(183,155,255,.16), rgba(216,201,138,.07)); }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -92,7 +93,7 @@
   <header>
     <h1>na</h1>
     <p>無から生まれた、小さな作品集</p>
-    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎 — 反</div>
+    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎 — 反 — 興</div>
   </header>
 
   <div class="works">
@@ -366,6 +367,14 @@
       <p>リバーシ（オセロ）——ただの盤ではなく、無から立ち上がる「考える相手」つき。ネガマックス＋α-β枝刈りで先を読み、位置評価（隅は宝、隅の隣は罠）と機動力を量り、終盤は最後の一マスまで読み切る。乱数なし＝同じ局面では同じ最善手。強さは誇らず数で示す——ランダム相手に何百局戦わせても負けなし、深く読むほど強い。あなたは黒で打ち、打てる場所に印が出る。手番も強さも選べる。算（無から作った計算機）が機械なら、これは無から作った盤上の知性。CLI でもそのまま戦う。</p>
       <div class="tags"><span class="tag">othello</span><span class="tag">alpha-beta AI</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
       <span class="go">対局する →</span>
+    </a>
+
+    <a class="card c-kyo" href="works/kyo/">
+      <span class="glyph">興</span>
+      <h2>興 <span class="en">/ kyo</span></h2>
+      <p>ゲームそのものを生み出す装置——設計者がいない。種ひとつから抽象ボードゲームの規則（盤の大きさ・置き方・勝ち方）が生まれ、ひとつの汎用エンジンがどの規則でも合法手・着手・終局を同じ手で扱い、ひとつの汎用 AI（α-β）がどれでも指す。装置は規則を何百局も自己対戦させ、自分で問う——技量は要るか（巧い手はランダムに勝てるか）、決着するか、先手が勝ちすぎないか、ほどよい長さか。詰まらない規則は捨て、残ったものを面白い順に並べ、名と遊び方を与える。正しさは完全解析済みの三目並べで固定。あなたは発掘された一作を先手で打てる。CLI でも発掘の様子が見える。</p>
+      <div class="tags"><span class="tag">game synthesis</span><span class="tag">generic engine</span><span class="tag">self-judged fun</span><span class="tag">offline</span></div>
+      <span class="go">発掘する →</span>
     </a>
   </div>
 

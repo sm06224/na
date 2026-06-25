@@ -1,0 +1,11 @@
+{
+  "name": "kyo",
+  "version": "1.0.0",
+  "description": "興 — games that invent themselves, and judge their own fun. From a seed, a ruleset for an abstract board game is born (board size, how you place, how you win). A generic engine plays any ruleset; a generic alpha-beta AI plays it hundreds of times against itself and against random, and measures whether the game is any good: does skill matter (can a thinking player beat a random one?), does it resolve, is it fair, is it the right length? Dull rules are discarded; promising ones are given a name and a rulebook. A game designer with no designer. Deterministic; the core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "kyo": "kyo.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
