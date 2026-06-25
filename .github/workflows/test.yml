@@ -408,6 +408,18 @@ jobs:
         working-directory: works/han
         run: node --test tests/*.test.js
 
+  kyo:
+    name: kyo — games that invent themselves, and judge their own fun
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Anchor the engine on solved tic-tac-toe, then forge rulesets and score their fun headless
+        working-directory: works/kyo
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
