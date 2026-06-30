@@ -420,6 +420,18 @@ jobs:
         working-directory: works/kyo
         run: node --test tests/*.test.js
 
+  hakana:
+    name: hakana — the fleeting colours of a thin film
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Prove the colour science and thin-film interference from white point to black film headless
+        working-directory: works/hakana
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest
