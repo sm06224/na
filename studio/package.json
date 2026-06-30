@@ -1,0 +1,12 @@
+{
+  "name": "studio",
+  "version": "0.1.0",
+  "description": "studio — a tiny DSL + interactive layout tool for Gantt charts and architecture diagrams. Write an easy line-based DSL; drag the result; the layout is written back into an @layout trailer so the semantic part stays clean for the next AI. Each diagram builds to one self-contained, zero-dependency HTML.",
+  "type": "module",
+  "private": true,
+  "bin": { "studio": "build.js" },
+  "scripts": {
+    "build": "node build.js --all",
+    "test": "node --test tests/*.test.js"
+  }
+}

@@ -444,6 +444,18 @@ jobs:
         working-directory: works/madara
         run: node --test tests/*.test.js
 
+  studio:
+    name: studio — diagram DSL + layout tool
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Parse the DSL, resolve a schedule, auto-layer a graph and prove the layout round-trips headless
+        working-directory: studio
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

@@ -1,0 +1,16 @@
+kind gantt
+title 製品リリース計画
+start 2026-07-01
+today 2026-07-16
+
+section 設計
+  task req    "要件定義"     at 2026-07-01 for 5d done 100
+  task design "基本設計"     after req for 7d done 60
+section 実装
+  task api    "API 実装"     after design for 10d done 30
+  task ui     "UI 実装"      after design for 12d done 20
+  task infra  "基盤構築"     at 2026-07-08 for 9d done 50
+section 検証と出荷
+  task test   "結合テスト"   after api ui for 6d
+  task uat    "受け入れ試験" after test for 4d
+  milestone ship "出荷"      after uat
