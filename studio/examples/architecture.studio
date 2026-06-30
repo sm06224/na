@@ -1,0 +1,29 @@
+kind arch
+title サービス機能構成図
+
+node web    "Web フロント"
+node mobile "モバイル"
+node gw     "API ゲートウェイ"
+node auth   "認証サービス"
+node order  "注文サービス"
+node pay    "決済サービス"
+node cat    "カタログ"
+node db     "主データベース"
+node cache  "キャッシュ"
+node queue  "メッセージキュー"
+
+edge web -> gw
+edge mobile -> gw
+edge gw -> auth
+edge gw -> order
+edge gw -> cat
+edge order -> pay
+edge order -> db
+edge order -> queue
+edge cat -> cache
+edge cat -> db
+edge auth -> db
+
+group "クライアント" { web mobile }
+group "中核サービス" { auth order pay cat }
+group "データ基盤" { db cache queue }

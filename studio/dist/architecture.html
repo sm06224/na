@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サービス機能構成図 — studio</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { height: 100vh; display: flex; flex-direction: column; background: #0b0e14; color: #e7ebf4;
+    font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; overflow: hidden; }
+  header { display: flex; align-items: center; gap: .8rem; padding: .55rem .9rem; border-bottom: 1px solid #1c2230; background: #0e121b; }
+  header h1 { font-size: .92rem; font-weight: 600; letter-spacing: .02em; }
+  header .sp { flex: 1; }
+  #status { font-size: .72rem; color: #8a93a6; }
+  #status[data-bad="1"] { color: #f5a36a; }
+  button { font: inherit; font-size: .76rem; color: #cfd6e6; background: #18202e; border: 1px solid #2a3344;
+    padding: .34em 1em; border-radius: 7px; cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { background: #20293a; border-color: #3a4660; }
+  main { flex: 1; display: flex; min-height: 0; }
+  #canvas { flex: 1; overflow: auto; padding: 18px; background:
+    radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14); }
+  #canvas svg { display: block; }
+  #panel { width: 380px; border-left: 1px solid #1c2230; display: flex; flex-direction: column; background: #0c1119; }
+  #panel.hidden { display: none; }
+  #panel .lbl { font-size: .68rem; letter-spacing: .12em; color: #6b748a; padding: .5rem .7rem .2rem; text-transform: uppercase; }
+  #dsl { flex: 1; resize: none; border: 0; outline: none; background: transparent; color: #cdd5e6;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; line-height: 1.65; padding: .3rem .8rem .8rem; tab-size: 2; }
+  #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #18202e;
+    border: 1px solid #2a3344; padding: .5em 1.1em; border-radius: 999px; font-size: .76rem; opacity: 0; transition: opacity .4s; pointer-events: none; }
+  #toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>サービス機能構成図</h1>
+  <span id="status"></span>
+  <span class="sp"></span>
+  <button id="bCopy">DSL をコピー</button>
+  <button id="bDown">.studio を保存</button>
+  <button id="bReset">元に戻す</button>
+  <button id="bPanel">パネル ◧</button>
+</header>
+<main>
+  <div id="canvas"></div>
+  <div id="panel">
+    <div class="lbl">DSL — 書けば図に、図を動かせば書き戻る</div>
+    <textarea id="dsl" spellcheck="false"></textarea>
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+const SOURCE = "kind arch\ntitle サービス機能構成図\n\nnode web    \"Web フロント\"\nnode mobile \"モバイル\"\nnode gw     \"API ゲートウェイ\"\nnode auth   \"認証サービス\"\nnode order  \"注文サービス\"\nnode pay    \"決済サービス\"\nnode cat    \"カタログ\"\nnode db     \"主データベース\"\nnode cache  \"キャッシュ\"\nnode queue  \"メッセージキュー\"\n\nedge web -> gw\nedge mobile -> gw\nedge gw -> auth\nedge gw -> order\nedge gw -> cat\nedge order -> pay\nedge order -> db\nedge order -> queue\nedge cat -> cache\nedge cat -> db\nedge auth -> db\n\ngroup \"クライアント\" { web mobile }\ngroup \"中核サービス\" { auth order pay cat }\ngroup \"データ基盤\" { db cache queue }\n";
+/* ============================================================
+   日付のちいさな道具 — 依存ゼロ、UTC 固定で時差の罠を避ける。
+   ガントは「日」を単位に動く。ここはその物差し。
+   ============================================================ */
+
+// "2026-07-01" → UTC ミリ秒（不正なら null）。
+function toMs(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s).trim());
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return Date.UTC(y, mo - 1, d);
+}
+
+const DAY = 86400000;
+
+// 2 つの日付の差（日数, b - a）。
+function diffDays(a, b) {
+  const ma = toMs(a), mb = toMs(b);
+  if (ma == null || mb == null) return null;
+  return Math.round((mb - ma) / DAY);
+}
+
+// 日付に n 日足す → "YYYY-MM-DD"。
+function addDays(s, n) {
+  const ms = toMs(s);
+  if (ms == null) return null;
+  const d = new Date(ms + n * DAY);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
+}
+
+// 日付の曜日（0=日 .. 6=土）。週末の薄帯を引くため。
+function weekday(s) {
+  const ms = toMs(s);
+  if (ms == null) return null;
+  return new Date(ms).getUTCDay();
+}
+
+// "5d" / "5" / 5 → 日数（既定は日）。"2w" は週。
+function parseDur(tok) {
+  if (typeof tok === 'number') return tok;
+  const m = /^(\d+(?:\.\d+)?)\s*([dw])?$/.exec(String(tok).trim());
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  return m[2] === 'w' ? n * 7 : n;
+}
+
+
+/* ============================================================
+   studio DSL のパーサ — 行指向・寛容・依存ゼロ。
+   設計の肝：「意味部」と「@layout トレイラ」を分ける。
+     ・意味部 … 人と AI が書く。何があり、何に依存するか。
+     ・@layout … エディタが書く。ドラッグした位置・順序。
+   こうすると、ドラッグしても意味部は汚れず、AI の差分がきれいに保たれる。
+
+   共通:
+     kind  gantt|arch
+     title  …
+     <key>  <value>        # メタ（start / today など）
+   ガント:
+     section "名前"
+     task <id> "ラベル" [at YYYY-MM-DD] [after <id…>] [for 5d] [done 60]
+     milestone <id> "ラベル" [at …|after …]
+   アーキ図:
+     node <id> "ラベル"
+     edge <id> -> <id>
+     group "名前" { <id> <id> … }
+   トレイラ:
+     @layout
+       pos <id> <x> <y>     # arch：ノードの座標
+       order <id> <id> …    # gantt：行の並び
+       at <id> YYYY-MM-DD    # gantt：手で動かした開始日
+   ============================================================ */
+
+// 空白で割りつつ "…" のラベルは 1 トークンに保つ。# 以降は注釈。
+function tokenize(line) {
+  const out = [];
+  let i = 0, n = line.length;
+  while (i < n) {
+    const c = line[i];
+    if (c === ' ' || c === '\t') { i++; continue; }
+    if (c === '#') break;                                  // 行注釈
+    if (c === '"') {
+      let j = i + 1, s = '';
+      while (j < n && line[j] !== '"') { s += line[j]; j++; }
+      out.push({ q: true, v: s }); i = j + 1; continue;
+    }
+    let j = i, s = '';
+    while (j < n && line[j] !== ' ' && line[j] !== '\t' && line[j] !== '#') { s += line[j]; j++; }
+    out.push({ q: false, v: s }); i = j;
+  }
+  return out;
+}
+
+const KW = new Set(['at', 'after', 'for', 'done']);
+
+function parseTask(type, toks, ln, errors) {
+  // toks[0] は task/milestone を除いた残り。 id [label] [timing…]
+  if (!toks.length) { errors.push(`L${ln}: ${type} に id がありません`); return null; }
+  const id = toks[0].v;
+  let k = 1, label = id;
+  if (toks[k] && toks[k].q) { label = toks[k].v; k++; }
+  const item = { type, id, label, after: [], dur: type === 'milestone' ? 0 : 1, done: 0, at: null };
+  while (k < toks.length) {
+    const t = toks[k].v;
+    if (t === 'at') { item.at = toks[++k]?.v ?? null; k++; }
+    else if (t === 'for') { item.dur = parseDur(toks[++k]?.v) ?? item.dur; k++; }
+    else if (t === 'done') { item.done = Math.max(0, Math.min(100, parseInt(toks[++k]?.v, 10) || 0)); k++; }
+    else if (t === 'after') {
+      k++;
+      while (k < toks.length && !KW.has(toks[k].v)) { item.after.push(toks[k].v); k++; }
+    } else { errors.push(`L${ln}: 不明な語「${t}」`); k++; }
+  }
+  return item;
+}
+
+function parse(text) {
+  const model = {
+    kind: null, meta: {}, items: [], edges: [], groups: [],
+    order: [], layout: { pos: {}, order: [], at: {} }, errors: [],
+  };
+  const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  let section = null, inLayout = false;
+
+  for (let li = 0; li < lines.length; li++) {
+    const raw = lines[li], ln = li + 1;
+    const toks = tokenize(raw);
+    if (!toks.length) continue;
+    const head = toks[0].v;
+
+    if (head === '@layout') { inLayout = true; continue; }
+
+    if (inLayout) {
+      const a = toks.map((t) => t.v);
+      if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
+      else if (a[0] === 'order') model.layout.order = a.slice(1);
+      else if (a[0] === 'at' && a.length >= 3) model.layout.at[a[1]] = a[2];
+      else model.errors.push(`L${ln}: @layout 内の不明な行「${a[0]}」`);
+      continue;
+    }
+
+    switch (head) {
+      case 'kind': model.kind = toks[1]?.v ?? null; break;
+      case 'title': model.meta.title = toks.slice(1).map((t) => t.v).join(' '); break;
+      case 'section': section = toks[1]?.v ?? null; break;
+      case 'task': case 'milestone': {
+        const it = parseTask(head, toks.slice(1), ln, model.errors);
+        if (it) { it.section = section; model.items.push(it); model.order.push(it.id); }
+        break;
+      }
+      case 'node': {
+        if (!toks[1]) { model.errors.push(`L${ln}: node に id がありません`); break; }
+        const id = toks[1].v, label = (toks[2] && toks[2].q) ? toks[2].v : id;
+        model.items.push({ type: 'node', id, label }); model.order.push(id);
+        break;
+      }
+      case 'edge': {
+        // edge a -> b  （-> でつなぐ。3 つ以上の連鎖も許す）
+        const ids = toks.slice(1).map((t) => t.v).filter((v) => v !== '->' && v !== '-');
+        for (let p = 0; p + 1 < ids.length; p++) model.edges.push({ from: ids[p], to: ids[p + 1] });
+        if (ids.length < 2) model.errors.push(`L${ln}: edge は「a -> b」の形で`);
+        break;
+      }
+      case 'group': {
+        const name = (toks[1] && toks[1].q) ? toks[1].v : (toks[1]?.v ?? '');
+        const ids = toks.slice(2).map((t) => t.v).filter((v) => v !== '{' && v !== '}');
+        model.groups.push({ name, ids });
+        break;
+      }
+      default:
+        // メタ行（key value…）。kind 既知のうちだけ受ける。
+        model.meta[head] = toks.slice(1).map((t) => t.v).join(' ');
+    }
+  }
+
+  if (!model.kind) model.errors.push('kind（gantt か arch）が宣言されていません');
+  return model;
+}
+
+
+/* ============================================================
+   レイアウト計算 — モデル＋（あれば）@layout から座標を出す。純粋・決定的。
+   ガント：日付を解決し、タイムライン上の棒に。
+   アーキ：@pos があればそれを、なければ依存から自動で段組み（最長経路）。
+   DOM もキャンバスも知らない。返すのは数だけ。UI はそれを SVG に写す。
+   ============================================================ */
+
+const GANTT = { PAD: 16, LABEL_W: 168, AXIS_H: 44, ROW_H: 32, SEC_H: 26, DAY_W: 26, BAR_H: 18 };
+const ARCH = { PAD: 28, NODE_H: 46, COL_GAP: 64, ROW_GAP: 26, GROUP_PAD: 16, GROUP_HEAD: 22 };
+
+// ---- ガント ---------------------------------------------------------------
+
+function ganttBase(model) {
+  if (model.meta.start) return model.meta.start;
+  let min = null;
+  for (const it of model.items) {
+    const d = model.layout.at[it.id] || it.at;
+    if (d && (min === null || diffDays(d, min) > 0)) min = d;
+  }
+  return min || '2026-01-01';
+}
+
+function layoutGantt(model) {
+  const G = GANTT, base = ganttBase(model), errors = [];
+  const byId = new Map(model.items.map((it) => [it.id, it]));
+  const startDay = {};                          // id → 開始日（base からの日数）
+
+  // 開始日を解決する：明示日 > after の依存終了 > 0。依存が解けるまで反復。
+  const explicit = (it) => model.layout.at[it.id] || it.at || null;
+  let changed = true, guard = 0;
+  while (changed && guard++ <= model.items.length + 1) {
+    changed = false;
+    for (const it of model.items) {
+      if (it.id in startDay) continue;
+      const ex = explicit(it);
+      if (ex) {
+        const d = diffDays(base, ex);
+        if (d == null) { errors.push(`task ${it.id}: 日付が不正「${ex}」`); startDay[it.id] = 0; }
+        else startDay[it.id] = d;
+        changed = true;
+      } else if (it.after.length === 0) { startDay[it.id] = 0; changed = true; }
+      else if (it.after.every((d) => d in startDay)) {
+        let s = 0;
+        for (const dep of it.after) { const e = startDay[dep] + (byId.get(dep)?.dur ?? 0); if (e > s) s = e; }
+        startDay[it.id] = s; changed = true;
+      }
+    }
+  }
+  for (const it of model.items) if (!(it.id in startDay)) {
+    startDay[it.id] = 0; errors.push(`task ${it.id}: 依存が解決できません（循環か未定義）`);
+  }
+
+  // 行の並び：@layout order があればそれを尊重し、漏れは元の順で補う。
+  const ordSet = new Set(model.layout.order);
+  const order = model.layout.order.filter((id) => byId.has(id))
+    .concat(model.order.filter((id) => !ordSet.has(id)));
+
+  // 縦に並べる（セクション見出しを挟む）。
+  const bars = [], sections = [];
+  let y = G.AXIS_H + G.PAD, curSec = undefined;
+  for (const id of order) {
+    const it = byId.get(id); if (!it) continue;
+    if (it.section !== curSec) {
+      curSec = it.section;
+      if (curSec) { sections.push({ name: curSec, y: y + 4 }); y += G.SEC_H; }
+    }
+    const sd = startDay[id], dur = it.dur;
+    bars.push({
+      id, label: it.label, type: it.type, done: it.done, section: it.section,
+      x: G.LABEL_W + sd * G.DAY_W, y: y + (G.ROW_H - G.BAR_H) / 2,
+      w: Math.max(it.type === 'milestone' ? G.BAR_H : 4, dur * G.DAY_W), h: G.BAR_H,
+      rowY: y, startDay: sd, dur, startDate: addDays(base, sd), endDate: addDays(base, sd + dur),
+    });
+    y += G.ROW_H;
+  }
+
+  // 期間の総日数（軸の幅）。
+  let maxDay = 1;
+  for (const b of bars) maxDay = Math.max(maxDay, b.startDay + b.dur);
+  maxDay += 2;
+  const width = G.LABEL_W + maxDay * G.DAY_W + G.PAD;
+  const height = Math.max(y + G.PAD, G.AXIS_H + 80);
+
+  // 週末の薄帯＋日付目盛り。
+  const days = [];
+  for (let d = 0; d <= maxDay; d++) {
+    const date = addDays(base, d);
+    days.push({ d, date, x: G.LABEL_W + d * G.DAY_W, weekend: [0, 6].includes(weekday(date)) });
+  }
+  const today = model.meta.today ? { x: G.LABEL_W + diffDays(base, model.meta.today) * G.DAY_W, date: model.meta.today } : null;
+
+  return { kind: 'gantt', base, dayW: G.DAY_W, labelW: G.LABEL_W, axisH: G.AXIS_H, rowH: G.ROW_H,
+    bars, sections, days, today, width, height, errors };
+}
+
+// ---- アーキ図 --------------------------------------------------------------
+
+function nodeSize(label) {
+  // 日本語まじりをざっくり見積もる（全角を広めに）。
+  let w = 0; for (const ch of label) w += (ch.charCodeAt(0) > 0x2e7f ? 16 : 9);
+  return { w: Math.max(84, Math.min(260, w + 28)), h: ARCH.NODE_H };
+}
+
+// 中心 A→中心 B の線を、矩形 A・B の境界でクリップする。
+function clip(a, b) {
+  const acx = a.x + a.w / 2, acy = a.y + a.h / 2, bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
+  const edge = (r, cx, cy, tx, ty) => {
+    const dx = tx - cx, dy = ty - cy;
+    if (dx === 0 && dy === 0) return [cx, cy];
+    const sx = dx === 0 ? Infinity : (r.w / 2) / Math.abs(dx);
+    const sy = dy === 0 ? Infinity : (r.h / 2) / Math.abs(dy);
+    const s = Math.min(sx, sy);
+    return [cx + dx * s, cy + dy * s];
+  };
+  return { from: edge(a, acx, acy, bcx, bcy), to: edge(b, bcx, bcy, acx, acy) };
+}
+
+function layoutArch(model) {
+  const nodes = model.items.filter((it) => it.type === 'node');
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const preds = new Map(nodes.map((n) => [n.id, []]));
+  for (const e of model.edges) if (byId.has(e.from) && byId.has(e.to)) preds.get(e.to).push(e.from);
+
+  // 段（depth）＝ソースからの最長経路。循環は後退辺を 0 扱いで切る。
+  const depth = {}, visiting = new Set();
+  const calc = (id) => {
+    if (id in depth) return depth[id];
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    let d = 0;
+    for (const p of preds.get(id) || []) d = Math.max(d, calc(p) + 1);
+    visiting.delete(id); depth[id] = d; return d;
+  };
+  for (const n of nodes) calc(n.id);
+
+  // 段ごとに列、列内は元の順で積む。
+  const cols = {};
+  for (const n of nodes) (cols[depth[n.id]] ||= []).push(n.id);
+
+  const placed = new Map();
+  const colKeys = Object.keys(cols).map(Number).sort((a, b) => a - b);
+  let x = ARCH.PAD;
+  const colW = {};
+  for (const c of colKeys) { let w = 84; for (const id of cols[c]) w = Math.max(w, nodeSize(byId.get(id).label).w); colW[c] = w; }
+  for (const c of colKeys) {
+    let yy = ARCH.PAD + ARCH.GROUP_HEAD;
+    for (const id of cols[c]) {
+      const sz = nodeSize(byId.get(id).label);
+      placed.set(id, { id, label: byId.get(id).label, x, y: yy, w: colW[c], h: sz.h });
+      yy += sz.h + ARCH.ROW_GAP;
+    }
+    x += colW[c] + ARCH.COL_GAP;
+  }
+
+  // @layout pos があれば上書き（手で動かした位置）。
+  for (const n of nodes) {
+    const p = model.layout.pos[n.id];
+    if (p) { const r = placed.get(n.id); r.x = p[0]; r.y = p[1]; }
+  }
+
+  // グループ枠：メンバーの外接矩形＋余白。
+  const groups = [];
+  for (const g of model.groups) {
+    const members = g.ids.map((id) => placed.get(id)).filter(Boolean);
+    if (!members.length) continue;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const m of members) { x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + m.w); y1 = Math.max(y1, m.y + m.h); }
+    groups.push({ name: g.name, x: x0 - ARCH.GROUP_PAD, y: y0 - ARCH.GROUP_PAD - ARCH.GROUP_HEAD,
+      w: (x1 - x0) + ARCH.GROUP_PAD * 2, h: (y1 - y0) + ARCH.GROUP_PAD * 2 + ARCH.GROUP_HEAD });
+  }
+
+  const edges = [];
+  for (const e of model.edges) {
+    const a = placed.get(e.from), b = placed.get(e.to);
+    if (a && b) { const c = clip(a, b); edges.push({ from: e.from, to: e.to, x1: c.from[0], y1: c.from[1], x2: c.to[0], y2: c.to[1] }); }
+  }
+
+  let width = ARCH.PAD, height = ARCH.PAD;
+  for (const r of placed.values()) { width = Math.max(width, r.x + r.w); height = Math.max(height, r.y + r.h); }
+  for (const g of groups) { width = Math.max(width, g.x + g.w); height = Math.max(height, g.y + g.h); }
+  return { kind: 'arch', nodes: [...placed.values()], edges, groups, width: width + ARCH.PAD, height: height + ARCH.PAD, errors: [] };
+}
+
+// 種別で振り分ける入口。
+function layout(model) {
+  return model.kind === 'arch' ? layoutArch(model) : layoutGantt(model);
+}
+
+
+/* ============================================================
+   モデル → DSL テキスト（往復の戻り）。
+   意味部はソースの items/edges/groups からそのまま書き、
+   ドラッグの結果（位置・順序・手動開始日）は @layout トレイラだけに書く。
+   だから人/AI が書いた意味は崩れず、エディタは @layout だけを更新する。
+   parse(serialize(model)) が安定することをテストが保証する。
+   ============================================================ */
+
+const q = (s) => `"${String(s).replace(/"/g, '')}"`;
+const num = (n) => (Math.round(n * 100) / 100).toString();
+
+function metaLines(model) {
+  const out = [];
+  if (model.meta.title) out.push(`title ${model.meta.title}`);
+  for (const k of ['start', 'today']) if (model.meta[k]) out.push(`${k} ${model.meta[k]}`);
+  for (const k of Object.keys(model.meta)) if (!['title', 'start', 'today'].includes(k)) out.push(`${k} ${model.meta[k]}`);
+  return out;
+}
+
+function ganttBody(model) {
+  const out = [];
+  let curSec;
+  for (const id of model.order) {
+    const it = model.items.find((x) => x.id === id);
+    if (!it) continue;
+    if (it.section !== curSec) { curSec = it.section; if (curSec) out.push('', `section ${q(curSec)}`); }
+    const parts = [it.type, it.id, q(it.label)];
+    if (it.at) parts.push('at', it.at);
+    else if (it.after.length) parts.push('after', ...it.after);
+    if (it.type !== 'milestone') parts.push('for', `${num(it.dur)}d`);
+    if (it.done) parts.push('done', String(it.done));
+    out.push('  ' + parts.join(' '));
+  }
+  return out;
+}
+
+function archBody(model) {
+  const out = [];
+  for (const id of model.order) {
+    const it = model.items.find((x) => x.id === id);
+    if (it && it.type === 'node') out.push(`node ${it.id} ${q(it.label)}`);
+  }
+  if (model.edges.length) out.push('');
+  for (const e of model.edges) out.push(`edge ${e.from} -> ${e.to}`);
+  for (const g of model.groups) out.push(`group ${q(g.name)} { ${g.ids.join(' ')} }`);
+  return out;
+}
+
+function layoutTrailer(model) {
+  const L = model.layout, out = [];
+  if (model.kind === 'arch') {
+    for (const id of model.order) if (L.pos[id]) out.push(`  pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
+  } else {
+    if (L.order && L.order.length) out.push(`  order ${L.order.join(' ')}`);
+    for (const id of Object.keys(L.at)) out.push(`  at ${id} ${L.at[id]}`);
+  }
+  return out.length ? ['', '@layout', ...out] : [];
+}
+
+function serialize(model) {
+  const head = [`kind ${model.kind}`, ...metaLines(model)];
+  const body = model.kind === 'arch' ? archBody(model) : ganttBody(model);
+  return [...head, '', ...body, ...layoutTrailer(model)].join('\n') + '\n';
+}
+
+
+/* ============================================================
+   描画 — モデル＋レイアウト → SVG 文字列。純粋（DOM を触らない）。
+   UI はこの文字列を innerHTML に流すだけ。ドラッグのたびに呼び直して描き替える。
+   各要素に data-id を付け、ui/interact.js がつかんで動かす。
+   ============================================================ */
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const HUES = ['#6aa9ff', '#7ad1b0', '#f5b86a', '#d68ad6', '#f57a8a', '#8ad1f5', '#b8a6ff'];
+const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
+
+const DEFS = `<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/>
+  </marker>
+</defs>`;
+
+// ---- ガント ---------------------------------------------------------------
+
+function drawGantt(model, L) {
+  const secIndex = new Map(); let si = -1, last;
+  for (const b of L.bars) { if (b.section !== last) { last = b.section; si++; } secIndex.set(b.id, b.section ? si : 0); }
+  const parts = [];
+
+  // 週末の薄帯。
+  for (const d of L.days) if (d.weekend)
+    parts.push(`<rect x="${d.x}" y="${L.axisH}" width="${L.dayW}" height="${L.height - L.axisH}" fill="#ffffff" opacity="0.03"/>`);
+  // 縦の日付グリッド＋目盛り（週頭にラベル）。
+  for (const d of L.days) {
+    parts.push(`<line x1="${d.x}" y1="${L.axisH}" x2="${d.x}" y2="${L.height}" stroke="#ffffff" stroke-opacity="0.05"/>`);
+    if (d.d % 7 === 0) parts.push(`<text x="${d.x + 3}" y="${L.axisH - 14}" fill="#8a93a6" font-size="10">${esc(d.date.slice(5))}</text>`);
+  }
+  if (L.today) parts.push(
+    `<line x1="${L.today.x}" y1="${L.axisH - 6}" x2="${L.today.x}" y2="${L.height}" stroke="#f57a8a" stroke-width="1.5" stroke-dasharray="3 3"/>`,
+    `<text x="${L.today.x + 4}" y="${L.axisH - 2}" fill="#f57a8a" font-size="10">today</text>`);
+
+  // 依存のうすい結線（前タスクの終わり → 後タスクの始まり）。
+  const byId = new Map(L.bars.map((b) => [b.id, b]));
+  for (const b of L.bars) {
+    const it = model.items.find((x) => x.id === b.id);
+    for (const dep of (it?.after || [])) {
+      const a = byId.get(dep); if (!a) continue;
+      const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2;
+      parts.push(`<path d="M${x1},${y1} C${x1 + 12},${y1} ${x2 - 12},${y2} ${x2},${y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.45" marker-end="url(#arrow)"/>`);
+    }
+  }
+
+  // セクション見出し。
+  for (const s of L.sections)
+    parts.push(`<text x="8" y="${s.y + 14}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(s.name)}</text>`);
+
+  // 行ラベル＋棒。
+  for (const b of L.bars) {
+    const hue = hueOf(secIndex.get(b.id));
+    parts.push(`<text x="8" y="${b.rowY + L.rowH / 2 + 4}" fill="#d7dbe6" font-size="12">${esc(b.label)}</text>`);
+    if (b.type === 'milestone') {
+      const cx = b.x, cy = b.y + b.h / 2, r = b.h / 2;
+      parts.push(`<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab"><path d="M${cx},${cy - r} L${cx + r},${cy} L${cx},${cy + r} L${cx - r},${cy} z" fill="${hue}" stroke="#0b0e14"/></g>`);
+    } else {
+      const done = Math.max(0, Math.min(1, b.done / 100));
+      parts.push(`<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab">`
+        + `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4" fill="${hue}" opacity="0.92"/>`
+        + (done > 0 ? `<rect x="${b.x}" y="${b.y}" width="${b.w * done}" height="${b.h}" rx="4" fill="#0b0e14" opacity="0.28"/>` : '')
+        + `</g>`);
+    }
+  }
+  return wrap(L, parts.join('\n'));
+}
+
+// ---- アーキ図 --------------------------------------------------------------
+
+function drawArch(model, L) {
+  const parts = [];
+  for (const g of L.groups) {
+    parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
+    parts.push(`<text x="${g.x + 12}" y="${g.y + 16}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(g.name)}</text>`);
+  }
+  for (const e of L.edges)
+    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.7" marker-end="url(#arrow)"/>`);
+  L.nodes.forEach((n, i) => {
+    const hue = hueOf(i);
+    parts.push(`<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`
+      + `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9" fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`
+      + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`
+      + `</g>`);
+  });
+  return wrap(L, parts.join('\n'));
+}
+
+function wrap(L, inner) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.ceil(L.width)} ${Math.ceil(L.height)}" `
+    + `width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" font-family="ui-sans-serif,system-ui,sans-serif">`
+    + DEFS + inner + '</svg>';
+}
+
+function draw(model, L) {
+  return L.kind === 'arch' ? drawArch(model, L) : drawGantt(model, L);
+}
+
+
+/* ============================================================
+   グリグリ動かす層（DOM）。純粋コアが出した図を SVG にして、
+   つかんで動かし、その結果を @layout に書き戻し、DSL を更新する。
+     ・アーキ：ノードを 2 次元に自由配置（pos）
+     ・ガント：横ドラッグで開始日を変え（at）、縦ドラッグで行を入れ替える（order）
+   左に図、右に DSL。どちらを変えても、もう一方が追いかける。
+   ============================================================ */
+
+function init({ canvas, dsl, status, source }) {
+  let model, L;
+
+  function render() {
+    L = layout(model);
+    canvas.innerHTML = draw(model, L);
+    const errs = [...(model.errors || []), ...(L.errors || [])];
+    if (status) {
+      status.textContent = errs.length ? '⚠ ' + errs.join(' / ') : `${model.kind} ・ ${model.items.length} 項目`;
+      status.dataset.bad = errs.length ? '1' : '';
+    }
+  }
+
+  // テキスト → モデル（人/AI が DSL を編集したとき）。
+  function fromText(text) { model = parse(text); render(); }
+  // モデル → テキスト（ドラッグの結果を書き戻す）。
+  function toText() { dsl.value = serialize(model); }
+
+  // 画面座標 → SVG 座標へ直すための倍率。
+  function scale() {
+    const svg = canvas.querySelector('svg'); if (!svg) return 1;
+    const r = svg.getBoundingClientRect();
+    return r.width / (svg.viewBox.baseVal.width || r.width) || 1;
+  }
+
+  let drag = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest('[data-drag]'); if (!g) return;
+    const id = g.dataset.id, kind = g.dataset.drag, s = scale();
+    if (kind === 'node') {
+      const n = L.nodes.find((x) => x.id === id);
+      drag = { id, kind, s, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY };
+    } else {
+      const b = L.bars.find((x) => x.id === id);
+      drag = { id, kind, s, day0: b.startDay, order: L.bars.map((x) => x.id), rowH: L.rowH, py0: b.rowY, px: e.clientX, py: e.clientY };
+    }
+    g.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = (e.clientX - drag.px) / drag.s, dy = (e.clientY - drag.py) / drag.s;
+    if (drag.kind === 'node') {
+      model.layout.pos[drag.id] = [Math.round(drag.x0 + dx), Math.round(drag.y0 + dy)];
+    } else {
+      const days = Math.round(dx / L.dayW);
+      model.layout.at[drag.id] = addDays(L.base, drag.day0 + days);     // 横：開始日
+      const steps = Math.round(dy / drag.rowH);                          // 縦：行の入れ替え
+      if (steps !== 0) {
+        const ord = drag.order.slice(), from = ord.indexOf(drag.id);
+        const to = Math.max(0, Math.min(ord.length - 1, from + steps));
+        ord.splice(to, 0, ord.splice(from, 1)[0]);
+        model.layout.order = ord;
+      }
+    }
+    render();
+  });
+
+  function endDrag() { if (drag) { drag = null; toText(); } }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  // DSL を直接編集したら描き直す（人/AI の手入力）。
+  let t;
+  dsl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => fromText(dsl.value), 180); });
+
+  fromText(source);
+  return {
+    export() { return serialize(model); },
+    reset() { dsl.value = source; fromText(source); },
+    model: () => model,
+  };
+}
+
+const APP = init({
+  canvas: document.getElementById('canvas'),
+  dsl: document.getElementById('dsl'),
+  status: document.getElementById('status'),
+  source: SOURCE,
+});
+const toast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 1500); };
+document.getElementById('bCopy').onclick = async () => { try { await navigator.clipboard.writeText(APP.export()); toast('DSL をコピーしました'); } catch (_) { toast('コピーできませんでした'); } };
+document.getElementById('bDown').onclick = () => {
+  const blob = new Blob([APP.export()], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = "サービス機能構成図.studio"; a.click(); URL.revokeObjectURL(a.href); toast('保存しました');
+};
+document.getElementById('bReset').onclick = () => { APP.reset(); toast('元に戻しました'); };
+document.getElementById('bPanel').onclick = () => document.getElementById('panel').classList.toggle('hidden');
+</script>
+</body>
+</html>
