@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="斑 (madara) — 一様な卵が、どうして豹の斑になるのか。チューリングが最後に問うた morphogenesis。答えは、ふたつの物質が追いかけあう反応拡散だけ。無地の肌に、斑・縞・迷路・孔がひとりでに浮かび、肌は自分が誰の毛皮かを名のる。同じ種からは同じ肌。なでると種火が撒ける。">
+<meta name="theme-color" content="#0a0806">
+<title>斑 — the coats that pattern themselves</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="coat"></canvas>
+
+<div id="hud">
+  <h1>斑 <span class="en">/ madara</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="name" hidden>
+  <span id="namekana"></span>
+  <span id="namenote"></span>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>一様な卵が、どうして豹の斑になるのか。<br>
+       チューリングが最後に問うたのは、この謎だった。<br>
+       答えは、ふたつの物質が追いかけあうだけ——<br>
+       片方は滲み、片方は喰らい、ともに枯れる。<br>
+       誰も模様を描かない。地に斑が、ひとりでに浮かぶ。</p>
+    <button id="bOpen">肌を育てる</button>
+    <p class="fine">同じ種からは、同じ肌。なでると種火が撒け、模様が割れて、また結ぶ。</p>
+  </div>
+</div>
+
+<nav id="bar" hidden>
+  <button id="bAgain" class="ghost">別の肌</button>
+  <button id="bShare" class="ghost">この肌を送る</button>
+  <span id="clock" class="clock"></span>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

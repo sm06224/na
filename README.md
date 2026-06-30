@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興 → 儚**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興 → 儚 → 斑**
 
 </div>
 
@@ -355,6 +355,18 @@ sRGB。出てくる色の並びは Newton が数えた順そのまま——**黒
 `--scale` で Newton の色階を見せる。コアは **DOM もネットワークも知らず**、白は (1,1,1)・単色は正しい原色・厚み 0 は黒い膜・
 λ/4 で強めあい λ/2 で弱めあい・色は次数を巡り・膜は上から薄り黒い膜を育てる——**ヘッドレス検証**・**9 tests**。
 
+### 斑 [斑 `madara`](./works/madara/) — *the coats that pattern themselves, born from nothing*
+**豹の斑も虎の縞も、誰かが描いた模様ではない**——それを、模様を一筆も描かず物理から生やす作品。チューリングが**最後の論文**
+（1952, morphogenesis）で問うた謎：一様な卵が、どうして豹の斑になるのか。答えはたった四則の連立だった。U（餌）はたえず補充され、
+V（喰うもの）は U をふたつ喰って自分をふやし（U + 2V → 3V）、ふたつは別の速さで滲み、V は枯れる（Gray–Scott の反応拡散）。
+肝心なのは **U が V より速く滲む**こと——近場の活性化と遠方の抑制だけで、対称な無地が破れ、模様が立つ（**チューリング不安定**）。
+模様を選ぶつまみは二つの数 `(f, k)` だけで、`node madara.js --map` で**位相空間の地図**が読める——どこに**斑・縞・迷路・孔**が棲むか。
+育ちきった肌は**形から正直に測られ**（覆い率・連結成分の数）、生まれた土地が何であれ実際に立った模様で分類され、**棲む獣を一頭、
+種から名のる**——豹は斑から、虎は縞から、脳珊瑚は迷路から、蜂の巣は孔から。`言`・`星`・`雪` と続く「ひとりでに名づける」系譜の、肌の章。
+なでると種火が撒け、模様が割れてまた結ぶ。コアは **DOM もネットワークも知らず**——ラプラシアンは一様な地を滲ませても一様
+（重みの総和 0）、無地は無地のまま（不動点）、ひと粒の種火が肌いちめんに広がり（創発）、`(f,k)` は約束どおりの肌を生む——
+**ヘッドレス検証**・**18 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -556,13 +568,20 @@ na/
 │  │  ├─ js/core/forge.js   種→規則・命名・ルールブック・面白さの採点・発掘
 │  │  ├─ js/ui/main.js      発掘したゲームの規則を見て、AI と対局
 │  │  └─ tests/
-│  └─ hakana/               儚 儚（薄膜の干渉色・消える直前の、いちばん美しい色）
-│     ├─ index.html · style.css · hakana.js（CLI・端末に干渉色／色階）
-│     ├─ js/core/spectrum.js スペクトル→目の色：CIE 1931 等色関数＋D65→sRGB
-│     ├─ js/core/film.js     薄膜の干渉：Fresnel＋Airy・反射率 R(λ)・干渉色の早見表
-│     ├─ js/core/flow.js     生きている膜：水切れ・マランゴニ・黒い膜（種で決まる）
-│     ├─ js/core/render.js   厚み場→ピクセル（ドームの曲率で入射角を変える）
-│     ├─ js/ui/main.js       低解像で描き、引き伸ばし、ほのかに発光させる
+│  ├─ hakana/               儚 儚（薄膜の干渉色・消える直前の、いちばん美しい色）
+│  │  ├─ index.html · style.css · hakana.js（CLI・端末に干渉色／色階）
+│  │  ├─ js/core/spectrum.js スペクトル→目の色：CIE 1931 等色関数＋D65→sRGB
+│  │  ├─ js/core/film.js     薄膜の干渉：Fresnel＋Airy・反射率 R(λ)・干渉色の早見表
+│  │  ├─ js/core/flow.js     生きている膜：水切れ・マランゴニ・黒い膜（種で決まる）
+│  │  ├─ js/core/render.js   厚み場→ピクセル（ドームの曲率で入射角を変える）
+│  │  ├─ js/ui/main.js       低解像で描き、引き伸ばし、ほのかに発光させる
+│  │  └─ tests/
+│  └─ madara/               斑 斑（反応拡散・一様な卵が、ひとりでに豹になる）
+│     ├─ index.html · style.css · madara.js（CLI・肌を育てる／位相空間の地図）
+│     ├─ js/core/grayscott.js 反応拡散：トーラス上の 9 点ラプラシアン＋Gray–Scott
+│     ├─ js/core/classify.js 形を測り斑・縞・迷路・孔に分け、棲む獣を名づける
+│     ├─ js/core/render.js   V の濃さ→獣の毛色（地色と墨の二色・種で決まる）
+│     ├─ js/ui/main.js       小さな格子で走らせ、引き伸ばしてやわらかく描く
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

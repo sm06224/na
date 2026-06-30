@@ -432,6 +432,18 @@ jobs:
         working-directory: works/hakana
         run: node --test tests/*.test.js
 
+  madara:
+    name: madara — the coats that pattern themselves
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Diffuse a Turing pattern from a seed and prove it grows spots, stripes, mazes and holes headless
+        working-directory: works/madara
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

@@ -1,0 +1,78 @@
+:root { color-scheme: dark; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: #0a0806; color: #efe6d6;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  user-select: none; touch-action: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#coat { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
+
+#hud { position: fixed; top: 14px; left: 18px; pointer-events: none; mix-blend-mode: difference; }
+#hud h1 { font-weight: 200; font-size: 1.5rem; letter-spacing: .16em; }
+#hud .en { font-size: .62rem; opacity: .55; letter-spacing: .26em; }
+#seedline { margin-top: 5px; font-size: .62rem; letter-spacing: .18em; opacity: .6; font-variant-numeric: tabular-nums; }
+
+/* 育った肌の名（獣の銘） */
+#name {
+  position: fixed; left: 50%; bottom: calc(74px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  text-align: center; pointer-events: none; z-index: 6; max-width: 86vw;
+  opacity: 0; transition: opacity 1.6s ease;
+}
+#name.on { opacity: 1; }
+#namekana { display: block; font-weight: 300; font-size: 1.05rem; letter-spacing: .14em; }
+#namenote { display: block; margin-top: .35em; font-size: .72rem; letter-spacing: .06em; opacity: .62; line-height: 1.7; }
+
+/* 序章 */
+#intro {
+  position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 2rem;
+  background: radial-gradient(120% 90% at 50% 32%, rgba(28,20,12,.5), rgba(10,8,6,.94));
+  backdrop-filter: blur(2px);
+  transition: opacity 1.5s ease, visibility 1.5s;
+}
+#intro.gone { opacity: 0; visibility: hidden; }
+#intro .lead { display: flex; flex-direction: column; gap: 1.6rem; align-items: center; max-width: 40em; }
+#intro p { line-height: 2.15; opacity: .92; font-weight: 300; font-size: .94rem; letter-spacing: .03em; }
+#intro .fine { font-size: .72rem; opacity: .5; line-height: 1.9; }
+
+button {
+  font: inherit; color: #efe6d6; cursor: pointer;
+  background: rgba(232,214,178,.07); border: 1px solid rgba(232,214,178,.26);
+  padding: .68em 1.9em; border-radius: 999px; letter-spacing: .14em; font-size: .82rem; font-weight: 300;
+  transition: background .3s, border-color .3s, transform .2s;
+}
+button:hover { background: rgba(232,214,178,.15); border-color: rgba(232,214,178,.46); }
+button:active { transform: scale(.97); }
+.ghost { background: transparent; border-color: rgba(232,214,178,.2); padding: .5em 1.3em; font-size: .74rem; }
+
+#bar {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; gap: .7rem; align-items: center; z-index: 6;
+}
+.clock { font-size: .66rem; letter-spacing: .14em; opacity: .55; font-variant-numeric: tabular-nums; padding-left: .4rem; }
+
+#toast {
+  position: fixed; left: 50%; top: 24%; transform: translateX(-50%);
+  background: rgba(18,12,8,.74); border: 1px solid rgba(232,214,178,.18);
+  padding: .55em 1.3em; border-radius: 999px; font-size: .8rem; letter-spacing: .08em;
+  z-index: 9; pointer-events: none; opacity: 0; transition: opacity .5s;
+}
+#toast.on { opacity: 1; }
+
+#foot {
+  position: fixed; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom));
+  font-size: .64rem; letter-spacing: .12em; opacity: .42; z-index: 6;
+}
+#foot a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(232,214,178,.22); }
+#foot a:hover { opacity: 1; }
+
+@media (max-width: 560px) {
+  #hud h1 { font-size: 1.2rem; }
+  #intro p { font-size: .86rem; line-height: 2; }
+  #foot { display: none; }
+  #namekana { font-size: .95rem; }
+}
