@@ -1,0 +1,18 @@
+flowchart TD
+    web[Web フロント] --> gw(API ゲートウェイ)
+    mobile([モバイル]) --> gw
+    gw -->|認証| auth{認証OK?}
+    gw --> order[注文サービス]
+    gw --> cat[カタログ]
+    order --> pay[決済サービス]
+    order --> db[(主データベース)]
+    cat --> cache((キャッシュ))
+    auth --> db
+    subgraph クライアント
+      web
+      mobile
+    end
+    subgraph データ基盤
+      db
+      cache
+    end

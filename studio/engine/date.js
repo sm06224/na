@@ -3,14 +3,17 @@
    ガントは「日」を単位に動く。ここはその物差し。
    ============================================================ */
 
-// "2026-07-01" → UTC ミリ秒（不正なら null）。
+// "2026-07-01"（または "2026/07/01"）→ UTC ミリ秒（不正なら null）。
 export function toMs(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s).trim());
+  const m = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/.exec(String(s).trim());
   if (!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   return Date.UTC(y, mo - 1, d);
 }
+
+// 日付らしい文字列か（Mermaid のフィールド判定に使う）。
+export function isDate(s) { return toMs(s) != null; }
 
 const DAY = 86400000;
 
@@ -37,11 +40,14 @@ export function weekday(s) {
   return new Date(ms).getUTCDay();
 }
 
-// "5d" / "5" / 5 → 日数（既定は日）。"2w" は週。
+// "5d" / "2w" / "12h" / 5 → 日数（Mermaid の duration を日に換算）。
 export function parseDur(tok) {
   if (typeof tok === 'number') return tok;
-  const m = /^(\d+(?:\.\d+)?)\s*([dw])?$/.exec(String(tok).trim());
+  const m = /^(\d+(?:\.\d+)?)\s*(d|w|h)?$/.exec(String(tok).trim());
   if (!m) return null;
   const n = parseFloat(m[1]);
-  return m[2] === 'w' ? n * 7 : n;
+  return m[2] === 'w' ? n * 7 : m[2] === 'h' ? n / 24 : n;
 }
+
+// Mermaid の duration トークンか（"30d" "2w" "12h"）。
+export function isDur(s) { return /^\d+(?:\.\d+)?\s*(d|w|h)$/.test(String(s).trim()); }

@@ -3,92 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="studio — 簡単に書けてグリグリ動かせる、ガントチャートと機能構成図のための DSL ＋ レイアウトツール。1 図 ＝ 自己完結の単一 HTML。">
+<meta name="description" content="studio — Mermaid 記法で書けて、グリグリ動かせる作図エディタ。ガントチャートと機能構成図（フローチャート）。構文ハイライト・リアルタイム検証・補完・ドラッグ・各種エクスポート。">
 <meta name="theme-color" content="#0b0e14">
-<title>studio — 作図のための DSL ＋ レイアウトツール</title>
-<style>
-  :root { color-scheme: dark; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { min-height: 100%; }
-  body {
-    background: #0b0e14; color: #e7ebf4;
-    font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-    display: flex; flex-direction: column; align-items: center; gap: 2.6rem; padding: 8vh 6vw;
-    background-image: radial-gradient(60% 50% at 30% 0%, rgba(106,169,255,.10), transparent 70%),
-      radial-gradient(50% 50% at 90% 25%, rgba(122,209,176,.06), transparent 70%);
-  }
-  header { text-align: center; max-width: 44rem; }
-  h1 { font-size: clamp(2.6rem, 9vw, 4.4rem); font-weight: 200; letter-spacing: .04em;
-    background: linear-gradient(130deg, #9fc0ff, #d6e2ff 50%, #7ad1b0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-  header p { margin-top: 1rem; opacity: .72; font-weight: 300; line-height: 1.9; font-size: .96rem; }
-  header .sub { margin-top: .5rem; font-size: .74rem; letter-spacing: .14em; color: #7c87a0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.3rem; width: min(820px, 100%); }
-  a.card { display: flex; flex-direction: column; gap: .6rem; padding: 1.5rem; border-radius: 16px;
-    text-decoration: none; color: inherit; border: 1px solid #1e2636;
-    background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
-    transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s, background .25s; }
-  a.card:hover { transform: translateY(-5px); border-color: #3a4660; }
-  a.card .k { font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: #6b748a; }
-  a.card h2 { font-weight: 500; font-size: 1.18rem; }
-  a.card p { font-size: .82rem; line-height: 1.7; opacity: .64; font-weight: 300; }
-  a.card .go { margin-top: .3rem; font-size: .74rem; letter-spacing: .12em; color: #8fb6ff; }
-  .c-gantt:hover { background: linear-gradient(160deg, rgba(106,169,255,.13), rgba(122,209,176,.05)); }
-  .c-arch:hover  { background: linear-gradient(160deg, rgba(214,138,214,.12), rgba(106,169,255,.05)); }
-  pre { width: min(820px, 100%); margin: 0; padding: 1.1rem 1.3rem; border-radius: 14px;
-    background: #0c1119; border: 1px solid #1c2230; color: #cdd5e6;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; line-height: 1.7; overflow-x: auto; }
-  .lead { width: min(820px, 100%); }
-  .lead h3 { font-size: .78rem; letter-spacing: .14em; color: #8a93a6; text-transform: uppercase; margin-bottom: .7rem; }
-  footer { font-size: .72rem; opacity: .5; letter-spacing: .08em; text-align: center; line-height: 1.9; }
-  footer a { color: #8fb6ff; text-decoration: none; }
-  @media (max-width: 560px) {
-    body { padding: 6vh 5vw; gap: 2rem; }
-    header p { font-size: .9rem; }
-    pre { font-size: 12px; padding: .9rem 1rem; }
-  }
-</style>
+<title>studio — Mermaid で書く作図エディタ</title>
+<link rel="stylesheet" href="ui/editor.css">
 </head>
 <body>
-  <header>
-    <h1>studio</h1>
-    <p>簡単に書けて、グリグリ動かせる。<br>ガントチャートと機能構成図のための、DSL ＋ レイアウトツール。</p>
-    <p class="sub">1 図 ＝ 自己完結の単一 HTML ・ 依存ゼロ ・ オフライン</p>
-  </header>
-
-  <div class="lead">
-    <h3>ひらいて、さわる</h3>
-    <div class="grid">
-      <a class="card c-gantt" href="dist/release.html">
-        <span class="k">gantt</span>
-        <h2>製品リリース計画</h2>
-        <p>日程・依存・進捗のガントチャート。横ドラッグで開始日、縦ドラッグで行の並び。依存は矢印で結ばれ、週末と today 線が入る。</p>
-        <span class="go">ひらく →</span>
-      </a>
-      <a class="card c-arch" href="dist/architecture.html">
-        <span class="k">arch</span>
-        <h2>サービス機能構成図</h2>
-        <p>ノード・エッジ・グループのアーキ図。位置を書かなければ依存の深さで自動段組み。ドラッグで自由に配置できる。</p>
-        <span class="go">ひらく →</span>
-      </a>
+<header>
+  <span class="brand">studio</span>
+  <span id="kind" class="badge">—</span>
+  <label class="pick">サンプル
+    <select id="samples"></select>
+  </label>
+  <span class="sp"></span>
+  <div class="ins" id="insbar"></div>
+  <span id="status" class="status"></span>
+  <div class="menu">
+    <button id="bExport">エクスポート ▾</button>
+    <div id="exportMenu" class="dropdown" hidden>
+      <button data-x="dsl">DSL をコピー</button>
+      <button data-x="mmd">.mmd を保存</button>
+      <button data-x="svg">SVG を保存</button>
+      <button data-x="html">単一 HTML を保存</button>
     </div>
   </div>
+</header>
 
-  <div class="lead">
-    <h3>書き方（DSL）</h3>
-    <pre>kind gantt
-title 製品リリース計画
-start 2026-07-01
-section 設計
-  task req    "要件定義"  at 2026-07-01 for 5d done 100
-  task design "基本設計"  after req for 7d
-  milestone ship "出荷"   after design
+<main>
+  <section class="editor" id="editor">
+    <div class="codewrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code">
+        <pre class="hl" aria-hidden="true"><code id="hl"></code></pre>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+      </div>
+    </div>
+    <div class="problems" id="problems"></div>
+  </section>
 
-# 図を動かすと、その位置・並び・開始日は
-# @layout トレイラだけに書き戻り、上の意味部は汚れない。</pre>
-  </div>
+  <section class="view" id="view">
+    <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div class="zoombar">
+      <button id="zOut">－</button>
+      <span id="zLabel">100%</span>
+      <button id="zIn">＋</button>
+      <button id="zFit">フィット</button>
+      <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+  </section>
+</main>
 
-  <footer>
-    つくり方は <a href="./README.md">README</a> ・ ソースは <a href="examples/">examples/</a> ・ <a href="../">na にもどる</a>
-  </footer>
+<div id="ac" class="ac" hidden></div>
+<div id="toast" hidden></div>
+
+<script type="module">
+  import { boot } from './ui/editor.js';
+  boot();
+</script>
 </body>
 </html>

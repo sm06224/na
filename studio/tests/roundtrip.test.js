@@ -1,81 +1,84 @@
-/* 往復の検証 — ドラッグの結果を書き戻しても、意味は崩れないか。
-   これが「DSL＋レイアウト情報」を持つツールの肝。AI 差分がきれいに保たれる。 */
+/* 往復の検証 — ドラッグの結果を書き戻しても意味は崩れないか。
+   そしてビルダが、依存を畳んで単一 HTML を吐けるか。 */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parse } from '../engine/parse.js';
 import { serialize } from '../engine/serialize.js';
-import { bundle, html } from '../build.js';
+import { html } from '../build.js';
 
-const GANTT = `kind gantt
-title リリース
-start 2026-07-01
-
-section 設計
-  task a "要件" at 2026-07-01 for 5d done 60
-  task b "設計" after a for 7d
-  milestone ship "出荷" after b
+const GANTT = `gantt
+    title リリース
+    dateFormat YYYY-MM-DD
+    section 設計
+      要件定義 :done, req, 2026-07-01, 5d
+      基本設計 :active, design, after req, 7d
+      出荷 :milestone, ship, after design, 0d
 `;
-const ARCH = `kind arch
-title 構成
-
-node web "Web"
-node gw "GW"
-node db "DB"
-
-edge web -> gw
-edge gw -> db
-group "裏方" { gw db }
+const FLOW = `flowchart TD
+    web[Web] --> gw(API)
+    gw -->|認証| db[(DB)]
+    subgraph 裏方
+      gw
+      db
+    end
 `;
 
 function sameModel(a, b) {
-  assert.equal(a.kind, b.kind);
-  assert.deepEqual(a.meta, b.meta);
-  assert.deepEqual(a.order, b.order);
-  assert.deepEqual(a.edges, b.edges);
-  assert.deepEqual(a.groups, b.groups);
-  assert.deepEqual(a.items, b.items);
-  assert.deepEqual(a.layout, b.layout);
+  for (const k of ['kind', 'meta', 'order', 'edges', 'groups', 'items', 'layout'])
+    assert.deepEqual(a[k], b[k], `${k} がずれた`);
 }
 
-test('serialize→parse は安定（ガント・アーキとも）', () => {
-  for (const src of [GANTT, ARCH]) {
-    const m1 = parse(src);
-    const m2 = parse(serialize(m1));
-    sameModel(m1, m2);
-  }
+test('serialize→parse は安定（ガント・フローとも）', () => {
+  for (const src of [GANTT, FLOW]) sameModel(parse(src), parse(serialize(parse(src))));
 });
 
-test('アーキ：ノードを動かすと @layout pos に入り、意味部は無傷', () => {
-  const m = parse(ARCH);
-  m.layout.pos.web = [120, 240];                 // ドラッグ相当
+test('フロー：ノードを動かすと %% pos に入り、意味部は無傷', () => {
+  const m = parse(FLOW);
+  m.layout.pos.web = [120, 240];
   const out = serialize(m);
-  assert.match(out, /@layout/);
-  assert.match(out, /pos web 120 240/);
-  assert.match(out, /node web "Web"/);           // 意味部はそのまま
-  assert.doesNotMatch(out.split('@layout')[0], /120|240/); // 座標は意味部に漏れない
+  assert.match(out, /%% @layout/);
+  assert.match(out, /%% pos web 120 240/);
+  assert.match(out, /web\[Web\]/);                         // 形・ラベルは残る
+  assert.doesNotMatch(out.split('%% @layout')[0], /120|240/);
   assert.deepEqual(parse(out).layout.pos.web, [120, 240]);
 });
 
-test('ガント：開始日と並びを動かすと @layout に入り、task 行は元のまま', () => {
+test('ガント：開始日と並びを動かすと %% に入り、タスク行は元のまま', () => {
   const m = parse(GANTT);
-  m.layout.at.a = '2026-07-03';                  // 横ドラッグ相当
-  m.layout.order = ['b', 'a', 'ship'];           // 縦ドラッグ相当
+  m.layout.at.req = '2026-07-03';
+  m.layout.order = ['design', 'req', 'ship'];
   const out = serialize(m);
-  const [semantic, trailer] = out.split('@layout');
-  assert.match(semantic, /task a "要件" at 2026-07-01 for 5d done 60/); // task 行は不変
-  assert.match(trailer, /at a 2026-07-03/);
-  assert.match(trailer, /order b a ship/);
+  const [semantic, trailer] = out.split('%% @layout');
+  assert.match(semantic, /:done, req, 2026-07-01, 5d/);    // タスク行は不変
+  assert.match(trailer, /%% at req 2026-07-03/);
+  assert.match(trailer, /%% order design req ship/);
   const re = parse(out);
-  assert.equal(re.layout.at.a, '2026-07-03');
-  assert.deepEqual(re.layout.order, ['b', 'a', 'ship']);
+  assert.equal(re.layout.at.req, '2026-07-03');
+  assert.deepEqual(re.layout.order, ['design', 'req', 'ship']);
 });
 
-test('ビルド：エンジンは import/export を剥がして畳まれ、図が埋め込まれる', () => {
-  const engine = bundle();
-  assert.doesNotMatch(engine, /^\s*import\b/m, 'import が残っている');
-  assert.doesNotMatch(engine, /^\s*export\s+(function|const|class|let)\b/m, 'export 宣言が残っている');
-  const page = html('テスト図', ARCH, engine);
-  assert.match(page, /<svg|id="canvas"/);        // 受け皿がある
-  assert.ok(page.includes(JSON.stringify(ARCH)), '図の DSL が埋め込まれている');
-  assert.match(page, /function parse\b/);        // エンジンが同梱されている
+test('Mermaid 互換：本物の Mermaid 記法をそのまま読める', () => {
+  const m = parse(`gantt
+    title A Gantt Diagram
+    dateFormat YYYY-MM-DD
+    section Section
+      A task :a1, 2014-01-01, 30d
+      Another task :after a1, 20d`);
+  assert.equal(m.kind, 'gantt');
+  assert.equal(m.items[0].id, 'a1');
+  assert.equal(m.items[0].dur, 30);
+  assert.deepEqual(m.items[1].after, ['a1']);
+});
+
+test('ビルド：依存を畳んで単一 HTML を吐き、図を埋め込み、script を壊さない', () => {
+  const page = html(FLOW);
+  assert.ok(page.includes(JSON.stringify(FLOW)), '図の DSL が埋め込まれている');
+  assert.match(page, /function parse\b/);                  // エンジン同梱
+  assert.match(page, /function boot\b/);                   // エディタ同梱
+  assert.match(page, /id="canvas"/);                       // 受け皿
+  assert.match(page, /window\.STUDIO_SOURCE=/);            // SOURCE 注入済み
+  assert.doesNotMatch(page, /import \{ boot \} from/);     // 元のモジュールローダは消えた
+  // 埋め込みスクリプト内に生の </script> が無い（あると途中で切れる）。
+  const body = page.slice(page.indexOf('<script>') + 8);
+  assert.ok(!body.slice(0, body.indexOf('<\/script>')).includes('</script>'), '生の閉じタグが混入していない');
 });
