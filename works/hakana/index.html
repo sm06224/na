@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="儚 (hakana) — 消える直前の、いちばん美しい色。シャボン玉の虹は描いたものではない。膜の表と裏で跳ね返った光が、波長ごとに強めあい弱めあう（薄膜干渉）。その物理から、本物の干渉色が生まれる。膜は重力で下へ落ち、上から黒い膜が口をあけ、やがて破れる。同じ種からは、同じうつろい。">
+<meta name="theme-color" content="#04040a">
+<title>儚 — the fleeting colours of a thin film</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="film"></canvas>
+
+<div id="hud">
+  <h1>儚 <span class="en">/ hakana</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>シャボン玉の虹は、誰かが描いた色ではない。<br>
+       膜の表と裏で跳ねかえった光が、波長ごとに強めあい、弱めあう。<br>
+       その物理だけから、目に映る色が生まれる。<br>
+       膜は薄くなり、上から黒い膜が口をあけ、やがて破れる。<br>
+       いちばん美しいのは——消える直前。</p>
+    <button id="bOpen">膜を張る</button>
+    <p class="fine">同じ種からは、同じうつろい。なでると膜が寄り、ふれると破れて、また張る。</p>
+  </div>
+</div>
+
+<nav id="bar" hidden>
+  <button id="bAgain" class="ghost">別の膜</button>
+  <button id="bShare" class="ghost">この膜を送る</button>
+  <span id="clock" class="clock"></span>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>

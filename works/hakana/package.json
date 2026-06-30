@@ -1,0 +1,11 @@
+{
+  "name": "hakana",
+  "version": "1.0.0",
+  "description": "儚 — the fleeting colours of a thin film, born from nothing. A soap film's iridescence is not painted; it is computed from real optics. Light reflected from the film's two faces interferes wavelength by wavelength (Fresnel + Airy), and the surviving spectrum is turned into the eye's colour through the CIE 1931 matching functions under D65. The film is alive: it drains downward under gravity, swirls with marangoni flow, and opens a black film at the top just before it bursts — and the most beautiful colours appear the instant before it is gone. Deterministic from a seed; the core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "hakana": "hakana.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

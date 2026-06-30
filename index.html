@@ -84,6 +84,7 @@
   .c-nazo:hover { background: linear-gradient(160deg, rgba(200,162,90,.16), rgba(20,16,12,.10)); }
   .c-han:hover { background: linear-gradient(160deg, rgba(120,220,180,.14), rgba(14,90,68,.10)); }
   .c-kyo:hover { background: linear-gradient(160deg, rgba(183,155,255,.16), rgba(216,201,138,.07)); }
+  .c-hakana:hover { background: linear-gradient(150deg, rgba(255,180,90,.12), rgba(214,60,170,.13) 42%, rgba(60,150,255,.12) 72%, rgba(60,235,180,.10)); }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -93,7 +94,7 @@
   <header>
     <h1>na</h1>
     <p>無から生まれた、小さな作品集</p>
-    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎 — 反 — 興</div>
+    <div class="thread">無 — 庭 — 生 — 史 — 番 — 言 — 歌 — 備 — 奏 — 苔 — 織 — 算 — 針 — 狐 — 星 — 雷 — 陽 — 割 — 窟 — 種 — 籤 — 波 — 陣 — 層 — 雪 — 響 — 段 — 宙 — 声 — 碑 — 証 — 影 — 計 — 謎 — 反 — 興 — 儚</div>
   </header>
 
   <div class="works">
@@ -375,6 +376,14 @@
       <p>ゲームそのものを生み出す装置——設計者がいない。種ひとつから抽象ボードゲームの規則（盤の大きさ・置き方・勝ち方）が生まれ、ひとつの汎用エンジンがどの規則でも合法手・着手・終局を同じ手で扱い、ひとつの汎用 AI（α-β）がどれでも指す。装置は規則を何百局も自己対戦させ、自分で問う——技量は要るか（巧い手はランダムに勝てるか）、決着するか、先手が勝ちすぎないか、ほどよい長さか。詰まらない規則は捨て、残ったものを面白い順に並べ、名と遊び方を与える。正しさは完全解析済みの三目並べで固定。あなたは発掘された一作を先手で打てる。CLI でも発掘の様子が見える。</p>
       <div class="tags"><span class="tag">game synthesis</span><span class="tag">generic engine</span><span class="tag">self-judged fun</span><span class="tag">offline</span></div>
       <span class="go">発掘する →</span>
+    </a>
+
+    <a class="card c-hakana" href="works/hakana/">
+      <span class="glyph">儚</span>
+      <h2>儚 <span class="en">/ hakana</span></h2>
+      <p>シャボン玉や油膜の虹を、絵の具を使わず物理から描く。膜の表と裏で跳ねかえった光が波長ごとに強めあい弱めあい（薄膜干渉）、厚みが波長の整数倍にあたる色は消え、半端な色は際立つ——だから厚みが、色になる。膜の厚み→表裏の反射の干渉（Fresnel＋Airy）→残ったスペクトル→CIE 1931 等色関数で目の色→D65 のもとで sRGB。出てくる色の並びは Newton が数えた順そのまま（黒→金→紅紫→青→緑…）。しかも膜は生きていて、重力で水が落ち、上から黒い膜が口をあけ、いちばん濃い色は消える直前に出る。なでると寄り、ふれると破れて、また張る。CLI は端末に本物の干渉色を描く。色は塗っていない。</p>
+      <div class="tags"><span class="tag">thin-film optics</span><span class="tag">spectral → sRGB</span><span class="tag">deterministic</span><span class="tag">offline</span></div>
+      <span class="go">膜を張る →</span>
     </a>
   </div>
 

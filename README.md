@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興 → 儚**
 
 </div>
 
@@ -344,6 +344,17 @@ CI の庭師がひとりでに目を覚まし、石庭の SVG に苔をすこし
 様子が見え、コアは **DOM もネットワークも知らず**、規則・勝者・majority の中央起動・面白さの判定・発掘の序列まで
 **ヘッドレス検証**・**8 tests**。
 
+### 儚 [儚 `hakana`](./works/hakana/) — *the fleeting colours of a thin film, born from nothing*
+**シャボン玉や油膜の虹を、絵の具を使わず物理から描く**作品。膜の表と裏で跳ねかえった光が波長ごとに強めあい弱めあい
+（薄膜干渉）、厚みが波長の整数倍にあたる色は消え、半端な色は際立つ。だから**厚みが、色になる**。塗る場所はどこにもない。
+膜の厚み→表裏の反射の干渉（Fresnel＋Airy）→残ったスペクトル R(λ)→**CIE 1931 等色関数**で目の色 XYZ→D65 のもとで
+sRGB。出てくる色の並びは Newton が数えた順そのまま——**黒→銀白→金→紅紫→青→緑…**と厚みが増すごとに次数を巡る
+（想像で選んだ色ではなく、物理の結論）。しかも膜は生きている——重力で水が下へ落ち、上から薄くなり、やがて**黒い膜**が
+口をあけ（表裏の反射が完全に打ち消す＝破れの予兆）、**いちばん濃い色は消える直前に出る**。名 `儚（はかな）い` は、そこから。
+なでれば膜が寄り、ふれれば破れて、また張る。`node hakana.js` は端末に 24bit カラーで本物の干渉色を描き（絵が見えなくても色は出る）、
+`--scale` で Newton の色階を見せる。コアは **DOM もネットワークも知らず**、白は (1,1,1)・単色は正しい原色・厚み 0 は黒い膜・
+λ/4 で強めあい λ/2 で弱めあい・色は次数を巡り・膜は上から薄り黒い膜を育てる——**ヘッドレス検証**・**9 tests**。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -538,12 +549,20 @@ na/
 │  │  ├─ js/core/ai.js      ネガマックス＋α-β・位置評価・機動力・終盤の読み切り
 │  │  ├─ js/ui/main.js      置く→相手が考えて返す・候補表示・手番と強さ
 │  │  └─ tests/
-│  └─ kyo/                  興 興（ゲームそのものが生まれ、自分で面白さを採点する）
-│     ├─ index.html · style.css · kyo.js（CLI・発掘して並べる）
-│     ├─ js/core/game.js    汎用エンジン：合法手・着手・終局・勝者（どの規則でも）
-│     ├─ js/core/ai.js      汎用 AI：α-β＋規則ごとの評価
-│     ├─ js/core/forge.js   種→規則・命名・ルールブック・面白さの採点・発掘
-│     ├─ js/ui/main.js      発掘したゲームの規則を見て、AI と対局
+│  ├─ kyo/                  興 興（ゲームそのものが生まれ、自分で面白さを採点する）
+│  │  ├─ index.html · style.css · kyo.js（CLI・発掘して並べる）
+│  │  ├─ js/core/game.js    汎用エンジン：合法手・着手・終局・勝者（どの規則でも）
+│  │  ├─ js/core/ai.js      汎用 AI：α-β＋規則ごとの評価
+│  │  ├─ js/core/forge.js   種→規則・命名・ルールブック・面白さの採点・発掘
+│  │  ├─ js/ui/main.js      発掘したゲームの規則を見て、AI と対局
+│  │  └─ tests/
+│  └─ hakana/               儚 儚（薄膜の干渉色・消える直前の、いちばん美しい色）
+│     ├─ index.html · style.css · hakana.js（CLI・端末に干渉色／色階）
+│     ├─ js/core/spectrum.js スペクトル→目の色：CIE 1931 等色関数＋D65→sRGB
+│     ├─ js/core/film.js     薄膜の干渉：Fresnel＋Airy・反射率 R(λ)・干渉色の早見表
+│     ├─ js/core/flow.js     生きている膜：水切れ・マランゴニ・黒い膜（種で決まる）
+│     ├─ js/core/render.js   厚み場→ピクセル（ドームの曲率で入射角を変える）
+│     ├─ js/ui/main.js       低解像で描き、引き伸ばし、ほのかに発光させる
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）
