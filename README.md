@@ -8,7 +8,7 @@
 [![test](https://github.com/sm06224/na/actions/workflows/test.yml/badge.svg)](https://github.com/sm06224/na/actions/workflows/test.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-9af5e0.svg)](./LICENSE)
 
-**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興 → 儚 → 斑**
+**無 → 庭 → 生 → 史 → 番 → 言 → 歌 → 備 → 奏 → 苔 → 織 → 算 → 針 → 狐 → 星 → 雷 → 陽 → 割 → 窟 → 種 → 籤 → 波 → 陣 → 層 → 雪 → 響 → 段 → 宙 → 声 → 碑 → 証 → 影 → 計 → 謎 → 反 → 興 → 儚 → 斑 → 群**
 
 </div>
 
@@ -367,6 +367,17 @@ V（喰うもの）は U をふたつ喰って自分をふやし（U + 2V → 3V
 （重みの総和 0）、無地は無地のまま（不動点）、ひと粒の種火が肌いちめんに広がり（創発）、`(f,k)` は約束どおりの肌を生む——
 **ヘッドレス検証**・**18 tests**。
 
+### 群 [群 `mure`](./works/mure/) — *a murmuration that has no leader, born from nothing*
+**夕暮れに空をうねる、椋鳥のむれ**——何百羽がひとつの体のようにうねるのに、率いている鳥は一羽もいない。それを、誰も振り付けず
+**規則だけ**から立ちあげる作品。一羽が見るのは近くの数羽だけで、**整列**（向きをそろえ）・**結束**（真ん中へ寄り）・**分離**
+（近すぎれば離れる）の三つの約束を守る（Reynolds の boids）。中央の指揮者も全体の設計図もないのに、何百羽が一つの体のように
+うねる——**創発**。整列の度合い（order parameter）は、ばらばらの始まり（≈0）から見るまにひとつ（≈1）へ立ちあがる。
+**隼**がよぎると、近くの鳥のおびえが**仲間へ伝わり**、鳥より速く群れを走る（**驚きの波**）。むれは割れ、渦を巻き、隼が去れば
+またひとつに結び直す。ブラウザでは**触れるとあなたが隼になり**、低いドローンとおびえで増す風が鳴る。`node mure.js --frames`
+は端末に夕空の影でうねりを動かす。コアは **DOM もネットワークも知らず**——同じ種は同じうねり・むれは空に留まり破綻せず・
+向きは揃い（創発）・近すぎず離れすぎず（密度）・隼で散りまた結ぶ——**ヘッドレス検証**・**7 tests**。`生`・`言`・`歌` と続く
+「ひとりでに生まれる」系譜の、夕の章。
+
 ```bash
 git clone https://github.com/sm06224/na.git
 cd na
@@ -576,12 +587,18 @@ na/
 │  │  ├─ js/core/render.js   厚み場→ピクセル（ドームの曲率で入射角を変える）
 │  │  ├─ js/ui/main.js       低解像で描き、引き伸ばし、ほのかに発光させる
 │  │  └─ tests/
-│  └─ madara/               斑 斑（反応拡散・一様な卵が、ひとりでに豹になる）
-│     ├─ index.html · style.css · madara.js（CLI・肌を育てる／位相空間の地図）
-│     ├─ js/core/grayscott.js 反応拡散：トーラス上の 9 点ラプラシアン＋Gray–Scott
-│     ├─ js/core/classify.js 形を測り斑・縞・迷路・孔に分け、棲む獣を名づける
-│     ├─ js/core/render.js   V の濃さ→獣の毛色（地色と墨の二色・種で決まる）
-│     ├─ js/ui/main.js       小さな格子で走らせ、引き伸ばしてやわらかく描く
+│  ├─ madara/               斑 斑（反応拡散・一様な卵が、ひとりでに豹になる）
+│  │  ├─ index.html · style.css · madara.js（CLI・肌を育てる／位相空間の地図）
+│  │  ├─ js/core/grayscott.js 反応拡散：トーラス上の 9 点ラプラシアン＋Gray–Scott
+│  │  ├─ js/core/classify.js 形を測り斑・縞・迷路・孔に分け、棲む獣を名づける
+│  │  ├─ js/core/render.js   V の濃さ→獣の毛色（地色と墨の二色・種で決まる）
+│  │  ├─ js/ui/main.js       小さな格子で走らせ、引き伸ばしてやわらかく描く
+│  │  └─ tests/
+│  └─ mure/                 群 群（むれ・指揮者のいない椋鳥が、ひとりでに夕空をうねる）
+│     ├─ index.html · style.css · mure.js（CLI・夕空の影でうねりを動かす）
+│     ├─ js/core/flock.js   むれの核：整列・結束・分離・隼への恐れ・おびえの伝播
+│     ├─ js/core/rng.js     決定的な乱数（mulberry32・FNV-1a）
+│     ├─ js/ui/main.js      残像で尾を引き、影として描き、おびえで風を鳴らす
 │     └─ tests/
 ├─ .github/workflows/
 │  ├─ gitleaks.yml          秘密混入の監視（push / PR / 毎週）

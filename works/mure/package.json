@@ -1,0 +1,11 @@
+{
+  "name": "mure",
+  "version": "1.0.0",
+  "description": "群 — a murmuration that has no leader, born from nothing. Hundreds of starlings wheel through the dusk as one body, yet not a single bird leads. Each watches only a few near neighbours and keeps three promises — align with them, draw toward their centre, and pull away when too close. From those three rules alone, the sky undulates. When a falcon crosses, alarm ripples through the flock as a wave. Deterministic from a seed; the core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "mure": "mure.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

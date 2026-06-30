@@ -444,6 +444,18 @@ jobs:
         working-directory: works/madara
         run: node --test tests/*.test.js
 
+  mure:
+    name: mure — a murmuration that has no leader
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Flock from a seed and prove order emerges, density holds, and a falcon scatters then the murmuration regroups headless
+        working-directory: works/mure
+        run: node --test tests/*.test.js
+
   studio:
     name: studio — Mermaid diagram editor
     runs-on: ubuntu-latest

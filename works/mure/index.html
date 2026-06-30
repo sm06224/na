@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="群 (mure) — 指揮者のいない、夕暮れの椋鳥のむれ。整列・結束・分離という三つの約束だけで、何百羽がひとつの体のようにうねる。隼がよぎれば、おびえが波となって走る。触れると、あなたが空をなでる。同じ種からは、同じうねり。">
+<meta name="theme-color" content="#1a1730">
+<title>群 — a murmuration that has no leader</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="hud">
+  <h1>群 <span class="en">/ mure</span></h1>
+  <div id="seedline"><span id="seedval"></span></div>
+</div>
+
+<div id="intro">
+  <div class="lead">
+    <p>夕暮れ。何百羽の椋鳥が、ひとつの体のようにうねる。<br>
+       けれど、率いている鳥は一羽もいない。<br>
+       一羽が見ているのは、近くの数羽だけ——<br>
+       向きをそろえ、真ん中へ寄り、近すぎれば離れる。<br>
+       その三つの約束だけで、空がうねる。</p>
+    <button id="bOpen">むれを放つ</button>
+    <p class="fine">触れると、あなたが隼になる。むれは散り、波を立て、やがてまた結ぶ。<br>同じ種からは、同じうねり。</p>
+  </div>
+</div>
+
+<nav id="bar" hidden>
+  <button id="bAgain" class="ghost">別のむれ</button>
+  <button id="bShare" class="ghost">この空を送る</button>
+  <button id="bSound" class="ghost">♪ 夕の音</button>
+  <span id="meter" class="clock"></span>
+</nav>
+
+<div id="toast" hidden></div>
+
+<footer id="foot">
+  <a href="./README.md">しくみ</a> · <a href="../../">作品集</a>
+</footer>
+
+<script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
