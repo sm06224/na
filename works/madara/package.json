@@ -1,0 +1,11 @@
+{
+  "name": "madara",
+  "version": "1.0.0",
+  "description": "斑 — the coats that pattern themselves, born from nothing. Turing asked, in his last paper, how a featureless egg becomes a spotted leopard. The answer is two chemicals chasing each other: a Gray–Scott reaction–diffusion in which one substance diffuses, feeds, and another devours it and decays. From a plain field plus a few sparks, spots, stripes, labyrinths and holes arise on their own — and the skin names the creature whose coat it grew. Deterministic from a seed; the core knows neither DOM nor network.",
+  "type": "module",
+  "private": true,
+  "bin": { "madara": "madara.js" },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
