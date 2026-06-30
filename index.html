@@ -86,6 +86,12 @@
   .c-kyo:hover { background: linear-gradient(160deg, rgba(183,155,255,.16), rgba(216,201,138,.07)); }
   .c-hakana:hover { background: linear-gradient(150deg, rgba(255,180,90,.12), rgba(214,60,170,.13) 42%, rgba(60,150,255,.12) 72%, rgba(60,235,180,.10)); }
   .c-madara:hover { background: linear-gradient(160deg, rgba(214,180,130,.15), rgba(120,58,30,.12) 55%, rgba(38,30,26,.10)); }
+  .c-studio:hover { background: linear-gradient(160deg, rgba(106,169,255,.14), rgba(122,209,176,.06)); }
+
+  .tools { display: flex; flex-direction: column; align-items: center; gap: 1.4rem; width: min(620px, 100%); }
+  .tools-head { text-align: center; }
+  .tools-head .t { font-size: .72rem; letter-spacing: .42em; text-transform: uppercase; color: rgba(180,200,255,.4); }
+  .tools-head p { margin-top: .5rem; opacity: .5; font-weight: 300; font-size: .84rem; }
 
   footer { font-size: .72rem; opacity: .35; letter-spacing: .1em; text-align: center; line-height: 1.9; }
   footer a { color: rgba(180,200,255,.6); }
@@ -395,6 +401,22 @@
       <span class="go">肌を育てる →</span>
     </a>
   </div>
+
+  <section class="tools">
+    <div class="tools-head">
+      <div class="t">道具 — tools</div>
+      <p>作品ではなく、これからを作る道具。さまざまな AI と図を育てるための土台。</p>
+    </div>
+    <div class="works" style="width:100%">
+      <a class="card c-studio" href="studio/">
+        <span class="glyph">📐</span>
+        <h2>studio <span class="en">/ 作図ツール</span></h2>
+        <p>簡単に書けて、グリグリ動かせる。ガントチャートと機能構成図のための DSL ＋ レイアウトツール。横ドラッグで開始日、縦ドラッグで行並び、ノードは自由配置。動かした位置は @layout に書き戻り、意味部は汚れないから、次の AI がきれいな差分で続けられる。1 図 ＝ 自己完結の単一 HTML（依存ゼロ・オフライン）。</p>
+        <div class="tags"><span class="tag">DSL</span><span class="tag">gantt</span><span class="tag">arch</span><span class="tag">single-file</span></div>
+        <span class="go">図をひらく →</span>
+      </a>
+    </div>
+  </section>
 
   <footer>
     無一物中無尽蔵 — 何も無いところに、尽きせぬものが宿る。<br>
