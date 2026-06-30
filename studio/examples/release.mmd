@@ -1,0 +1,16 @@
+gantt
+    title 製品リリース計画
+    dateFormat YYYY-MM-DD
+    section 設計
+      要件定義   :done, req, 2026-07-01, 5d
+      基本設計   :active, design, after req, 7d
+    section 実装
+      API 実装   :api, after design, 10d
+      UI 実装    :ui, after design, 12d
+      基盤構築   :crit, infra, 2026-07-08, 9d
+    section 検証と出荷
+      結合テスト :test, after api ui, 6d
+      受け入れ   :uat, after test, 4d
+      出荷       :milestone, ship, after uat, 0d
+%% @layout
+%% today 2026-07-16
