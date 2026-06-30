@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="studio — 簡単に書けてグリグリ動かせる、ガントチャートと機能構成図のための DSL ＋ レイアウトツール。1 図 ＝ 自己完結の単一 HTML。">
 <meta name="theme-color" content="#0b0e14">
 <title>studio — 作図のための DSL ＋ レイアウトツール</title>
@@ -41,6 +41,11 @@
   .lead h3 { font-size: .78rem; letter-spacing: .14em; color: #8a93a6; text-transform: uppercase; margin-bottom: .7rem; }
   footer { font-size: .72rem; opacity: .5; letter-spacing: .08em; text-align: center; line-height: 1.9; }
   footer a { color: #8fb6ff; text-decoration: none; }
+  @media (max-width: 560px) {
+    body { padding: 6vh 5vw; gap: 2rem; }
+    header p { font-size: .9rem; }
+    pre { font-size: 12px; padding: .9rem 1rem; }
+  }
 </style>
 </head>
 <body>
