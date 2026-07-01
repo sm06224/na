@@ -72,12 +72,30 @@ export const SAMPLES = {
       w-->>u: エラー表示
     end
     Note over u,w: 3回失敗でロック`,
+  'クラス — ドメインモデル': `classDiagram
+    class Animal {
+      +String name
+      +int age
+      +speak() string
+    }
+    class Dog {
+      +fetch() void
+    }
+    class Cat
+    class Owner {
+      +String name
+      +feed(a) void
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+    Owner --> Animal : 飼う
+    Dog ..> Owner : なつく`,
 };
 
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -109,8 +127,9 @@ export function boot() {
   function render() {
     model = parse(src.value);
     L = layout(model);
-    if (selected && !model.items.some((x) => x.id === selected)) selected = null;
+    for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
     canvas.innerHTML = draw(model, L, { selected });
+    syncAlignBar();
     applyView();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
@@ -146,7 +165,8 @@ export function boot() {
   $('zFit').onclick = fit;
 
   // ---- ポインタ（選択・ドラッグ・接続・パン・ピンチ・ダブルタップ）----
-  let selected = null, drag = null, pan = null, connect = null, pinch = null;
+  const selected = new Set();
+  let drag = null, pan = null, connect = null, pinch = null;
   const pointers = new Map();
   let lastTap = { t: 0, x: 0, y: 0 };
 
@@ -195,7 +215,11 @@ export function boot() {
     const g = e.target.closest('[data-drag]');
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
-      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY, moved: false }; }
+      if (kind === 'node') {
+        const ids = (selected.has(id) && selected.size > 1) ? [...selected] : [id];
+        const starts = new Map(ids.map((i2) => { const n = L.nodes.find((x) => x.id === i2); return [i2, [n.x, n.y]]; }));
+        drag = { id, kind, ids, starts, px: e.clientX, py: e.clientY, moved: false, shift: e.shiftKey };
+      }
       else if (kind === 'actor') {
         const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
         drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY, moved: false };
@@ -227,7 +251,7 @@ export function boot() {
       const dx = dxp / view.s, dy = dyp / view.s;
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
-        model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
+        for (const [i2, [x0, y0]] of drag.starts) model.layout.pos[i2] = [snap(x0 + dx), snap(y0 + dy)];
       } else if (drag.kind === 'actor') {
         const steps = Math.round(dx / drag.spacing);
         const o = drag.order.slice(), f = o.indexOf(drag.id);
@@ -254,14 +278,23 @@ export function boot() {
       removeTempLine();
       if (tgt && tgt.dataset.id !== connect.from) {
         if (model.edges.some((x) => x.from === connect.from && x.to === tgt.dataset.id)) toast('もうつながっています');
-        else { model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true }); selected = null; commitModel(); toast('つなぎました'); return; }
+        else {
+          if (model.kind === 'class') model.edges.push({ from: connect.from, to: tgt.dataset.id, kind: 'assoc', dotted: false, label: '' });
+          else model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true });
+          selected.clear(); commitModel(); toast('つなぎました'); return;
+        }
       }
-      connect = null; selected = null; redraw(); return;
+      connect = null; selected.clear(); redraw(); syncAlignBar(); return;
     }
     if (drag) {
       if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
-      else if (drag.kind === 'node') { selected = selected === drag.id ? null : drag.id; redraw(); }  // クリック＝選択
-    } else if (pan && !pan.moved && selected) { selected = null; redraw(); }                            // 空クリック＝選択解除
+      else if (drag.kind === 'node') {                                       // クリック＝選択（Shift で追加/除外）
+        if (drag.shift) { selected.has(drag.id) ? selected.delete(drag.id) : selected.add(drag.id); }
+        else if (selected.size === 1 && selected.has(drag.id)) selected.clear();
+        else { selected.clear(); selected.add(drag.id); }
+        redraw(); syncAlignBar();
+      }
+    } else if (pan && !pan.moved && selected.size) { selected.clear(); redraw(); syncAlignBar(); }       // 空クリック＝選択解除
     drag = null; pan = null; connect = null; stage.classList.remove('panning');
   }
   stage.addEventListener('pointerup', endPointer);
@@ -286,7 +319,14 @@ export function boot() {
       model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
       model.order.push(id);
       model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
-      selected = id; commitModel();
+      selected.clear(); selected.add(id); commitModel();
+    } else if (model.kind === 'class') {
+      let k = 1; while (model.items.some((n) => n.id === 'C' + k)) k++;
+      const id = 'C' + k;
+      model.items.push({ type: 'class', id, attrs: [], methods: [] });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected.clear(); selected.add(id); commitModel();
     } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
     else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
   }
@@ -310,6 +350,16 @@ export function boot() {
     if (!ok) return;
     const v = inline.value.trim();
     if (kind === 'edge') { if (model.edges[ref] != null) model.edges[ref].label = v; }
+    else if (model.kind === 'class') {                        // クラスは名前＝id なので、参照ごと改名する
+      const nid = v.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_.-]/g, '');
+      const it = model.items.find((x) => x.id === ref);
+      if (!it || !nid) return;
+      if (nid !== ref && model.items.some((x) => x.id === nid)) { toast('その名前は使われています'); return; }
+      it.id = nid;
+      model.order = model.order.map((x) => (x === ref ? nid : x));
+      for (const e2 of model.edges) { if (e2.from === ref) e2.from = nid; if (e2.to === ref) e2.to = nid; }
+      if (model.layout.pos[ref]) { model.layout.pos[nid] = model.layout.pos[ref]; delete model.layout.pos[ref]; }
+    }
     else { const it = model.items.find((x) => x.id === ref); if (it && v) it.label = v; else return; }
     commitModel();
   }
@@ -319,6 +369,29 @@ export function boot() {
     e.stopPropagation();
   });
   inline.addEventListener('blur', () => commitRename(true));
+
+  // ---- 整列（2 個以上選ぶと出る）----
+  function syncAlignBar() {
+    const bar = $('alignbar'); if (!bar) return;
+    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class'));
+  }
+  $('alignbar').addEventListener('click', (e) => {
+    const a = e.target.dataset.a; if (!a) return;
+    const ns = [...selected].map((id) => L.nodes.find((n) => n.id === id)).filter(Boolean);
+    if (ns.length < 2) return;
+    if (a === 'left') { const x0 = Math.min(...ns.map((n) => n.x)); for (const n of ns) model.layout.pos[n.id] = [x0, n.y]; }
+    else if (a === 'top') { const y0 = Math.min(...ns.map((n) => n.y)); for (const n of ns) model.layout.pos[n.id] = [n.x, y0]; }
+    else if (a === 'hspread') {
+      const so = [...ns].sort((p, q) => p.x - q.x);
+      const step = (so[so.length - 1].x - so[0].x) / (so.length - 1);
+      so.forEach((n, i) => { model.layout.pos[n.id] = [Math.round(so[0].x + i * step), n.y]; });
+    } else if (a === 'vspread') {
+      const so = [...ns].sort((p, q) => p.y - q.y);
+      const step = (so[so.length - 1].y - so[0].y) / (so.length - 1);
+      so.forEach((n, i) => { model.layout.pos[n.id] = [n.x, Math.round(so[0].y + i * step)]; });
+    }
+    commitModel(); toast('そろえました');
+  });
 
   // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
   const history = { stack: [], idx: -1 };
@@ -350,7 +423,9 @@ export function boot() {
       ? ['title', 'dateFormat', 'section', 'done', 'active', 'crit', 'milestone', 'after']
       : model.kind === 'sequence'
         ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
-        : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+        : model.kind === 'class'
+          ? ['classDiagram', 'class']
+          : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -407,7 +482,9 @@ export function boot() {
       ? [['＋タスク', '\n      新しいタスク :t{N}, after {last}, 3d'], ['＋セクション', '\n    section 新しい区分'], ['＋マイルストン', '\n      節目 :milestone, m{N}, after {last}, 0d']]
       : model.kind === 'sequence'
         ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
-        : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+        : model.kind === 'class'
+          ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
+          : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
     ins.innerHTML = snips.map((s, i) => `<button data-i="${i}">${s[0]}</button>`).join('');
     for (const b of ins.children) b.onclick = () => insert(snips[+b.dataset.i][1]);
   }
@@ -480,7 +557,7 @@ export function boot() {
   function runImport(text) {
     const t = String(text || '').trim();
     if (!t) return;
-    if (/^(gantt|flowchart|graph|sequenceDiagram)\b/.test(t)) {   // Mermaid ならそのまま
+    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)\b/.test(t)) {   // Mermaid ならそのまま
       setText(t, true); dlg.hidden = true; toast('Mermaid を読み込みました'); return;
     }
     const r = csvToMermaid(t);
@@ -497,6 +574,16 @@ export function boot() {
   // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) runImport(await f.text()); });
+  // エディタの外に Ctrl+V：表（Excel の TSV そのまま）や Mermaid を貼るだけで図に。
+  document.addEventListener('paste', (e) => {
+    const t = e.target;
+    if (t === src || t === inline || t.tagName === 'TEXTAREA' || t.tagName === 'INPUT') return;
+    const text = e.clipboardData?.getData('text/plain') || '';
+    if (!text.trim()) return;
+    const head = text.trim().split(/\s/)[0];
+    const tableish = text.includes('\t') || (text.includes('\n') && text.split('\n')[0].includes(','));
+    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)$/.test(head) || tableish) { e.preventDefault(); runImport(text); }
+  });
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }

@@ -71,6 +71,11 @@ main { flex: 1; display: flex; min-height: 0; }
 #canvas { transform-origin: 0 0; will-change: transform; }
 #canvas svg { display: block; }
 #canvas [data-drag] { cursor: grab; }
+.alignbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex; gap: .3rem; align-items: center; background: #131a26cc; border: 1px solid var(--line2);
+  border-radius: 10px; padding: .25rem .5rem; backdrop-filter: blur(6px); z-index: 5; }
+.alignbar .albl { font-size: .68rem; color: var(--dim); letter-spacing: .1em; padding-right: .2rem; }
+.alignbar button { padding: .25em .7em; }
 .zoombar { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: .3rem; align-items: center;
   background: #131a26cc; border: 1px solid var(--line2); border-radius: 10px; padding: .25rem .4rem; backdrop-filter: blur(6px); }
 .zoombar button { padding: .2em .6em; }
@@ -162,6 +167,13 @@ main { flex: 1; display: flex; min-height: 0; }
 
   <section class="view" id="view">
     <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div id="alignbar" class="alignbar" hidden>
+      <span class="albl">整列</span>
+      <button data-a="left">⇤ 左</button>
+      <button data-a="top">⤒ 上</button>
+      <button data-a="hspread">↔ 等間隔</button>
+      <button data-a="vspread">↕ 等間隔</button>
+    </div>
     <div class="zoombar">
       <button id="zOut">－</button>
       <span id="zLabel">100%</span>
@@ -439,7 +451,9 @@ function parseFlow(lines, model, dir) {
     if (head === 'flowchart' || head === 'graph') continue;
     if (head === 'subgraph') {
       const name = stripName(line.slice('subgraph'.length).trim()) || ('group' + (model.groups.length + 1));
-      const g = { name, ids: [] }; model.groups.push(g); stack.push(g); continue;
+      // 入れ子：親（いま開いている subgraph）の番号を覚える。
+      const parent = stack.length ? model.groups.indexOf(stack[stack.length - 1]) : null;
+      const g = { name, ids: [], parent }; model.groups.push(g); stack.push(g); continue;
     }
     if (line === 'end') { stack.pop(); continue; }
     if (head === 'direction') { model.meta.dir = line.split(/\s+/)[1] || model.meta.dir; continue; }
@@ -459,12 +473,31 @@ function parseFlow(lines, model, dir) {
   return model;
 }
 
-// ---- シーケンス図 -----------------------------------------------------------
-
-// メッセージ：A->>B: text ／ 線は - 実線・-- 点線、先は >>(矢) >(なし) x(バツ) )(非同期)。
-// id のハイフンは内部のみ（末尾の - を線と取り違えないため）。
+// id の共通形：ハイフンは内部のみ（末尾の - を線と取り違えないため）。
 const SEQ_ID = '[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*';
-const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?<!DOCTYPE html>
+
+// ---- クラス図 ----------------------------------------------------------------
+
+/* 関係の演算子を「from → to（to 側に印）」へ正規化する。
+   <|-- は継承（三角が親に付く）、*-- は合成（黒菱形）、o-- は集約（白菱形）、
+   --> は関連、..> は点線の依存。向きは左右どちら書きでも同じ意味に畳む。 */
+const CLASS_OPS = {
+  '<|--': (a, b) => ({ from: b, to: a, kind: 'inherit', dotted: false }),
+  '--|>': (a, b) => ({ from: a, to: b, kind: 'inherit', dotted: false }),
+  '<|..': (a, b) => ({ from: b, to: a, kind: 'inherit', dotted: true }),
+  '..|>': (a, b) => ({ from: a, to: b, kind: 'inherit', dotted: true }),
+  '*--': (a, b) => ({ from: b, to: a, kind: 'composition', dotted: false }),
+  '--*': (a, b) => ({ from: a, to: b, kind: 'composition', dotted: false }),
+  'o--': (a, b) => ({ from: b, to: a, kind: 'aggregation', dotted: false }),
+  '--o': (a, b) => ({ from: a, to: b, kind: 'aggregation', dotted: false }),
+  '-->': (a, b) => ({ from: a, to: b, kind: 'assoc', dotted: false }),
+  '<--': (a, b) => ({ from: b, to: a, kind: 'assoc', dotted: false }),
+  '..>': (a, b) => ({ from: a, to: b, kind: 'assoc', dotted: true }),
+  '<..': (a, b) => ({ from: b, to: a, kind: 'assoc', dotted: true }),
+  '--': (a, b) => ({ from: a, to: b, kind: 'link', dotted: false }),
+  '..': (a, b) => ({ from: a, to: b, kind: 'link', dotted: true }),
+};
+const CLASS_REL = new RegExp(`^(${SEQ_ID})\\s*(<\\|--|<\\|\\.\\.|--\\|>|\\.\\.\\|>|\\*--|--\\*|o--|--o|-->|<--|\\.\\.>|<\\.\\.|--|\\.\\.)\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -537,6 +570,11 @@ main { flex: 1; display: flex; min-height: 0; }
 #canvas { transform-origin: 0 0; will-change: transform; }
 #canvas svg { display: block; }
 #canvas [data-drag] { cursor: grab; }
+.alignbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex; gap: .3rem; align-items: center; background: #131a26cc; border: 1px solid var(--line2);
+  border-radius: 10px; padding: .25rem .5rem; backdrop-filter: blur(6px); z-index: 5; }
+.alignbar .albl { font-size: .68rem; color: var(--dim); letter-spacing: .1em; padding-right: .2rem; }
+.alignbar button { padding: .25em .7em; }
 .zoombar { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: .3rem; align-items: center;
   background: #131a26cc; border: 1px solid var(--line2); border-radius: 10px; padding: .25rem .4rem; backdrop-filter: blur(6px); }
 .zoombar button { padding: .2em .6em; }
@@ -628,6 +666,469 @@ main { flex: 1; display: flex; min-height: 0; }
 
   <section class="view" id="view">
     <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div id="alignbar" class="alignbar" hidden>
+      <span class="albl">整列</span>
+      <button data-a="left">⇤ 左</button>
+      <button data-a="top">⤒ 上</button>
+      <button data-a="hspread">↔ 等間隔</button>
+      <button data-a="vspread">↕ 等間隔</button>
+    </div>
+    <div class="zoombar">
+      <button id="zOut">－</button>
+      <span id="zLabel">100%</span>
+      <button id="zIn">＋</button>
+      <button id="zFit">フィット</button>
+      <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+  </section>
+</main>
+
+<div id="ac" class="ac" hidden></div>
+<div id="toast" hidden></div>
+<input id="inline" type="text" hidden>
+
+<div id="importDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>データの流し込み（CSV / TSV / Mermaid）</h3>
+    <p class="hint">1 行目はヘッダ。<b>ガント</b>：名前(label)・開始(start)・期間(duration)・依存(after)・状態(status)・区分(section)・link。<b>フロー</b>：from・to・label。列名は日英どちらでも。Mermaid テキストはそのまま読み込みます。</p>
+    <textarea id="csvIn" spellcheck="false" placeholder="名前,開始,期間,依存,状態,区分
+要件定義,2026-07-01,5,,完了,設計
+基本設計,,7,要件定義,進行中,設計
+API 実装,,10,基本設計,,実装"></textarea>
+    <div class="row">
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <button id="csvCancel" class="ghost2">閉じる</button>
+      <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
+
+);
+
+function parseClass(lines, model) {
+  model.kind = 'class';
+  const ensure = (id) => {
+    let c = model.items.find((n) => n.id === id);
+    if (!c) { c = { type: 'class', id, attrs: [], methods: [] }; model.items.push(c); model.order.push(id); }
+    return c;
+  };
+  const addMember = (c, raw) => { (raw.includes('(') ? c.methods : c.attrs).push(raw.trim()); };
+  let inBlock = null;
+  for (const { raw, ln } of lines) {
+    const line = raw.trim();
+    if (!line || line === 'classDiagram') continue;
+    if (inBlock) {
+      if (line === '}') { inBlock = null; continue; }
+      addMember(inBlock, line.replace(/[,;]$/, ''));
+      continue;
+    }
+    const head = line.split(/\s+/)[0];
+    if (head === 'class') {
+      const m = /^class\s+([A-Za-z0-9_.-]+)\s*(\{)?\s*$/.exec(line);
+      if (m) { const c = ensure(m[1]); if (m[2]) inBlock = c; }
+      else model.errors.push(`L${ln}: class が読めない「${line}」`);
+      continue;
+    }
+    if (head === 'direction' || head === 'note') continue;   // 体裁系は無視
+    let m = CLASS_REL.exec(line);
+    if (m && CLASS_OPS[m[2]]) {
+      ensure(m[1]); ensure(m[3]);
+      model.edges.push({ ...CLASS_OPS[m[2]](m[1], m[3]), label: (m[4] ?? '').trim() });
+      continue;
+    }
+    m = new RegExp(`^(${SEQ_ID})\\s*:\\s*(.+)<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="studio — Mermaid 記法で書けて、グリグリ動かせる作図エディタ。ガントチャートと機能構成図（フローチャート）。構文ハイライト・リアルタイム検証・補完・ドラッグ・各種エクスポート。">
+<meta name="theme-color" content="#0b0e14">
+<title>studio — Mermaid で書く作図エディタ</title>
+<style>
+:root { color-scheme: dark;
+  --bg: #0b0e14; --bg2: #0c1119; --line: #1c2230; --line2: #2a3344;
+  --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
+  --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
+
+header { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+  padding: calc(.45rem + env(safe-area-inset-top)) .8rem .45rem; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.brand { font-weight: 700; letter-spacing: .03em; }
+.badge { font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--acc);
+  border: 1px solid var(--line2); border-radius: 999px; padding: .12em .7em; }
+.pick { font-size: .72rem; color: var(--dim); display: flex; align-items: center; gap: .4rem; }
+select, button { font: inherit; color: var(--fg); background: #18202e; border: 1px solid var(--line2); border-radius: 7px;
+  padding: .32em .8em; font-size: .76rem; cursor: pointer; transition: background .15s, border-color .15s; touch-action: manipulation; }
+select:hover, button:hover { background: #20293a; border-color: #3a4660; }
+.sp { flex: 1; }
+.ins { display: flex; gap: .35rem; flex-wrap: wrap; }
+.ins button { padding: .3em .6em; font-size: .72rem; }
+.status { font-size: .72rem; color: var(--dim); }
+.status[data-bad="1"] { color: var(--tag); }
+.menu { position: relative; }
+.dropdown { position: absolute; right: 0; top: 110%; background: #131a26; border: 1px solid var(--line2); border-radius: 9px;
+  padding: .3rem; display: flex; flex-direction: column; gap: .2rem; z-index: 30; min-width: 160px; box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+.dropdown button { text-align: left; background: transparent; border: 0; }
+.dropdown button:hover { background: #20293a; }
+
+main { flex: 1; display: flex; min-height: 0; }
+.editor { width: 44%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0; }
+.codewrap { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+.gutter { width: 42px; flex: none; overflow: hidden; text-align: right; padding: 12px 8px 12px 0; color: #4a5670;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 20px; user-select: none; background: #0a0e16; }
+.gutter .ln { height: 20px; }
+.gutter .ln.bad { color: var(--bad); font-weight: 700; }
+.code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.hl, #src { margin: 0; border: 0; padding: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px; line-height: 20px; tab-size: 2; white-space: pre; overflow: auto; }
+.hl { position: absolute; inset: 0; pointer-events: none; color: var(--str); }
+#src { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; background: transparent; color: transparent;
+  caret-color: var(--fg); outline: none; }
+#src::selection { background: rgba(106,169,255,.28); }
+.tk-kw { color: var(--kw); } .tk-id { color: var(--id); } .tk-tag { color: var(--tag); }
+.tk-date { color: var(--date); } .tk-arrow { color: var(--arrow); } .tk-com { color: var(--com); font-style: italic; }
+.tk-shape { color: var(--str); } .tk-bad { text-decoration: wavy underline var(--bad); }
+
+.problems { flex: none; max-height: 30%; overflow: auto; border-top: 1px solid var(--line); padding: .3rem 0; }
+.problems:empty { display: none; }
+.problems .p { display: flex; gap: .5rem; padding: .25rem .8rem; font-size: .74rem; color: #d8b48a; cursor: pointer; }
+.problems .p:hover { background: #161d2a; }
+.problems .p .ln { color: var(--bad); font-variant-numeric: tabular-nums; }
+
+.view { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.stage { flex: 1; overflow: hidden; touch-action: none; cursor: grab;
+  background: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14);
+  background-image: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14),
+    linear-gradient(#ffffff09 1px, transparent 1px), linear-gradient(90deg, #ffffff09 1px, transparent 1px);
+  background-size: 100% 100%, 22px 22px, 22px 22px; }
+.stage.panning { cursor: grabbing; }
+#canvas { transform-origin: 0 0; will-change: transform; }
+#canvas svg { display: block; }
+#canvas [data-drag] { cursor: grab; }
+.alignbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex; gap: .3rem; align-items: center; background: #131a26cc; border: 1px solid var(--line2);
+  border-radius: 10px; padding: .25rem .5rem; backdrop-filter: blur(6px); z-index: 5; }
+.alignbar .albl { font-size: .68rem; color: var(--dim); letter-spacing: .1em; padding-right: .2rem; }
+.alignbar button { padding: .25em .7em; }
+.zoombar { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: .3rem; align-items: center;
+  background: #131a26cc; border: 1px solid var(--line2); border-radius: 10px; padding: .25rem .4rem; backdrop-filter: blur(6px); }
+.zoombar button { padding: .2em .6em; }
+#zLabel { font-size: .72rem; color: var(--dim); min-width: 3em; text-align: center; font-variant-numeric: tabular-nums; }
+.only-mobile { display: none; }
+
+.ac { position: fixed; z-index: 40; background: #131a26; border: 1px solid var(--line2); border-radius: 8px;
+  padding: .2rem; max-height: 220px; overflow: auto; box-shadow: 0 14px 34px rgba(0,0,0,.5); min-width: 160px; }
+.ac .opt { padding: .3em .6em; font-size: .78rem; border-radius: 5px; cursor: pointer; display: flex; gap: .5rem; align-items: baseline; }
+.ac .opt .k { font-family: ui-monospace, Menlo, monospace; color: var(--id); }
+.ac .opt .d { color: var(--dim); font-size: .68rem; }
+.ac .opt.sel { background: #24304a; }
+
+#toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: #18202e; border: 1px solid var(--line2); padding: .5em 1.1em; border-radius: 999px; font-size: .76rem;
+  opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
+#toast.on { opacity: 1; }
+
+/* ポトペタのその場リネーム（浮きインプット） */
+#inline { position: fixed; z-index: 70; background: #101724; border: 1.5px solid var(--acc); border-radius: 7px;
+  color: var(--fg); font: inherit; font-size: .84rem; padding: .3em .6em; outline: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+
+/* 取り込みダイアログ */
+.dlg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,10,.55); backdrop-filter: blur(3px); padding: 1rem; }
+.dlg .box { width: min(560px, 94vw); max-height: 88vh; overflow: auto; background: #0e1420; border: 1px solid var(--line2);
+  border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .65rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.dlg h3 { font-size: .92rem; font-weight: 600; }
+.dlg .hint { font-size: .72rem; color: var(--dim); line-height: 1.8; }
+.dlg .hint a { color: var(--acc); }
+.dlg textarea { min-height: 170px; resize: vertical; background: #0a0e16; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.6; padding: .6rem; outline: none; }
+.dlg .row { display: flex; gap: .5rem; align-items: center; }
+.ghost2 { background: transparent; }
+
+@media (max-width: 820px) {
+  header { gap: .35rem .45rem; padding-bottom: .4rem; }
+  #status { display: none; }                                 /* 指摘は problems 一覧で見える */
+  .pick { order: 5; flex-basis: calc(100% - 96px); }
+  .pick select { flex: 1; min-width: 0; max-width: 100%; }
+  #bImport { order: 6; }
+  .ins { order: 7; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .ins button { flex: none; padding: .45em .8em; }           /* 指で押しやすく */
+  .zoombar button { padding: .4em .8em; }
+  main { flex-direction: column; }
+  .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
+  .view { flex: 1; }
+  .only-mobile { display: inline-block; }
+  body.viewmax .editor { display: none; }
+  body.viewmax .view { height: 100%; }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">studio</span>
+  <span id="kind" class="badge">—</span>
+  <label class="pick">サンプル
+    <select id="samples"></select>
+  </label>
+  <span class="sp"></span>
+  <div class="ins" id="insbar"></div>
+  <span id="status" class="status"></span>
+  <button id="bImport">取り込み</button>
+  <div class="menu">
+    <button id="bExport">エクスポート ▾</button>
+    <div id="exportMenu" class="dropdown" hidden>
+      <button data-x="dsl">DSL をコピー</button>
+      <button data-x="mmd">.mmd を保存</button>
+      <button data-x="svg">SVG を保存</button>
+      <button data-x="png">PNG を保存</button>
+      <button data-x="html">単一 HTML を保存</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="editor" id="editor">
+    <div class="codewrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code">
+        <pre class="hl" aria-hidden="true"><code id="hl"></code></pre>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+      </div>
+    </div>
+    <div class="problems" id="problems"></div>
+  </section>
+
+  <section class="view" id="view">
+    <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div id="alignbar" class="alignbar" hidden>
+      <span class="albl">整列</span>
+      <button data-a="left">⇤ 左</button>
+      <button data-a="top">⤒ 上</button>
+      <button data-a="hspread">↔ 等間隔</button>
+      <button data-a="vspread">↕ 等間隔</button>
+    </div>
+    <div class="zoombar">
+      <button id="zOut">－</button>
+      <span id="zLabel">100%</span>
+      <button id="zIn">＋</button>
+      <button id="zFit">フィット</button>
+      <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+  </section>
+</main>
+
+<div id="ac" class="ac" hidden></div>
+<div id="toast" hidden></div>
+<input id="inline" type="text" hidden>
+
+<div id="importDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>データの流し込み（CSV / TSV / Mermaid）</h3>
+    <p class="hint">1 行目はヘッダ。<b>ガント</b>：名前(label)・開始(start)・期間(duration)・依存(after)・状態(status)・区分(section)・link。<b>フロー</b>：from・to・label。列名は日英どちらでも。Mermaid テキストはそのまま読み込みます。</p>
+    <textarea id="csvIn" spellcheck="false" placeholder="名前,開始,期間,依存,状態,区分
+要件定義,2026-07-01,5,,完了,設計
+基本設計,,7,要件定義,進行中,設計
+API 実装,,10,基本設計,,実装"></textarea>
+    <div class="row">
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <button id="csvCancel" class="ghost2">閉じる</button>
+      <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
+
+).exec(line);  // A : +int age（一行メンバ）
+    if (m) { addMember(ensure(m[1]), m[2]); continue; }
+    model.errors.push(`L${ln}: 読めない行「${line}」`);
+  }
+  if (inBlock) model.errors.push('閉じていない class ブロック（} が足りない）');
+  return model;
+}
+
+// ---- シーケンス図 -----------------------------------------------------------
+
+// メッセージ：A->>B: text ／ 線は - 実線・-- 点線、先は >>(矢) >(なし) x(バツ) )(非同期)。
+const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="studio — Mermaid 記法で書けて、グリグリ動かせる作図エディタ。ガントチャートと機能構成図（フローチャート）。構文ハイライト・リアルタイム検証・補完・ドラッグ・各種エクスポート。">
+<meta name="theme-color" content="#0b0e14">
+<title>studio — Mermaid で書く作図エディタ</title>
+<style>
+:root { color-scheme: dark;
+  --bg: #0b0e14; --bg2: #0c1119; --line: #1c2230; --line2: #2a3344;
+  --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
+  --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
+
+header { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+  padding: calc(.45rem + env(safe-area-inset-top)) .8rem .45rem; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.brand { font-weight: 700; letter-spacing: .03em; }
+.badge { font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--acc);
+  border: 1px solid var(--line2); border-radius: 999px; padding: .12em .7em; }
+.pick { font-size: .72rem; color: var(--dim); display: flex; align-items: center; gap: .4rem; }
+select, button { font: inherit; color: var(--fg); background: #18202e; border: 1px solid var(--line2); border-radius: 7px;
+  padding: .32em .8em; font-size: .76rem; cursor: pointer; transition: background .15s, border-color .15s; touch-action: manipulation; }
+select:hover, button:hover { background: #20293a; border-color: #3a4660; }
+.sp { flex: 1; }
+.ins { display: flex; gap: .35rem; flex-wrap: wrap; }
+.ins button { padding: .3em .6em; font-size: .72rem; }
+.status { font-size: .72rem; color: var(--dim); }
+.status[data-bad="1"] { color: var(--tag); }
+.menu { position: relative; }
+.dropdown { position: absolute; right: 0; top: 110%; background: #131a26; border: 1px solid var(--line2); border-radius: 9px;
+  padding: .3rem; display: flex; flex-direction: column; gap: .2rem; z-index: 30; min-width: 160px; box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+.dropdown button { text-align: left; background: transparent; border: 0; }
+.dropdown button:hover { background: #20293a; }
+
+main { flex: 1; display: flex; min-height: 0; }
+.editor { width: 44%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0; }
+.codewrap { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+.gutter { width: 42px; flex: none; overflow: hidden; text-align: right; padding: 12px 8px 12px 0; color: #4a5670;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 20px; user-select: none; background: #0a0e16; }
+.gutter .ln { height: 20px; }
+.gutter .ln.bad { color: var(--bad); font-weight: 700; }
+.code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.hl, #src { margin: 0; border: 0; padding: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px; line-height: 20px; tab-size: 2; white-space: pre; overflow: auto; }
+.hl { position: absolute; inset: 0; pointer-events: none; color: var(--str); }
+#src { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; background: transparent; color: transparent;
+  caret-color: var(--fg); outline: none; }
+#src::selection { background: rgba(106,169,255,.28); }
+.tk-kw { color: var(--kw); } .tk-id { color: var(--id); } .tk-tag { color: var(--tag); }
+.tk-date { color: var(--date); } .tk-arrow { color: var(--arrow); } .tk-com { color: var(--com); font-style: italic; }
+.tk-shape { color: var(--str); } .tk-bad { text-decoration: wavy underline var(--bad); }
+
+.problems { flex: none; max-height: 30%; overflow: auto; border-top: 1px solid var(--line); padding: .3rem 0; }
+.problems:empty { display: none; }
+.problems .p { display: flex; gap: .5rem; padding: .25rem .8rem; font-size: .74rem; color: #d8b48a; cursor: pointer; }
+.problems .p:hover { background: #161d2a; }
+.problems .p .ln { color: var(--bad); font-variant-numeric: tabular-nums; }
+
+.view { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.stage { flex: 1; overflow: hidden; touch-action: none; cursor: grab;
+  background: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14);
+  background-image: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14),
+    linear-gradient(#ffffff09 1px, transparent 1px), linear-gradient(90deg, #ffffff09 1px, transparent 1px);
+  background-size: 100% 100%, 22px 22px, 22px 22px; }
+.stage.panning { cursor: grabbing; }
+#canvas { transform-origin: 0 0; will-change: transform; }
+#canvas svg { display: block; }
+#canvas [data-drag] { cursor: grab; }
+.alignbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex; gap: .3rem; align-items: center; background: #131a26cc; border: 1px solid var(--line2);
+  border-radius: 10px; padding: .25rem .5rem; backdrop-filter: blur(6px); z-index: 5; }
+.alignbar .albl { font-size: .68rem; color: var(--dim); letter-spacing: .1em; padding-right: .2rem; }
+.alignbar button { padding: .25em .7em; }
+.zoombar { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: .3rem; align-items: center;
+  background: #131a26cc; border: 1px solid var(--line2); border-radius: 10px; padding: .25rem .4rem; backdrop-filter: blur(6px); }
+.zoombar button { padding: .2em .6em; }
+#zLabel { font-size: .72rem; color: var(--dim); min-width: 3em; text-align: center; font-variant-numeric: tabular-nums; }
+.only-mobile { display: none; }
+
+.ac { position: fixed; z-index: 40; background: #131a26; border: 1px solid var(--line2); border-radius: 8px;
+  padding: .2rem; max-height: 220px; overflow: auto; box-shadow: 0 14px 34px rgba(0,0,0,.5); min-width: 160px; }
+.ac .opt { padding: .3em .6em; font-size: .78rem; border-radius: 5px; cursor: pointer; display: flex; gap: .5rem; align-items: baseline; }
+.ac .opt .k { font-family: ui-monospace, Menlo, monospace; color: var(--id); }
+.ac .opt .d { color: var(--dim); font-size: .68rem; }
+.ac .opt.sel { background: #24304a; }
+
+#toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: #18202e; border: 1px solid var(--line2); padding: .5em 1.1em; border-radius: 999px; font-size: .76rem;
+  opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
+#toast.on { opacity: 1; }
+
+/* ポトペタのその場リネーム（浮きインプット） */
+#inline { position: fixed; z-index: 70; background: #101724; border: 1.5px solid var(--acc); border-radius: 7px;
+  color: var(--fg); font: inherit; font-size: .84rem; padding: .3em .6em; outline: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+
+/* 取り込みダイアログ */
+.dlg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,10,.55); backdrop-filter: blur(3px); padding: 1rem; }
+.dlg .box { width: min(560px, 94vw); max-height: 88vh; overflow: auto; background: #0e1420; border: 1px solid var(--line2);
+  border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .65rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.dlg h3 { font-size: .92rem; font-weight: 600; }
+.dlg .hint { font-size: .72rem; color: var(--dim); line-height: 1.8; }
+.dlg .hint a { color: var(--acc); }
+.dlg textarea { min-height: 170px; resize: vertical; background: #0a0e16; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.6; padding: .6rem; outline: none; }
+.dlg .row { display: flex; gap: .5rem; align-items: center; }
+.ghost2 { background: transparent; }
+
+@media (max-width: 820px) {
+  header { gap: .35rem .45rem; padding-bottom: .4rem; }
+  #status { display: none; }                                 /* 指摘は problems 一覧で見える */
+  .pick { order: 5; flex-basis: calc(100% - 96px); }
+  .pick select { flex: 1; min-width: 0; max-width: 100%; }
+  #bImport { order: 6; }
+  .ins { order: 7; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .ins button { flex: none; padding: .45em .8em; }           /* 指で押しやすく */
+  .zoombar button { padding: .4em .8em; }
+  main { flex-direction: column; }
+  .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
+  .view { flex: 1; }
+  .only-mobile { display: inline-block; }
+  body.viewmax .editor { display: none; }
+  body.viewmax .view { height: 100%; }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">studio</span>
+  <span id="kind" class="badge">—</span>
+  <label class="pick">サンプル
+    <select id="samples"></select>
+  </label>
+  <span class="sp"></span>
+  <div class="ins" id="insbar"></div>
+  <span id="status" class="status"></span>
+  <button id="bImport">取り込み</button>
+  <div class="menu">
+    <button id="bExport">エクスポート ▾</button>
+    <div id="exportMenu" class="dropdown" hidden>
+      <button data-x="dsl">DSL をコピー</button>
+      <button data-x="mmd">.mmd を保存</button>
+      <button data-x="svg">SVG を保存</button>
+      <button data-x="png">PNG を保存</button>
+      <button data-x="html">単一 HTML を保存</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="editor" id="editor">
+    <div class="codewrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code">
+        <pre class="hl" aria-hidden="true"><code id="hl"></code></pre>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+      </div>
+    </div>
+    <div class="problems" id="problems"></div>
+  </section>
+
+  <section class="view" id="view">
+    <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div id="alignbar" class="alignbar" hidden>
+      <span class="albl">整列</span>
+      <button data-a="left">⇤ 左</button>
+      <button data-a="top">⤒ 上</button>
+      <button data-a="hspread">↔ 等間隔</button>
+      <button data-a="vspread">↕ 等間隔</button>
+    </div>
     <div class="zoombar">
       <button id="zOut">－</button>
       <span id="zLabel">100%</span>
@@ -748,7 +1249,8 @@ function parse(text) {
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
   else if (headWord === 'sequenceDiagram') parseSeq(body, model);
-  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram ではありません「${headWord}」`);
+  else if (headWord === 'classDiagram') parseClass(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram ではありません「${headWord}」`);
   return model;
 }
 
@@ -945,15 +1447,27 @@ function layoutFlow(model) {
 
   for (const n of nodes) { const p = model.layout.pos[n.id]; if (p) { const r = placed.get(n.id); r.x = p[0]; r.y = p[1]; } }
 
-  const groups = [];
-  for (const g of model.groups) {
-    const mem = g.ids.map((id) => placed.get(id)).filter(Boolean);
-    if (!mem.length) continue;
+  // グループ枠：内側（子）から外接矩形を決め、親は子の枠ごと包む（入れ子対応）。
+  // 子は宣言上あとに来る（親の中で開く）ので、逆順にたどれば子が先に決まる。
+  const boxes = new Array(model.groups.length).fill(null);
+  for (let i = model.groups.length - 1; i >= 0; i--) {
+    const g = model.groups[i];
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const m of mem) { x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + m.w); y1 = Math.max(y1, m.y + m.h); }
-    groups.push({ name: g.name, x: x0 - FLOW.GROUP_PAD, y: y0 - FLOW.GROUP_PAD - FLOW.GROUP_HEAD,
-      w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD });
+    for (const id of g.ids) {
+      const m = placed.get(id); if (!m) continue;
+      x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + m.w); y1 = Math.max(y1, m.y + m.h);
+    }
+    for (let j = i + 1; j < model.groups.length; j++) {
+      if (model.groups[j].parent !== i || !boxes[j]) continue;
+      const b = boxes[j];
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    }
+    if (!Number.isFinite(x0)) continue;
+    boxes[i] = { x: x0 - FLOW.GROUP_PAD, y: y0 - FLOW.GROUP_PAD - FLOW.GROUP_HEAD,
+      w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD };
   }
+  const groups = [];
+  boxes.forEach((b, i) => { if (b) groups.push({ name: model.groups[i].name, ...b }); });
 
   // エッジは主軸に沿うベジェ曲線。ラベルは曲線の中点（t=0.5）へ。
   const edges = [];
@@ -1033,9 +1547,76 @@ function layoutSeq(model) {
     width, height, errors };
 }
 
+// ---- クラス図 ----------------------------------------------------------------
+
+const CLASS = { PAD: 30, GAP_MAIN: 64, GAP_CROSS: 34, HEAD_H: 26, LINE_H: 16, SEP: 5 };
+
+function classSize(c) {
+  const wOf = (s) => { let w = 0; for (const ch of String(s)) w += ch.charCodeAt(0) > 0x2e7f ? 15 : 7.6; return w; };
+  let w = wOf(c.id) + 28;
+  for (const m of [...c.attrs, ...c.methods]) w = Math.max(w, wOf(m) + 22);
+  const lines = c.attrs.length + c.methods.length;
+  const h = CLASS.HEAD_H + (lines ? CLASS.SEP : 0) + c.attrs.length * CLASS.LINE_H
+    + (c.methods.length ? CLASS.SEP : 0) + c.methods.length * CLASS.LINE_H + (lines ? 8 : 4);
+  return { w: Math.max(110, Math.min(300, w)), h };
+}
+
+function layoutClass(model) {
+  const classes = model.items.filter((it) => it.type === 'class');
+  const byId = new Map(classes.map((c) => [c.id, c]));
+  // 段組み：継承は「親が上」——親→子の向きで層を数える。ほかの関係は from→to。
+  const preds = new Map(classes.map((c) => [c.id, []]));
+  for (const e of model.edges) {
+    const [up, down] = e.kind === 'inherit' ? [e.to, e.from] : [e.from, e.to];
+    if (byId.has(up) && byId.has(down) && up !== down) preds.get(down).push(up);
+  }
+  const depth = {}, visiting = new Set();
+  const calc = (id) => {
+    if (id in depth) return depth[id];
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    let d = 0; for (const p of preds.get(id) || []) d = Math.max(d, calc(p) + 1);
+    visiting.delete(id); depth[id] = d; return d;
+  };
+  for (const c of classes) calc(c.id);
+
+  const layers = {};
+  for (const c of classes) (layers[depth[c.id]] ||= []).push(c.id);
+  const keys = Object.keys(layers).map(Number).sort((a, b) => a - b);
+
+  const placed = new Map();
+  const layerH = {}; let acc = CLASS.PAD;
+  for (const k of keys) { let m = 0; for (const id of layers[k]) m = Math.max(m, classSize(byId.get(id)).h); layerH[k] = acc; acc += m + CLASS.GAP_MAIN; }
+  for (const k of keys) {
+    let x = CLASS.PAD;
+    for (const id of layers[k]) {
+      const s = classSize(byId.get(id));
+      placed.set(id, { id, label: byId.get(id).id, attrs: byId.get(id).attrs, methods: byId.get(id).methods,
+        x, y: layerH[k], w: s.w, h: s.h });
+      x += s.w + CLASS.GAP_CROSS;
+    }
+  }
+  for (const c of classes) { const p = model.layout.pos[c.id]; if (p) { const r = placed.get(c.id); r.x = p[0]; r.y = p[1]; } }
+
+  const edges = [];
+  for (const e of model.edges) {
+    const a = placed.get(e.from), b = placed.get(e.to);
+    if (!a || !b) continue;
+    const c = clip(a, b);
+    edges.push({ ...e, x1: c.from[0], y1: c.from[1], x2: c.to[0], y2: c.to[1],
+      mx: (c.from[0] + c.to[0]) / 2, my: (c.from[1] + c.to[1]) / 2 });
+  }
+
+  let width = CLASS.PAD, height = CLASS.PAD;
+  for (const r of placed.values()) { width = Math.max(width, r.x + r.w); height = Math.max(height, r.y + r.h); }
+  return { kind: 'class', nodes: [...placed.values()], edges, groups: [],
+    width: width + CLASS.PAD, height: height + CLASS.PAD, errors: [] };
+}
+
 function layout(model) {
   if (model.kind === 'flowchart') return layoutFlow(model);
   if (model.kind === 'sequence') return layoutSeq(model);
+  if (model.kind === 'class') return layoutClass(model);
   return layoutGantt(model);
 }
 
@@ -1097,14 +1678,18 @@ function flowBody(model) {
     const op = OP(e), lbl = e.label ? `|${e.label}|` : '';
     out.push(`    ${e.from} ${op}${lbl} ${e.to}`);
   }
-  for (const g of model.groups) {
-    out.push(`    subgraph ${g.name}`);
+  // subgraph は入れ子ごと書き戻す（parent 番号でぶら下げる）。
+  const emitGroup = (gi, indent) => {
+    const g = model.groups[gi];
+    out.push(`${indent}subgraph ${g.name}`);
     for (const id of g.ids) {
       const n = model.items.find((x) => x.id === id);
-      out.push(n ? `      ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `      ${id}`);
+      out.push(n ? `${indent}  ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `${indent}  ${id}`);
     }
-    out.push('    end');
-  }
+    model.groups.forEach((c, ci) => { if (c.parent === gi) emitGroup(ci, indent + '  '); });
+    out.push(`${indent}end`);
+  };
+  model.groups.forEach((g, gi) => { if (g.parent == null) emitGroup(gi, '    '); });
   for (const id of model.order) {                      // ハイパーリンク（click 行）
     const n = model.items.find((x) => x.id === id);
     if (n?.link) out.push(`    click ${n.id} "${n.link}"`);
@@ -1134,9 +1719,35 @@ function seqBody(model) {
   return out;
 }
 
+// クラス図：class ブロック（属性→メソッド）と、正規形の関係演算子。
+const CLASS_OP = (e) => {
+  if (e.kind === 'inherit') return [e.to, e.dotted ? '<|..' : '<|--', e.from];
+  if (e.kind === 'composition') return [e.to, '*--', e.from];
+  if (e.kind === 'aggregation') return [e.to, 'o--', e.from];
+  if (e.kind === 'assoc') return [e.from, e.dotted ? '..>' : '-->', e.to];
+  return [e.from, e.dotted ? '..' : '--', e.to];
+};
+function classBody(model) {
+  const out = ['classDiagram'];
+  for (const id of model.order) {
+    const c = model.items.find((x) => x.id === id);
+    if (!c || c.type !== 'class') continue;
+    if (!c.attrs.length && !c.methods.length) { out.push(`    class ${c.id}`); continue; }
+    out.push(`    class ${c.id} {`);
+    for (const a of c.attrs) out.push(`      ${a}`);
+    for (const m of c.methods) out.push(`      ${m}`);
+    out.push('    }');
+  }
+  for (const e of model.edges) {
+    const [a, op, b] = CLASS_OP(e);
+    out.push(`    ${a} ${op} ${b}${e.label ? ' : ' + e.label : ''}`);
+  }
+  return out;
+}
+
 function trailer(model) {
   const L = model.layout, out = [];
-  if (model.kind === 'flowchart') {
+  if (model.kind === 'flowchart' || model.kind === 'class') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
   } else if (model.kind === 'sequence') {
     if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
@@ -1150,7 +1761,8 @@ function trailer(model) {
 
 function serialize(model) {
   const body = model.kind === 'flowchart' ? flowBody(model)
-    : model.kind === 'sequence' ? seqBody(model) : ganttBody(model);
+    : model.kind === 'sequence' ? seqBody(model)
+    : model.kind === 'class' ? classBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }
 
@@ -1327,6 +1939,9 @@ const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
   <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
   <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#9aa3b5" stroke-width="1.4"/></marker>
+  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
+  <marker id="diaf" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#9aa3b5"/></marker>
+  <marker id="diao" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
 </defs>`;
 
 function wrap(L, inner) {
@@ -1420,7 +2035,7 @@ function drawFlow(model, L, opts = {}) {
   });
   L.nodes.forEach((n, i) => {
     const hue = hueOf(i);
-    const sel = opts.selected === n.id;
+    const sel = !!opts.selected?.has?.(n.id);
     const inner = shapePath(n).replace(/<(rect|ellipse|polygon|path)([^>]*?)\/>/g,
       `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
@@ -1429,9 +2044,54 @@ function drawFlow(model, L, opts = {}) {
     g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
     if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
     parts.push(g + `</g>`);
-    if (sel) parts.push(`<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
-      + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
-      + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
+  });
+  return wrap(L, parts.join('\n'));
+}
+
+// 選択ノードから生える接続ハンドル（引っぱって別ノードへ落とすとエッジ）。
+function connectHandle(n) {
+  return `<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
+    + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
+    + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`;
+}
+
+// ---- クラス図 ----------------------------------------------------------------
+
+const CLASS_MARKER = { inherit: 'tri', composition: 'diaf', aggregation: 'diao', assoc: 'arrow' };
+
+function drawClass(model, L, opts = {}) {
+  const parts = [];
+  L.edges.forEach((e, i) => {
+    const marker = CLASS_MARKER[e.kind];
+    const dash = e.dotted ? ` stroke-dasharray="4 4"` : '';
+    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.8" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+    if (e.label) {
+      const tw = e.label.length * 7 + 10;
+      parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
+    }
+  });
+  L.nodes.forEach((n, i) => {
+    const hue = hueOf(i);
+    const sel = !!opts.selected?.has?.(n.id);
+    let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
+    if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="8" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.4 : 1.5}"/>`;
+    g += `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e7ebf4" font-size="12.5" font-weight="700" text-anchor="middle">${esc(n.label)}</text>`;
+    let y = n.y + 26;
+    if (n.attrs.length || n.methods.length) {
+      g += `<line x1="${n.x}" y1="${y}" x2="${n.x + n.w}" y2="${y}" stroke="${hue}" stroke-opacity="0.5"/>`;
+      y += 4;
+      for (const a of n.attrs) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#c7d0e0" font-size="11">${esc(a)}</text>`; y += 3; }
+      if (n.methods.length) {
+        if (n.attrs.length) { g += `<line x1="${n.x}" y1="${y + 2}" x2="${n.x + n.w}" y2="${y + 2}" stroke="${hue}" stroke-opacity="0.35"/>`; y += 5; }
+        for (const m of n.methods) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#aeb9d0" font-size="11" font-style="italic">${esc(m)}</text>`; y += 3; }
+      }
+    }
+    parts.push(g + `</g>`);
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
   });
   return wrap(L, parts.join('\n'));
 }
@@ -1485,6 +2145,7 @@ function drawSeq(model, L) {
 function draw(model, L, opts = {}) {
   if (L.kind === 'flowchart') return drawFlow(model, L, opts);
   if (L.kind === 'sequence') return drawSeq(model, L);
+  if (L.kind === 'class') return drawClass(model, L, opts);
   return drawGantt(model, L);
 }
 
@@ -1556,12 +2217,30 @@ const SAMPLES = {
       w-->>u: エラー表示
     end
     Note over u,w: 3回失敗でロック`,
+  'クラス — ドメインモデル': `classDiagram
+    class Animal {
+      +String name
+      +int age
+      +speak() string
+    }
+    class Dog {
+      +fetch() void
+    }
+    class Cat
+    class Owner {
+      +String name
+      +feed(a) void
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+    Owner --> Animal : 飼う
+    Dog ..> Owner : なつく`,
 };
 
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -1593,8 +2272,9 @@ function boot() {
   function render() {
     model = parse(src.value);
     L = layout(model);
-    if (selected && !model.items.some((x) => x.id === selected)) selected = null;
+    for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
     canvas.innerHTML = draw(model, L, { selected });
+    syncAlignBar();
     applyView();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
@@ -1630,7 +2310,8 @@ function boot() {
   $('zFit').onclick = fit;
 
   // ---- ポインタ（選択・ドラッグ・接続・パン・ピンチ・ダブルタップ）----
-  let selected = null, drag = null, pan = null, connect = null, pinch = null;
+  const selected = new Set();
+  let drag = null, pan = null, connect = null, pinch = null;
   const pointers = new Map();
   let lastTap = { t: 0, x: 0, y: 0 };
 
@@ -1679,7 +2360,11 @@ function boot() {
     const g = e.target.closest('[data-drag]');
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
-      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY, moved: false }; }
+      if (kind === 'node') {
+        const ids = (selected.has(id) && selected.size > 1) ? [...selected] : [id];
+        const starts = new Map(ids.map((i2) => { const n = L.nodes.find((x) => x.id === i2); return [i2, [n.x, n.y]]; }));
+        drag = { id, kind, ids, starts, px: e.clientX, py: e.clientY, moved: false, shift: e.shiftKey };
+      }
       else if (kind === 'actor') {
         const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
         drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY, moved: false };
@@ -1711,7 +2396,7 @@ function boot() {
       const dx = dxp / view.s, dy = dyp / view.s;
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
-        model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
+        for (const [i2, [x0, y0]] of drag.starts) model.layout.pos[i2] = [snap(x0 + dx), snap(y0 + dy)];
       } else if (drag.kind === 'actor') {
         const steps = Math.round(dx / drag.spacing);
         const o = drag.order.slice(), f = o.indexOf(drag.id);
@@ -1738,14 +2423,23 @@ function boot() {
       removeTempLine();
       if (tgt && tgt.dataset.id !== connect.from) {
         if (model.edges.some((x) => x.from === connect.from && x.to === tgt.dataset.id)) toast('もうつながっています');
-        else { model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true }); selected = null; commitModel(); toast('つなぎました'); return; }
+        else {
+          if (model.kind === 'class') model.edges.push({ from: connect.from, to: tgt.dataset.id, kind: 'assoc', dotted: false, label: '' });
+          else model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true });
+          selected.clear(); commitModel(); toast('つなぎました'); return;
+        }
       }
-      connect = null; selected = null; redraw(); return;
+      connect = null; selected.clear(); redraw(); syncAlignBar(); return;
     }
     if (drag) {
       if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
-      else if (drag.kind === 'node') { selected = selected === drag.id ? null : drag.id; redraw(); }  // クリック＝選択
-    } else if (pan && !pan.moved && selected) { selected = null; redraw(); }                            // 空クリック＝選択解除
+      else if (drag.kind === 'node') {                                       // クリック＝選択（Shift で追加/除外）
+        if (drag.shift) { selected.has(drag.id) ? selected.delete(drag.id) : selected.add(drag.id); }
+        else if (selected.size === 1 && selected.has(drag.id)) selected.clear();
+        else { selected.clear(); selected.add(drag.id); }
+        redraw(); syncAlignBar();
+      }
+    } else if (pan && !pan.moved && selected.size) { selected.clear(); redraw(); syncAlignBar(); }       // 空クリック＝選択解除
     drag = null; pan = null; connect = null; stage.classList.remove('panning');
   }
   stage.addEventListener('pointerup', endPointer);
@@ -1770,7 +2464,14 @@ function boot() {
       model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
       model.order.push(id);
       model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
-      selected = id; commitModel();
+      selected.clear(); selected.add(id); commitModel();
+    } else if (model.kind === 'class') {
+      let k = 1; while (model.items.some((n) => n.id === 'C' + k)) k++;
+      const id = 'C' + k;
+      model.items.push({ type: 'class', id, attrs: [], methods: [] });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected.clear(); selected.add(id); commitModel();
     } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
     else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
   }
@@ -1794,6 +2495,16 @@ function boot() {
     if (!ok) return;
     const v = inline.value.trim();
     if (kind === 'edge') { if (model.edges[ref] != null) model.edges[ref].label = v; }
+    else if (model.kind === 'class') {                        // クラスは名前＝id なので、参照ごと改名する
+      const nid = v.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_.-]/g, '');
+      const it = model.items.find((x) => x.id === ref);
+      if (!it || !nid) return;
+      if (nid !== ref && model.items.some((x) => x.id === nid)) { toast('その名前は使われています'); return; }
+      it.id = nid;
+      model.order = model.order.map((x) => (x === ref ? nid : x));
+      for (const e2 of model.edges) { if (e2.from === ref) e2.from = nid; if (e2.to === ref) e2.to = nid; }
+      if (model.layout.pos[ref]) { model.layout.pos[nid] = model.layout.pos[ref]; delete model.layout.pos[ref]; }
+    }
     else { const it = model.items.find((x) => x.id === ref); if (it && v) it.label = v; else return; }
     commitModel();
   }
@@ -1803,6 +2514,29 @@ function boot() {
     e.stopPropagation();
   });
   inline.addEventListener('blur', () => commitRename(true));
+
+  // ---- 整列（2 個以上選ぶと出る）----
+  function syncAlignBar() {
+    const bar = $('alignbar'); if (!bar) return;
+    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class'));
+  }
+  $('alignbar').addEventListener('click', (e) => {
+    const a = e.target.dataset.a; if (!a) return;
+    const ns = [...selected].map((id) => L.nodes.find((n) => n.id === id)).filter(Boolean);
+    if (ns.length < 2) return;
+    if (a === 'left') { const x0 = Math.min(...ns.map((n) => n.x)); for (const n of ns) model.layout.pos[n.id] = [x0, n.y]; }
+    else if (a === 'top') { const y0 = Math.min(...ns.map((n) => n.y)); for (const n of ns) model.layout.pos[n.id] = [n.x, y0]; }
+    else if (a === 'hspread') {
+      const so = [...ns].sort((p, q) => p.x - q.x);
+      const step = (so[so.length - 1].x - so[0].x) / (so.length - 1);
+      so.forEach((n, i) => { model.layout.pos[n.id] = [Math.round(so[0].x + i * step), n.y]; });
+    } else if (a === 'vspread') {
+      const so = [...ns].sort((p, q) => p.y - q.y);
+      const step = (so[so.length - 1].y - so[0].y) / (so.length - 1);
+      so.forEach((n, i) => { model.layout.pos[n.id] = [n.x, Math.round(so[0].y + i * step)]; });
+    }
+    commitModel(); toast('そろえました');
+  });
 
   // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
   const history = { stack: [], idx: -1 };
@@ -1834,7 +2568,9 @@ function boot() {
       ? ['title', 'dateFormat', 'section', 'done', 'active', 'crit', 'milestone', 'after']
       : model.kind === 'sequence'
         ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
-        : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+        : model.kind === 'class'
+          ? ['classDiagram', 'class']
+          : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -1891,7 +2627,9 @@ function boot() {
       ? [['＋タスク', '\n      新しいタスク :t{N}, after {last}, 3d'], ['＋セクション', '\n    section 新しい区分'], ['＋マイルストン', '\n      節目 :milestone, m{N}, after {last}, 0d']]
       : model.kind === 'sequence'
         ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
-        : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+        : model.kind === 'class'
+          ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
+          : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
     ins.innerHTML = snips.map((s, i) => `<button data-i="${i}">${s[0]}</button>`).join('');
     for (const b of ins.children) b.onclick = () => insert(snips[+b.dataset.i][1]);
   }
@@ -1964,7 +2702,7 @@ function boot() {
   function runImport(text) {
     const t = String(text || '').trim();
     if (!t) return;
-    if (/^(gantt|flowchart|graph|sequenceDiagram)\b/.test(t)) {   // Mermaid ならそのまま
+    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)\b/.test(t)) {   // Mermaid ならそのまま
       setText(t, true); dlg.hidden = true; toast('Mermaid を読み込みました'); return;
     }
     const r = csvToMermaid(t);
@@ -1981,6 +2719,16 @@ function boot() {
   // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) runImport(await f.text()); });
+  // エディタの外に Ctrl+V：表（Excel の TSV そのまま）や Mermaid を貼るだけで図に。
+  document.addEventListener('paste', (e) => {
+    const t = e.target;
+    if (t === src || t === inline || t.tagName === 'TEXTAREA' || t.tagName === 'INPUT') return;
+    const text = e.clipboardData?.getData('text/plain') || '';
+    if (!text.trim()) return;
+    const head = text.trim().split(/\s/)[0];
+    const tableish = text.includes('\t') || (text.includes('\n') && text.split('\n')[0].includes(','));
+    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)$/.test(head) || tableish) { e.preventDefault(); runImport(text); }
+  });
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }

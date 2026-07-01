@@ -190,7 +190,9 @@ function parseFlow(lines, model, dir) {
     if (head === 'flowchart' || head === 'graph') continue;
     if (head === 'subgraph') {
       const name = stripName(line.slice('subgraph'.length).trim()) || ('group' + (model.groups.length + 1));
-      const g = { name, ids: [] }; model.groups.push(g); stack.push(g); continue;
+      // 入れ子：親（いま開いている subgraph）の番号を覚える。
+      const parent = stack.length ? model.groups.indexOf(stack[stack.length - 1]) : null;
+      const g = { name, ids: [], parent }; model.groups.push(g); stack.push(g); continue;
     }
     if (line === 'end') { stack.pop(); continue; }
     if (head === 'direction') { model.meta.dir = line.split(/\s+/)[1] || model.meta.dir; continue; }
@@ -210,11 +212,74 @@ function parseFlow(lines, model, dir) {
   return model;
 }
 
+// id の共通形：ハイフンは内部のみ（末尾の - を線と取り違えないため）。
+const SEQ_ID = '[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*';
+
+// ---- クラス図 ----------------------------------------------------------------
+
+/* 関係の演算子を「from → to（to 側に印）」へ正規化する。
+   <|-- は継承（三角が親に付く）、*-- は合成（黒菱形）、o-- は集約（白菱形）、
+   --> は関連、..> は点線の依存。向きは左右どちら書きでも同じ意味に畳む。 */
+const CLASS_OPS = {
+  '<|--': (a, b) => ({ from: b, to: a, kind: 'inherit', dotted: false }),
+  '--|>': (a, b) => ({ from: a, to: b, kind: 'inherit', dotted: false }),
+  '<|..': (a, b) => ({ from: b, to: a, kind: 'inherit', dotted: true }),
+  '..|>': (a, b) => ({ from: a, to: b, kind: 'inherit', dotted: true }),
+  '*--': (a, b) => ({ from: b, to: a, kind: 'composition', dotted: false }),
+  '--*': (a, b) => ({ from: a, to: b, kind: 'composition', dotted: false }),
+  'o--': (a, b) => ({ from: b, to: a, kind: 'aggregation', dotted: false }),
+  '--o': (a, b) => ({ from: a, to: b, kind: 'aggregation', dotted: false }),
+  '-->': (a, b) => ({ from: a, to: b, kind: 'assoc', dotted: false }),
+  '<--': (a, b) => ({ from: b, to: a, kind: 'assoc', dotted: false }),
+  '..>': (a, b) => ({ from: a, to: b, kind: 'assoc', dotted: true }),
+  '<..': (a, b) => ({ from: b, to: a, kind: 'assoc', dotted: true }),
+  '--': (a, b) => ({ from: a, to: b, kind: 'link', dotted: false }),
+  '..': (a, b) => ({ from: a, to: b, kind: 'link', dotted: true }),
+};
+const CLASS_REL = new RegExp(`^(${SEQ_ID})\\s*(<\\|--|<\\|\\.\\.|--\\|>|\\.\\.\\|>|\\*--|--\\*|o--|--o|-->|<--|\\.\\.>|<\\.\\.|--|\\.\\.)\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?$`);
+
+function parseClass(lines, model) {
+  model.kind = 'class';
+  const ensure = (id) => {
+    let c = model.items.find((n) => n.id === id);
+    if (!c) { c = { type: 'class', id, attrs: [], methods: [] }; model.items.push(c); model.order.push(id); }
+    return c;
+  };
+  const addMember = (c, raw) => { (raw.includes('(') ? c.methods : c.attrs).push(raw.trim()); };
+  let inBlock = null;
+  for (const { raw, ln } of lines) {
+    const line = raw.trim();
+    if (!line || line === 'classDiagram') continue;
+    if (inBlock) {
+      if (line === '}') { inBlock = null; continue; }
+      addMember(inBlock, line.replace(/[,;]$/, ''));
+      continue;
+    }
+    const head = line.split(/\s+/)[0];
+    if (head === 'class') {
+      const m = /^class\s+([A-Za-z0-9_.-]+)\s*(\{)?\s*$/.exec(line);
+      if (m) { const c = ensure(m[1]); if (m[2]) inBlock = c; }
+      else model.errors.push(`L${ln}: class が読めない「${line}」`);
+      continue;
+    }
+    if (head === 'direction' || head === 'note') continue;   // 体裁系は無視
+    let m = CLASS_REL.exec(line);
+    if (m && CLASS_OPS[m[2]]) {
+      ensure(m[1]); ensure(m[3]);
+      model.edges.push({ ...CLASS_OPS[m[2]](m[1], m[3]), label: (m[4] ?? '').trim() });
+      continue;
+    }
+    m = new RegExp(`^(${SEQ_ID})\\s*:\\s*(.+)$`).exec(line);  // A : +int age（一行メンバ）
+    if (m) { addMember(ensure(m[1]), m[2]); continue; }
+    model.errors.push(`L${ln}: 読めない行「${line}」`);
+  }
+  if (inBlock) model.errors.push('閉じていない class ブロック（} が足りない）');
+  return model;
+}
+
 // ---- シーケンス図 -----------------------------------------------------------
 
 // メッセージ：A->>B: text ／ 線は - 実線・-- 点線、先は >>(矢) >(なし) x(バツ) )(非同期)。
-// id のハイフンは内部のみ（末尾の - を線と取り違えないため）。
-const SEQ_ID = '[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*';
 const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?$`);
 const FRAMES = new Set(['loop', 'opt', 'alt', 'par', 'rect', 'critical', 'break']);
 
@@ -305,6 +370,7 @@ export function parse(text) {
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
   else if (headWord === 'sequenceDiagram') parseSeq(body, model);
-  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram ではありません「${headWord}」`);
+  else if (headWord === 'classDiagram') parseClass(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram ではありません「${headWord}」`);
   return model;
 }

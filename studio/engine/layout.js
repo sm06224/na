@@ -192,15 +192,27 @@ export function layoutFlow(model) {
 
   for (const n of nodes) { const p = model.layout.pos[n.id]; if (p) { const r = placed.get(n.id); r.x = p[0]; r.y = p[1]; } }
 
-  const groups = [];
-  for (const g of model.groups) {
-    const mem = g.ids.map((id) => placed.get(id)).filter(Boolean);
-    if (!mem.length) continue;
+  // グループ枠：内側（子）から外接矩形を決め、親は子の枠ごと包む（入れ子対応）。
+  // 子は宣言上あとに来る（親の中で開く）ので、逆順にたどれば子が先に決まる。
+  const boxes = new Array(model.groups.length).fill(null);
+  for (let i = model.groups.length - 1; i >= 0; i--) {
+    const g = model.groups[i];
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const m of mem) { x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + m.w); y1 = Math.max(y1, m.y + m.h); }
-    groups.push({ name: g.name, x: x0 - FLOW.GROUP_PAD, y: y0 - FLOW.GROUP_PAD - FLOW.GROUP_HEAD,
-      w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD });
+    for (const id of g.ids) {
+      const m = placed.get(id); if (!m) continue;
+      x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + m.w); y1 = Math.max(y1, m.y + m.h);
+    }
+    for (let j = i + 1; j < model.groups.length; j++) {
+      if (model.groups[j].parent !== i || !boxes[j]) continue;
+      const b = boxes[j];
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    }
+    if (!Number.isFinite(x0)) continue;
+    boxes[i] = { x: x0 - FLOW.GROUP_PAD, y: y0 - FLOW.GROUP_PAD - FLOW.GROUP_HEAD,
+      w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD };
   }
+  const groups = [];
+  boxes.forEach((b, i) => { if (b) groups.push({ name: model.groups[i].name, ...b }); });
 
   // エッジは主軸に沿うベジェ曲線。ラベルは曲線の中点（t=0.5）へ。
   const edges = [];
@@ -280,8 +292,75 @@ export function layoutSeq(model) {
     width, height, errors };
 }
 
+// ---- クラス図 ----------------------------------------------------------------
+
+export const CLASS = { PAD: 30, GAP_MAIN: 64, GAP_CROSS: 34, HEAD_H: 26, LINE_H: 16, SEP: 5 };
+
+function classSize(c) {
+  const wOf = (s) => { let w = 0; for (const ch of String(s)) w += ch.charCodeAt(0) > 0x2e7f ? 15 : 7.6; return w; };
+  let w = wOf(c.id) + 28;
+  for (const m of [...c.attrs, ...c.methods]) w = Math.max(w, wOf(m) + 22);
+  const lines = c.attrs.length + c.methods.length;
+  const h = CLASS.HEAD_H + (lines ? CLASS.SEP : 0) + c.attrs.length * CLASS.LINE_H
+    + (c.methods.length ? CLASS.SEP : 0) + c.methods.length * CLASS.LINE_H + (lines ? 8 : 4);
+  return { w: Math.max(110, Math.min(300, w)), h };
+}
+
+export function layoutClass(model) {
+  const classes = model.items.filter((it) => it.type === 'class');
+  const byId = new Map(classes.map((c) => [c.id, c]));
+  // 段組み：継承は「親が上」——親→子の向きで層を数える。ほかの関係は from→to。
+  const preds = new Map(classes.map((c) => [c.id, []]));
+  for (const e of model.edges) {
+    const [up, down] = e.kind === 'inherit' ? [e.to, e.from] : [e.from, e.to];
+    if (byId.has(up) && byId.has(down) && up !== down) preds.get(down).push(up);
+  }
+  const depth = {}, visiting = new Set();
+  const calc = (id) => {
+    if (id in depth) return depth[id];
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    let d = 0; for (const p of preds.get(id) || []) d = Math.max(d, calc(p) + 1);
+    visiting.delete(id); depth[id] = d; return d;
+  };
+  for (const c of classes) calc(c.id);
+
+  const layers = {};
+  for (const c of classes) (layers[depth[c.id]] ||= []).push(c.id);
+  const keys = Object.keys(layers).map(Number).sort((a, b) => a - b);
+
+  const placed = new Map();
+  const layerH = {}; let acc = CLASS.PAD;
+  for (const k of keys) { let m = 0; for (const id of layers[k]) m = Math.max(m, classSize(byId.get(id)).h); layerH[k] = acc; acc += m + CLASS.GAP_MAIN; }
+  for (const k of keys) {
+    let x = CLASS.PAD;
+    for (const id of layers[k]) {
+      const s = classSize(byId.get(id));
+      placed.set(id, { id, label: byId.get(id).id, attrs: byId.get(id).attrs, methods: byId.get(id).methods,
+        x, y: layerH[k], w: s.w, h: s.h });
+      x += s.w + CLASS.GAP_CROSS;
+    }
+  }
+  for (const c of classes) { const p = model.layout.pos[c.id]; if (p) { const r = placed.get(c.id); r.x = p[0]; r.y = p[1]; } }
+
+  const edges = [];
+  for (const e of model.edges) {
+    const a = placed.get(e.from), b = placed.get(e.to);
+    if (!a || !b) continue;
+    const c = clip(a, b);
+    edges.push({ ...e, x1: c.from[0], y1: c.from[1], x2: c.to[0], y2: c.to[1],
+      mx: (c.from[0] + c.to[0]) / 2, my: (c.from[1] + c.to[1]) / 2 });
+  }
+
+  let width = CLASS.PAD, height = CLASS.PAD;
+  for (const r of placed.values()) { width = Math.max(width, r.x + r.w); height = Math.max(height, r.y + r.h); }
+  return { kind: 'class', nodes: [...placed.values()], edges, groups: [],
+    width: width + CLASS.PAD, height: height + CLASS.PAD, errors: [] };
+}
+
 export function layout(model) {
   if (model.kind === 'flowchart') return layoutFlow(model);
   if (model.kind === 'sequence') return layoutSeq(model);
+  if (model.kind === 'class') return layoutClass(model);
   return layoutGantt(model);
 }

@@ -205,7 +205,7 @@ API 実装,,10,基本設計,,実装"></textarea>
 </div>
 
 <script>
-window.STUDIO_SOURCE="gantt\n    title 製品リリース計画\n    dateFormat YYYY-MM-DD\n    section 設計\n      要件定義   :done, req, 2026-07-01, 5d\n      基本設計   :active, design, after req, 7d\n    section 実装\n      API 実装   :api, after design, 10d\n      UI 実装    :ui, after design, 12d\n      基盤構築   :crit, infra, 2026-07-08, 9d\n    section 検証と出荷\n      結合テスト :test, after api ui, 6d\n      受け入れ   :uat, after test, 4d\n      出荷       :milestone, ship, after uat, 0d\n%% @layout\n%% today 2026-07-16\n";
+window.STUDIO_SOURCE="classDiagram\n    class Animal {\n      +String name\n      +int age\n      +speak() string\n    }\n    class Dog {\n      +fetch() void\n    }\n    class Cat\n    class Owner {\n      +String name\n      +feed(a) void\n    }\n    Animal <|-- Dog\n    Animal <|-- Cat\n    Owner --> Animal : 飼う\n    Dog ..> Owner : なつく\n";
 /* ============================================================
    日付のちいさな道具 — 依存ゼロ、UTC 固定で時差の罠を避ける。
    ガントは「日」を単位に動く。ここはその物差し。
