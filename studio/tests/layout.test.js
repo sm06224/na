@@ -97,6 +97,23 @@ test('フロー：エッジはベジェ曲線（制御点と中点を持つ）',
   for (const k of ['c1x', 'c1y', 'c2x', 'c2y', 'mx', 'my']) assert.ok(Number.isFinite(e[k]), `${k} が無い`);
 });
 
+test('フロー：入れ子の subgraph は、親の枠が子の枠ごと包む', () => {
+  const m = parse(`flowchart TD
+  a[A] --> b[B]
+  subgraph 外
+    a
+    subgraph 内
+      b
+    end
+  end`);
+  assert.equal(m.groups.length, 2);
+  assert.equal(m.groups[1].parent, 0);                        // 内 の親は 外
+  const L = layoutFlow(m);
+  const outer = L.groups.find((g) => g.name === '外'), inner = L.groups.find((g) => g.name === '内');
+  assert.ok(outer.x <= inner.x && outer.y <= inner.y, '親が子を包んでいない（左上）');
+  assert.ok(outer.x + outer.w >= inner.x + inner.w && outer.y + outer.h >= inner.y + inner.h, '親が子を包んでいない（右下）');
+});
+
 test('決定的：同じモデルからは寸分たがわぬ同じ配置', () => {
   assert.deepEqual(layout(parse(G)), layout(parse(G)));
 });

@@ -56,14 +56,18 @@ function flowBody(model) {
     const op = OP(e), lbl = e.label ? `|${e.label}|` : '';
     out.push(`    ${e.from} ${op}${lbl} ${e.to}`);
   }
-  for (const g of model.groups) {
-    out.push(`    subgraph ${g.name}`);
+  // subgraph は入れ子ごと書き戻す（parent 番号でぶら下げる）。
+  const emitGroup = (gi, indent) => {
+    const g = model.groups[gi];
+    out.push(`${indent}subgraph ${g.name}`);
     for (const id of g.ids) {
       const n = model.items.find((x) => x.id === id);
-      out.push(n ? `      ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `      ${id}`);
+      out.push(n ? `${indent}  ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `${indent}  ${id}`);
     }
-    out.push('    end');
-  }
+    model.groups.forEach((c, ci) => { if (c.parent === gi) emitGroup(ci, indent + '  '); });
+    out.push(`${indent}end`);
+  };
+  model.groups.forEach((g, gi) => { if (g.parent == null) emitGroup(gi, '    '); });
   for (const id of model.order) {                      // ハイパーリンク（click 行）
     const n = model.items.find((x) => x.id === id);
     if (n?.link) out.push(`    click ${n.id} "${n.link}"`);
@@ -93,9 +97,35 @@ function seqBody(model) {
   return out;
 }
 
+// クラス図：class ブロック（属性→メソッド）と、正規形の関係演算子。
+const CLASS_OP = (e) => {
+  if (e.kind === 'inherit') return [e.to, e.dotted ? '<|..' : '<|--', e.from];
+  if (e.kind === 'composition') return [e.to, '*--', e.from];
+  if (e.kind === 'aggregation') return [e.to, 'o--', e.from];
+  if (e.kind === 'assoc') return [e.from, e.dotted ? '..>' : '-->', e.to];
+  return [e.from, e.dotted ? '..' : '--', e.to];
+};
+function classBody(model) {
+  const out = ['classDiagram'];
+  for (const id of model.order) {
+    const c = model.items.find((x) => x.id === id);
+    if (!c || c.type !== 'class') continue;
+    if (!c.attrs.length && !c.methods.length) { out.push(`    class ${c.id}`); continue; }
+    out.push(`    class ${c.id} {`);
+    for (const a of c.attrs) out.push(`      ${a}`);
+    for (const m of c.methods) out.push(`      ${m}`);
+    out.push('    }');
+  }
+  for (const e of model.edges) {
+    const [a, op, b] = CLASS_OP(e);
+    out.push(`    ${a} ${op} ${b}${e.label ? ' : ' + e.label : ''}`);
+  }
+  return out;
+}
+
 function trailer(model) {
   const L = model.layout, out = [];
-  if (model.kind === 'flowchart') {
+  if (model.kind === 'flowchart' || model.kind === 'class') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
   } else if (model.kind === 'sequence') {
     if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
@@ -109,6 +139,7 @@ function trailer(model) {
 
 export function serialize(model) {
   const body = model.kind === 'flowchart' ? flowBody(model)
-    : model.kind === 'sequence' ? seqBody(model) : ganttBody(model);
+    : model.kind === 'sequence' ? seqBody(model)
+    : model.kind === 'class' ? classBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }

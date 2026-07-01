@@ -4,7 +4,7 @@
 
 ### Mermaid で書けて、グリグリ動かせる — 作図エディタ
 
-ガントチャート・機能構成図（フローチャート）・シーケンス図。**書けば図に、図を動かせば書き戻る。**<br>
+ガントチャート・機能構成図（フローチャート）・シーケンス図・クラス図。**書けば図に、図を動かせば書き戻る。**<br>
 1 図 ＝ 自己完結の単一 HTML（フル機能エディタ同梱・オフライン・どこでも開ける）。
 
 </div>
@@ -17,7 +17,7 @@
 
 ねらいは三つ。
 
-1. **みんなが知っている記法** — DSL は **Mermaid 互換**（`gantt`・`flowchart`・`sequenceDiagram`）。人も AI も、すでに知っている書き方でそのまま書ける。
+1. **みんなが知っている記法** — DSL は **Mermaid 互換**（`gantt`・`flowchart`・`sequenceDiagram`・`classDiagram`）。人も AI も、すでに知っている書き方でそのまま書ける。
 2. **グリグリ動かせる** — ブラウザでノードや棒をドラッグして整える。Mermaid は自動整列だけだが、studio は**手で置いた位置を保持**する。
 3. **AI に優しい往復** — ドラッグの結果は Mermaid の**コメント `%% @layout`** にだけ書き戻る。意味部（何があり、何に依存するか）は汚れないので、**次の AI が差分をきれいに読める**。しかも `%%` はコメントなので、**本物の Mermaid でもそのまま描ける**。
 
@@ -37,8 +37,8 @@
 
 ### 手数が減る（ポトペタ・流し込み・リンク）
 
-- **ポトペタ編集** — ノードを**クリックで選択**すると → ハンドルが生え、**別のノードへ引っぱるだけでエッジ**がつながる。**ダブルタップでその場リネーム**（ノード・タスク・参加者・エッジラベル）。**空きをダブルタップで新しいノード**がその場に生える（ガントはタスク、シーケンスは参加者）。すべて DSL に書き戻る
-- **CSV / TSV の流し込み** — 「取り込み」に表を貼る・ファイルを選ぶ・**画面へドロップ**するだけで図に。列名は日英ゆらぎを吸収（名前/label・開始/start・期間/duration・依存/after・状態/status・区分/section・link、フローは from/to/label）。依存は **id でもラベルでも**書ける
+- **ポトペタ編集** — ノードを**クリックで選択**すると → ハンドルが生え、**別のノードへ引っぱるだけでエッジ**がつながる。**Shift+クリックで複数選択**：まとめてドラッグでき、**整列バー**（左揃え・上揃え・横/縦等間隔）が出る。**ダブルタップでその場リネーム**（ノード・タスク・参加者・エッジラベル）。**空きをダブルタップで新しいノード**がその場に生える（ガントはタスク、シーケンスは参加者）。すべて DSL に書き戻る
+- **CSV / TSV の流し込み** — 「取り込み」に表を貼る・ファイルを選ぶ・**画面へドロップ**、あるいは**エディタの外で Ctrl+V**（Excel の範囲コピーがそのまま入る）だけで図に。列名は日英ゆらぎを吸収（名前/label・開始/start・期間/duration・依存/after・状態/status・区分/section・link、フローは from/to/label）。依存は **id でもラベルでも**書ける
 - **ハイパーリンク** — Mermaid 純正の `click id "url"`（ガントは `click id href "url"`）でノード・タスクに **↗ バッジ**が生え、タップで開く。大きな図を**複数の単一 HTML に分割してリンクで渡り歩く**のに効く
 - **スマホ** — **ピンチでズーム**、起動時は図が全画面（「コード ◧」でエディタ）、スニペットは横スクロールでいつでも
 
@@ -77,6 +77,7 @@ flowchart TD
 - 向き `TD` / `LR` …、形状 `[]`(四角) `()`(丸) `([])`(スタジアム) `[()]`(円柱) `(())`(円) `{}`(菱形) `{{}}`(六角) `[[]]`(サブルーチン)
 - エッジ `-->` / `---` / `-.->`(点線) / `==>`(太線)、ラベル `-->|text|`、`subgraph … end` でグループ
 - 位置を書かなければ**依存の深さで自動段組み**（最長経路）。ドラッグで自由配置 → `%% pos id x y`。段の中の並びは**重心法（barycenter）で交差をほどき**、エッジは曲線で結ぶ
+- `subgraph` は**入れ子**にできる（親の枠が子の枠ごと包み、往復でも保たれる）
 
 ### シーケンス図
 
@@ -97,16 +98,33 @@ sequenceDiagram
 - 枠 `loop` / `alt` / `opt` / `par` … と `else` / `end`
 - **参加者を横ドラッグ**で並び替え → `%% order`（ライフラインごと入れ替わる）
 
+### クラス図
+
+```mermaid
+classDiagram
+    class Animal {
+      +String name
+      +speak() string
+    }
+    Animal <|-- Dog
+    Owner --> Animal : 飼う
+    Dog ..> Owner : なつく
+```
+
+- `class 名 { … }` ブロック（`()` があればメソッド区画、なければ属性区画）と一行メンバ `A : +int age`
+- 関係：`<|--`(継承・三角) `*--`(合成・黒菱形) `o--`(集約・白菱形) `-->`(関連) `..>`(点線の依存)——左右どちら書きでも同じ意味に畳む
+- 継承は**親が上**に段組み。ドラッグ自由配置 → `%% pos`。**ダブルタップの改名は id ごと**（関係の参照もまとめて書き換わる）
+
 ## 使い方
 
 ```bash
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 30 tests
+node --test tests/*.test.js            # 37 tests
 ```
 
-同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）
+同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）
 
 ## アーキテクチャ
 
@@ -116,7 +134,7 @@ studio/
 ├─ ui/editor.js                      編集体験：ハイライト・検証・補完・ズーム/パン・ドラッグ・出力
 ├─ engine/                           純粋コア（DOM 非依存・決定的・テスト対象）
 │  ├─ date.js                        日付の道具（UTC 固定）
-│  ├─ parse.js                       Mermaid（gantt/flowchart/sequence）→ モデル（意味部＋%% @layout を分離）
+│  ├─ parse.js                       Mermaid（gantt/flowchart/sequence/class）→ モデル（意味部＋%% @layout を分離）
 │  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
 │  ├─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
 │  └─ import.js                      流し込み：CSV/TSV → Mermaid（日英ヘッダ吸収・link 列対応）

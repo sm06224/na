@@ -21,6 +21,9 @@ const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
   <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
   <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#9aa3b5" stroke-width="1.4"/></marker>
+  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
+  <marker id="diaf" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#9aa3b5"/></marker>
+  <marker id="diao" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
 </defs>`;
 
 function wrap(L, inner) {
@@ -114,7 +117,7 @@ function drawFlow(model, L, opts = {}) {
   });
   L.nodes.forEach((n, i) => {
     const hue = hueOf(i);
-    const sel = opts.selected === n.id;
+    const sel = !!opts.selected?.has?.(n.id);
     const inner = shapePath(n).replace(/<(rect|ellipse|polygon|path)([^>]*?)\/>/g,
       `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
@@ -123,9 +126,54 @@ function drawFlow(model, L, opts = {}) {
     g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
     if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
     parts.push(g + `</g>`);
-    if (sel) parts.push(`<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
-      + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
-      + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
+  });
+  return wrap(L, parts.join('\n'));
+}
+
+// 選択ノードから生える接続ハンドル（引っぱって別ノードへ落とすとエッジ）。
+function connectHandle(n) {
+  return `<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
+    + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
+    + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`;
+}
+
+// ---- クラス図 ----------------------------------------------------------------
+
+const CLASS_MARKER = { inherit: 'tri', composition: 'diaf', aggregation: 'diao', assoc: 'arrow' };
+
+function drawClass(model, L, opts = {}) {
+  const parts = [];
+  L.edges.forEach((e, i) => {
+    const marker = CLASS_MARKER[e.kind];
+    const dash = e.dotted ? ` stroke-dasharray="4 4"` : '';
+    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.8" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+    if (e.label) {
+      const tw = e.label.length * 7 + 10;
+      parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
+    }
+  });
+  L.nodes.forEach((n, i) => {
+    const hue = hueOf(i);
+    const sel = !!opts.selected?.has?.(n.id);
+    let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
+    if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="8" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.4 : 1.5}"/>`;
+    g += `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e7ebf4" font-size="12.5" font-weight="700" text-anchor="middle">${esc(n.label)}</text>`;
+    let y = n.y + 26;
+    if (n.attrs.length || n.methods.length) {
+      g += `<line x1="${n.x}" y1="${y}" x2="${n.x + n.w}" y2="${y}" stroke="${hue}" stroke-opacity="0.5"/>`;
+      y += 4;
+      for (const a of n.attrs) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#c7d0e0" font-size="11">${esc(a)}</text>`; y += 3; }
+      if (n.methods.length) {
+        if (n.attrs.length) { g += `<line x1="${n.x}" y1="${y + 2}" x2="${n.x + n.w}" y2="${y + 2}" stroke="${hue}" stroke-opacity="0.35"/>`; y += 5; }
+        for (const m of n.methods) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#aeb9d0" font-size="11" font-style="italic">${esc(m)}</text>`; y += 3; }
+      }
+    }
+    parts.push(g + `</g>`);
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
   });
   return wrap(L, parts.join('\n'));
 }
@@ -179,5 +227,6 @@ function drawSeq(model, L) {
 export function draw(model, L, opts = {}) {
   if (L.kind === 'flowchart') return drawFlow(model, L, opts);
   if (L.kind === 'sequence') return drawSeq(model, L);
+  if (L.kind === 'class') return drawClass(model, L, opts);
   return drawGantt(model, L);
 }

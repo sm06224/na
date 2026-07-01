@@ -1,0 +1,18 @@
+classDiagram
+    class Animal {
+      +String name
+      +int age
+      +speak() string
+    }
+    class Dog {
+      +fetch() void
+    }
+    class Cat
+    class Owner {
+      +String name
+      +feed(a) void
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+    Owner --> Animal : 飼う
+    Dog ..> Owner : なつく
