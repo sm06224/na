@@ -182,8 +182,10 @@ export function layoutFlow(model) {
       const s = sizeOf(id);
       const d = reverse ? (maxDepth - c) : c;
       const main = (layerPos[d] ?? layerPos[c]);
-      if (vertical) placed.set(id, { id, label: byId.get(id).label, shape: byId.get(id).shape, x: cross, y: main, w: s.w, h: s.h });
-      else placed.set(id, { id, label: byId.get(id).label, shape: byId.get(id).shape, x: main, y: cross, w: s.w, h: s.h });
+      const base = { id, label: byId.get(id).label, shape: byId.get(id).shape, w: s.w, h: s.h };
+      if (byId.get(id).link) base.link = byId.get(id).link;
+      if (vertical) placed.set(id, { ...base, x: cross, y: main });
+      else placed.set(id, { ...base, x: main, y: cross });
       cross += (vertical ? s.w : s.h) + FLOW.GAP_CROSS;
     }
   }

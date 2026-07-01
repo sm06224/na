@@ -24,6 +24,10 @@ function ganttBody(model) {
     const spec = [...tags, it.id, start, `${num(it.dur)}d`].filter((s) => s !== '').join(', ');
     out.push(`      ${it.label} :${spec}`);
   }
+  for (const id of model.order) {                      // ハイパーリンク（click 行）
+    const it = model.items.find((x) => x.id === id);
+    if (it?.link) out.push(`    click ${it.id} href "${it.link}"`);
+  }
   return out;
 }
 
@@ -59,6 +63,10 @@ function flowBody(model) {
       out.push(n ? `      ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `      ${id}`);
     }
     out.push('    end');
+  }
+  for (const id of model.order) {                      // ハイパーリンク（click 行）
+    const n = model.items.find((x) => x.id === id);
+    if (n?.link) out.push(`    click ${n.id} "${n.link}"`);
   }
   return out;
 }

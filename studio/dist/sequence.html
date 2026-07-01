@@ -12,6 +12,7 @@
   --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
   --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
   font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
@@ -88,9 +89,32 @@ main { flex: 1; display: flex; min-height: 0; }
   opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
 #toast.on { opacity: 1; }
 
+/* ポトペタのその場リネーム（浮きインプット） */
+#inline { position: fixed; z-index: 70; background: #101724; border: 1.5px solid var(--acc); border-radius: 7px;
+  color: var(--fg); font: inherit; font-size: .84rem; padding: .3em .6em; outline: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+
+/* 取り込みダイアログ */
+.dlg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,10,.55); backdrop-filter: blur(3px); padding: 1rem; }
+.dlg .box { width: min(560px, 94vw); max-height: 88vh; overflow: auto; background: #0e1420; border: 1px solid var(--line2);
+  border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .65rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.dlg h3 { font-size: .92rem; font-weight: 600; }
+.dlg .hint { font-size: .72rem; color: var(--dim); line-height: 1.8; }
+.dlg .hint a { color: var(--acc); }
+.dlg textarea { min-height: 170px; resize: vertical; background: #0a0e16; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.6; padding: .6rem; outline: none; }
+.dlg .row { display: flex; gap: .5rem; align-items: center; }
+.ghost2 { background: transparent; }
+
 @media (max-width: 820px) {
-  header { gap: .4rem; }
-  .pick, .ins { display: none; }
+  header { gap: .35rem .45rem; padding-bottom: .4rem; }
+  #status { display: none; }                                 /* 指摘は problems 一覧で見える */
+  .pick { order: 5; flex-basis: calc(100% - 96px); }
+  .pick select { flex: 1; min-width: 0; max-width: 100%; }
+  #bImport { order: 6; }
+  .ins { order: 7; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .ins button { flex: none; padding: .45em .8em; }           /* 指で押しやすく */
+  .zoombar button { padding: .4em .8em; }
   main { flex-direction: column; }
   .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
   .view { flex: 1; }
@@ -111,6 +135,7 @@ main { flex: 1; display: flex; min-height: 0; }
   <span class="sp"></span>
   <div class="ins" id="insbar"></div>
   <span id="status" class="status"></span>
+  <button id="bImport">取り込み</button>
   <div class="menu">
     <button id="bExport">エクスポート ▾</button>
     <div id="exportMenu" class="dropdown" hidden>
@@ -149,6 +174,23 @@ main { flex: 1; display: flex; min-height: 0; }
 
 <div id="ac" class="ac" hidden></div>
 <div id="toast" hidden></div>
+<input id="inline" type="text" hidden>
+
+<div id="importDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>データの流し込み（CSV / TSV / Mermaid）</h3>
+    <p class="hint">1 行目はヘッダ。<b>ガント</b>：名前(label)・開始(start)・期間(duration)・依存(after)・状態(status)・区分(section)・link。<b>フロー</b>：from・to・label。列名は日英どちらでも。Mermaid テキストはそのまま読み込みます。</p>
+    <textarea id="csvIn" spellcheck="false" placeholder="名前,開始,期間,依存,状態,区分
+要件定義,2026-07-01,5,,完了,設計
+基本設計,,7,要件定義,進行中,設計
+API 実装,,10,基本設計,,実装"></textarea>
+    <div class="row">
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <button id="csvCancel" class="ghost2">閉じる</button>
+      <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
 
 <script>
 window.STUDIO_SOURCE="sequenceDiagram\n    autonumber\n    participant u as 利用者\n    participant w as Web\n    participant a as 認証サービス\n    participant d as DB\n    u->>w: ログイン要求\n    w->>a: 資格情報を検証\n    a->>d: 利用者を照会\n    d-->>a: レコード\n    alt 検証OK\n      a-->>w: トークン発行\n      w-->>u: ようこそ\n    else 失敗\n      a--xw: 拒否\n      w-->>u: エラー表示\n    end\n    Note over u,w: 3回失敗でロック\n";
@@ -307,6 +349,11 @@ function parseGantt(lines, model) {
     if (head === 'axisFormat') { model.meta.axisFormat = rest; continue; }
     if (head === 'section') { section = rest; continue; }
     if (['excludes', 'todayMarker', 'weekday', 'tickInterval'].includes(head)) continue; // 体裁系は無視
+    if (head === 'click') {                                   // click id href "url" — タスクにリンクを張る
+      const m = /^click\s+([A-Za-z0-9_.-]+)\s+(?:href\s+)?"([^"]+)"/.exec(line);
+      if (m) { const it = model.items.find((x) => x.id === m[1]); if (it) it.link = m[2]; else model.errors.push(`L${ln}: click の相手が見つからない「${m[1]}」`); }
+      continue;                                                // call など未対応の形は静かに流す（Mermaid 互換）
+    }
     // タスク行：「ラベル : spec」
     const c = line.indexOf(':');
     if (c < 0) { if (line) model.errors.push(`L${ln}: タスク行に ':' がない「${line}」`); continue; }
@@ -396,7 +443,12 @@ function parseFlow(lines, model, dir) {
     }
     if (line === 'end') { stack.pop(); continue; }
     if (head === 'direction') { model.meta.dir = line.split(/\s+/)[1] || model.meta.dir; continue; }
-    if (['classDef', 'class', 'style', 'click', 'linkStyle'].includes(head)) continue; // 体裁系は無視
+    if (head === 'click') {                                   // click id "url" — ノードにリンクを張る
+      const m = /^click\s+([A-Za-z0-9_.-]+)\s+(?:href\s+)?"([^"]+)"/.exec(line);
+      if (m) { const n = model.items.find((x) => x.id === m[1]); if (n) n.link = m[2]; else model.errors.push(`L${ln}: click の相手が見つからない「${m[1]}」`); }
+      continue;                                                // call など未対応の形は静かに流す
+    }
+    if (['classDef', 'class', 'style', 'linkStyle'].includes(head)) continue; // 体裁系は無視
     // ノード/エッジ行。subgraph 内なら、この行で触れたノードをそのグループに入れる。
     const touched = parseFlowLine(line, model, ln);
     if (stack.length) {
@@ -426,6 +478,7 @@ const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*
   --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
   --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
   font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
@@ -502,9 +555,32 @@ main { flex: 1; display: flex; min-height: 0; }
   opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
 #toast.on { opacity: 1; }
 
+/* ポトペタのその場リネーム（浮きインプット） */
+#inline { position: fixed; z-index: 70; background: #101724; border: 1.5px solid var(--acc); border-radius: 7px;
+  color: var(--fg); font: inherit; font-size: .84rem; padding: .3em .6em; outline: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+
+/* 取り込みダイアログ */
+.dlg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,10,.55); backdrop-filter: blur(3px); padding: 1rem; }
+.dlg .box { width: min(560px, 94vw); max-height: 88vh; overflow: auto; background: #0e1420; border: 1px solid var(--line2);
+  border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .65rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.dlg h3 { font-size: .92rem; font-weight: 600; }
+.dlg .hint { font-size: .72rem; color: var(--dim); line-height: 1.8; }
+.dlg .hint a { color: var(--acc); }
+.dlg textarea { min-height: 170px; resize: vertical; background: #0a0e16; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.6; padding: .6rem; outline: none; }
+.dlg .row { display: flex; gap: .5rem; align-items: center; }
+.ghost2 { background: transparent; }
+
 @media (max-width: 820px) {
-  header { gap: .4rem; }
-  .pick, .ins { display: none; }
+  header { gap: .35rem .45rem; padding-bottom: .4rem; }
+  #status { display: none; }                                 /* 指摘は problems 一覧で見える */
+  .pick { order: 5; flex-basis: calc(100% - 96px); }
+  .pick select { flex: 1; min-width: 0; max-width: 100%; }
+  #bImport { order: 6; }
+  .ins { order: 7; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .ins button { flex: none; padding: .45em .8em; }           /* 指で押しやすく */
+  .zoombar button { padding: .4em .8em; }
   main { flex-direction: column; }
   .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
   .view { flex: 1; }
@@ -525,6 +601,7 @@ main { flex: 1; display: flex; min-height: 0; }
   <span class="sp"></span>
   <div class="ins" id="insbar"></div>
   <span id="status" class="status"></span>
+  <button id="bImport">取り込み</button>
   <div class="menu">
     <button id="bExport">エクスポート ▾</button>
     <div id="exportMenu" class="dropdown" hidden>
@@ -563,6 +640,23 @@ main { flex: 1; display: flex; min-height: 0; }
 
 <div id="ac" class="ac" hidden></div>
 <div id="toast" hidden></div>
+<input id="inline" type="text" hidden>
+
+<div id="importDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>データの流し込み（CSV / TSV / Mermaid）</h3>
+    <p class="hint">1 行目はヘッダ。<b>ガント</b>：名前(label)・開始(start)・期間(duration)・依存(after)・状態(status)・区分(section)・link。<b>フロー</b>：from・to・label。列名は日英どちらでも。Mermaid テキストはそのまま読み込みます。</p>
+    <textarea id="csvIn" spellcheck="false" placeholder="名前,開始,期間,依存,状態,区分
+要件定義,2026-07-01,5,,完了,設計
+基本設計,,7,要件定義,進行中,設計
+API 実装,,10,基本設計,,実装"></textarea>
+    <div class="row">
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <button id="csvCancel" class="ghost2">閉じる</button>
+      <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
 
 );
 const FRAMES = new Set(['loop', 'opt', 'alt', 'par', 'rect', 'critical', 'break']);
@@ -841,8 +935,10 @@ function layoutFlow(model) {
       const s = sizeOf(id);
       const d = reverse ? (maxDepth - c) : c;
       const main = (layerPos[d] ?? layerPos[c]);
-      if (vertical) placed.set(id, { id, label: byId.get(id).label, shape: byId.get(id).shape, x: cross, y: main, w: s.w, h: s.h });
-      else placed.set(id, { id, label: byId.get(id).label, shape: byId.get(id).shape, x: main, y: cross, w: s.w, h: s.h });
+      const base = { id, label: byId.get(id).label, shape: byId.get(id).shape, w: s.w, h: s.h };
+      if (byId.get(id).link) base.link = byId.get(id).link;
+      if (vertical) placed.set(id, { ...base, x: cross, y: main });
+      else placed.set(id, { ...base, x: main, y: cross });
       cross += (vertical ? s.w : s.h) + FLOW.GAP_CROSS;
     }
   }
@@ -969,6 +1065,10 @@ function ganttBody(model) {
     const spec = [...tags, it.id, start, `${num(it.dur)}d`].filter((s) => s !== '').join(', ');
     out.push(`      ${it.label} :${spec}`);
   }
+  for (const id of model.order) {                      // ハイパーリンク（click 行）
+    const it = model.items.find((x) => x.id === id);
+    if (it?.link) out.push(`    click ${it.id} href "${it.link}"`);
+  }
   return out;
 }
 
@@ -1004,6 +1104,10 @@ function flowBody(model) {
       out.push(n ? `      ${id}${(SHAPE[n.shape] || SHAPE.rect)(n.label)}` : `      ${id}`);
     }
     out.push('    end');
+  }
+  for (const id of model.order) {                      // ハイパーリンク（click 行）
+    const n = model.items.find((x) => x.id === id);
+    if (n?.link) out.push(`    click ${n.id} "${n.link}"`);
   }
   return out;
 }
@@ -1051,6 +1155,156 @@ function serialize(model) {
 }
 
 /* ============================================================
+   流し込み — 表データ（CSV / TSV）→ Mermaid。手数を減らす入口。純粋・決定的。
+   1 行目はヘッダ。言い方のゆらぎ（日英）は同義語表で吸収する。
+     ・from / to（元・先）があれば **フローチャート**（エッジリスト）
+     ・label / start / duration（名前・開始・期間）があれば **ガント**
+   ガントは link 列で click 行（ハイパーリンク）も生やす。
+   DOM もネットも知らない。文字列を受けて Mermaid 文字列を返すだけ。
+   ============================================================ */
+
+// 引用符（"a,b" と "" のエスケープ）対応の CSV。タブ区切りなら TSV として読む。
+function parseCSV(text) {
+  const s = String(text).replace(/\r\n?/g, '\n');
+  const head = s.split('\n', 1)[0] || '';
+  const delim = head.includes('\t') && !head.includes(',') ? '\t' : ',';
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) {
+      if (c === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); if (row.some((x) => x.trim() !== '')) rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  row.push(cell); if (row.some((x) => x.trim() !== '')) rows.push(row);
+  return rows;
+}
+
+// 列名の同義語（小文字化して照合）。
+const SYN = {
+  id: ['id', '番号', 'no', 'no.'],
+  label: ['label', 'name', 'task', 'title', 'node', '名前', 'タスク', '作業', '項目', 'ラベル', '件名'],
+  start: ['start', 'begin', '開始', '開始日', '着手'],
+  end: ['end', 'finish', 'due', '終了', '終了日', '期限', '締切'],
+  dur: ['duration', 'days', 'dur', '期間', '日数', '工数'],
+  after: ['after', 'depends', 'dependson', 'deps', 'pred', '依存', '先行', '前工程'],
+  status: ['status', 'state', '状態', '進捗', 'ステータス'],
+  section: ['section', 'group', 'phase', 'category', '区分', 'セクション', '工程', 'フェーズ', '分類'],
+  from: ['from', 'source', 'src', '元', '始点', '出発'],
+  to: ['to', 'target', 'dest', 'dst', '先', '終点', '到着'],
+  link: ['link', 'url', 'href', 'リンク'],
+};
+
+function mapHeader(cells) {
+  const idx = {};
+  cells.forEach((h, i) => {
+    const k = String(h).trim().toLowerCase();
+    for (const key of Object.keys(SYN)) if (idx[key] == null && SYN[key].includes(k)) { idx[key] = i; return; }
+  });
+  return idx;
+}
+
+const normStatus = (s) => {
+  s = String(s || '').trim().toLowerCase();
+  if (['done', '完了', '済', '済み'].includes(s)) return 'done';
+  if (['active', 'doing', '進行', '進行中', '作業中', '着手中'].includes(s)) return 'active';
+  if (['crit', 'critical', '重要', 'クリティカル', '危険'].includes(s)) return 'crit';
+  if (['milestone', 'マイルストン', 'マイルストーン', '節目'].includes(s)) return 'milestone';
+  return null;
+};
+
+const safeId = (s) => String(s).trim().replace(/[^A-Za-z0-9_.-]/g, '');
+const normDate = (s) => String(s).trim().replace(/\//g, '-');
+const isDateish = (s) => /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(String(s).trim());
+
+// ---- ガント ---------------------------------------------------------------
+
+function rowsToGantt(rows, H) {
+  const recs = [];
+  const used = new Set();
+  rows.forEach((r, i) => {
+    const get = (k) => (H[k] != null ? String(r[H[k]] ?? '').trim() : '');
+    const label = get('label') || get('id') || `task${i + 1}`;
+    let id = safeId(get('id')) || `t${i + 1}`;
+    while (used.has(id)) id += 'x';
+    used.add(id);
+    recs.push({ id, label, start: get('start'), end: get('end'), dur: get('dur'),
+      after: get('after'), status: normStatus(get('status')), section: get('section'), link: get('link') });
+  });
+  // 依存は id でもラベルでも書ける（後解決）。
+  const byLabel = new Map(recs.map((x) => [x.label, x.id]));
+  const byId = new Set(recs.map((x) => x.id));
+  const resolve = (tok) => byId.has(tok) ? tok : (byLabel.get(tok) || null);
+
+  const out = ['gantt', '    dateFormat YYYY-MM-DD'];
+  const clicks = [];
+  let cur, prev = null;
+  for (const x of recs) {
+    if (x.section && x.section !== cur) { out.push(`    section ${x.section}`); cur = x.section; }
+    const tags = [];
+    if (x.status === 'milestone') tags.push('milestone');
+    else if (x.status) tags.push(x.status);
+    const after = x.after.split(/[\s;、,，]+/).filter(Boolean).map(resolve).filter(Boolean);
+    let startTok = '';
+    if (isDateish(x.start)) startTok = normDate(x.start);
+    else if (after.length) startTok = 'after ' + after.join(' ');
+    else if (prev) startTok = 'after ' + prev;               // 開始未指定は直前の後ろ（明示して曖昧さを消す）
+    let endTok;
+    if (x.status === 'milestone') endTok = '0d';
+    else if (x.dur) endTok = /^\d+(\.\d+)?$/.test(x.dur) ? x.dur + 'd' : x.dur;
+    else if (isDateish(x.end)) endTok = normDate(x.end);
+    else endTok = '1d';
+    const spec = [...tags, x.id, startTok, endTok].filter((s) => s !== '').join(', ');
+    out.push(`      ${x.label} :${spec}`);
+    if (x.link) clicks.push(`    click ${x.id} href "${x.link}"`);
+    prev = x.id;
+  }
+  return out.concat(clicks).join('\n') + '\n';
+}
+
+// ---- フローチャート（エッジリスト）------------------------------------------
+
+function rowsToFlow(rows, H) {
+  const ids = new Map();                                   // ラベル → id
+  let k = 0;
+  const ensure = (label) => {
+    if (ids.has(label)) return ids.get(label);
+    let id = safeId(label);
+    if (!id || [...ids.values()].includes(id)) id = 'n' + (++k);
+    ids.set(label, id);
+    return id;
+  };
+  const edges = [], clicks = [];
+  for (const r of rows) {
+    const get = (key) => (H[key] != null ? String(r[H[key]] ?? '').trim() : '');
+    const f = get('from'), t = get('to');
+    if (!f || !t) continue;
+    const lab = get('label');
+    edges.push(`    ${ensure(f)} -->${lab ? `|${lab}|` : ''} ${ensure(t)}`);
+    const link = get('link');
+    if (link) clicks.push(`    click ${ensure(t)} "${link}"`);
+  }
+  const decls = [...ids.entries()].map(([label, id]) => `    ${id}[${label}]`);
+  const seen = new Set(), uc = clicks.filter((c) => !seen.has(c) && seen.add(c));
+  return ['flowchart TD', ...decls, ...edges, ...uc].join('\n') + '\n';
+}
+
+// ---- 入口 -------------------------------------------------------------------
+
+function csvToMermaid(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return { error: 'ヘッダ行とデータ行が要ります（2 行以上）' };
+  const H = mapHeader(rows[0]);
+  if (H.from != null && H.to != null) return { kind: 'flowchart', text: rowsToFlow(rows.slice(1), H) };
+  if (H.label != null || H.start != null || H.dur != null)
+    return { kind: 'gantt', text: rowsToGantt(rows.slice(1), H) };
+  return { error: '列が読めません（from/to か、名前(label)・開始(start)・期間(duration) を含めてください）' };
+}
+
+/* ============================================================
    描画 — モデル＋レイアウト → SVG 文字列。純粋（DOM を触らない）。
    フローチャートは Mermaid の形（角丸・丸・スタジアム・円柱・円・菱形・六角）を描き分け、
    エッジは実線/点線/太線・矢印・ラベルを描く。
@@ -1061,6 +1315,13 @@ function serialize(model) {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const HUES = ['#6aa9ff', '#7ad1b0', '#f5b86a', '#d68ad6', '#f57a8a', '#8ad1f5', '#b8a6ff', '#9ad17a'];
 const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
+
+// ハイパーリンクの ↗ バッジ（要素の右肩）。UI がクリックで開く。
+function linkBadge(url, cx, cy) {
+  return `<g data-linkbtn="1" data-url="${esc(url)}" style="cursor:pointer">`
+    + `<circle cx="${cx}" cy="${cy}" r="8" fill="#18202e" stroke="#6aa9ff" stroke-width="1.2"/>`
+    + `<text x="${cx}" y="${cy + 3.5}" fill="#8fb6ff" font-size="9" text-anchor="middle">↗</text></g>`;
+}
 
 const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
@@ -1112,10 +1373,12 @@ function drawGantt(model, L) {
     } else {
       const crit = b.status === 'crit', active = b.status === 'active', done = b.status === 'done';
       const fillOp = done ? 0.95 : active ? 0.5 : 0.9;
+      const it2 = model.items.find((x) => x.id === b.id);
       let g = `<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab">`
         + `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4" fill="${hue}" opacity="${fillOp}"`
         + (crit ? ` stroke="#f5667a" stroke-width="2"` : active ? ` stroke="${hue}" stroke-width="1.5" stroke-dasharray="4 3"` : '') + `/>`;
       if (done) g += `<path d="M${b.x + 5},${b.y + b.h / 2} l3,4 l6,-7" fill="none" stroke="#0b0e14" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
+      if (it2?.link) g += linkBadge(it2.link, b.x + b.w + 11, b.y + b.h / 2);
       parts.push(g + `</g>`);
     }
   }
@@ -1138,29 +1401,37 @@ function shapePath(n) {
   }
 }
 
-function drawFlow(model, L) {
+function drawFlow(model, L, opts = {}) {
   const parts = [];
   for (const g of L.groups) {
     parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
     parts.push(`<text x="${g.x + 12}" y="${g.y + 16}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(g.name)}</text>`);
   }
-  for (const e of L.edges) {
+  L.edges.forEach((e, i) => {
     const dash = e.dotted ? ` stroke-dasharray="2 4"` : '';
     const wdt = e.thick ? 2.5 : 1.4;
     parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
-      parts.push(`<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
-        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text>`);
+      parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
     }
-  }
+  });
   L.nodes.forEach((n, i) => {
     const hue = hueOf(i);
+    const sel = opts.selected === n.id;
     const inner = shapePath(n).replace(/<(rect|ellipse|polygon|path)([^>]*?)\/>/g,
-      `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`)
+      `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
-    parts.push(`<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">${inner}`
-      + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text></g>`);
+    let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
+    if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="10" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+    g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
+    if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
+    parts.push(g + `</g>`);
+    if (sel) parts.push(`<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
+      + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
+      + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
   });
   return wrap(L, parts.join('\n'));
 }
@@ -1211,8 +1482,8 @@ function drawSeq(model, L) {
   return wrap(L, parts.join('\n'));
 }
 
-function draw(model, L) {
-  if (L.kind === 'flowchart') return drawFlow(model, L);
+function draw(model, L, opts = {}) {
+  if (L.kind === 'flowchart') return drawFlow(model, L, opts);
   if (L.kind === 'sequence') return drawSeq(model, L);
   return drawGantt(model, L);
 }
@@ -1287,7 +1558,7 @@ const SAMPLES = {
     Note over u,w: 3回失敗でロック`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -1322,7 +1593,8 @@ function boot() {
   function render() {
     model = parse(src.value);
     L = layout(model);
-    canvas.innerHTML = draw(model, L);
+    if (selected && !model.items.some((x) => x.id === selected)) selected = null;
+    canvas.innerHTML = draw(model, L, { selected });
     applyView();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
@@ -1346,39 +1618,101 @@ function boot() {
     view.tx = (r.width - L.width * view.s) / 2; view.ty = Math.max(16, (r.height - L.height * view.s) / 2);
     applyView();
   }
-  function zoomAt(cx, cy, factor) {
+  function zoomTo(cx, cy, ns) {
     const r = stage.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
-    const ns = Math.max(0.15, Math.min(4, view.s * factor));
+    ns = Math.max(0.15, Math.min(4, ns));
     view.tx = x - (x - view.tx) * (ns / view.s); view.ty = y - (y - view.ty) * (ns / view.s); view.s = ns; applyView();
   }
+  const zoomAt = (cx, cy, factor) => zoomTo(cx, cy, view.s * factor);
   stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   $('zIn').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); };
   $('zOut').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); };
   $('zFit').onclick = fit;
 
-  // ---- ドラッグ（要素を動かす／空きをパン）----
-  let drag = null, pan = null;
+  // ---- ポインタ（選択・ドラッグ・接続・パン・ピンチ・ダブルタップ）----
+  let selected = null, drag = null, pan = null, connect = null, pinch = null;
+  const pointers = new Map();
+  let lastTap = { t: 0, x: 0, y: 0 };
+
+  function toWorld(cx, cy) {
+    const r = stage.getBoundingClientRect();
+    return [(cx - r.left - view.tx) / view.s, (cy - r.top - view.ty) / view.s];
+  }
+  const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
+  function redraw() {
+    const keep = { ...view };
+    canvas.innerHTML = draw(model, L = layout(model), { selected });
+    Object.assign(view, keep); applyView();
+  }
+  // ポトペタで意味部を書き換えたら、DSL に反映して履歴へ。
+  function commitModel() { src.value = serialize(model); highlight(); render(); pushHistory(); }
+
+  function tempLine(x1, y1, x2, y2) {
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    let l = svg.querySelector('#tmpedge');
+    if (!l) {
+      l = document.createElementNS('http://www.w3.org/2000/svg', 'line'); l.id = 'tmpedge';
+      l.setAttribute('stroke', '#6aa9ff'); l.setAttribute('stroke-width', '2'); l.setAttribute('stroke-dasharray', '5 4');
+      l.setAttribute('pointer-events', 'none');              // 落とし先の判定を邪魔しない
+      svg.appendChild(l);
+    }
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  }
+  const removeTempLine = () => canvas.querySelector('#tmpedge')?.remove();
+
   stage.addEventListener('pointerdown', (e) => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {                               // 二本指＝ピンチ。進行中の操作は畳む。
+      drag = null; pan = null; connect = null; removeTempLine(); stage.classList.remove('panning');
+      const [a, b] = [...pointers.values()];
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: view.s };
+      capture(e); e.preventDefault(); return;
+    }
+    if (e.target.closest('[data-linkbtn]')) return;          // リンクは click に任せる（開くだけ）
+    const now = performance.now();
+    const isDouble = now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24;
+    lastTap = { t: now, x: e.clientX, y: e.clientY };
+    if (isDouble) { lastTap.t = 0; e.preventDefault(); onDoubleTap(e); return; }
+
+    const c = e.target.closest('[data-connect]');
+    if (c) { connect = { from: c.dataset.id }; capture(e); e.preventDefault(); return; }
     const g = e.target.closest('[data-drag]');
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
-      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY }; }
+      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY, moved: false }; }
       else if (kind === 'actor') {
         const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
-        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY };
+        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY, moved: false };
       }
-      else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY }; }
-    } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY }; stage.classList.add('panning'); }
-    stage.setPointerCapture?.(e.pointerId); e.preventDefault();
+      else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY, moved: false }; }
+    } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); }
+    capture(e); e.preventDefault();
   });
+
   stage.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch) {
+      if (pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        zoomTo((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.s0 * (Math.hypot(a.x - b.x, a.y - b.y) || 1) / pinch.d0);
+      }
+      return;
+    }
+    if (connect) {
+      const n = L.nodes.find((x) => x.id === connect.from); if (!n) return;
+      const [wx, wy] = toWorld(e.clientX, e.clientY);
+      tempLine(n.x + n.w + 14, n.y + n.h / 2, wx, wy);
+      return;
+    }
     if (drag) {
-      const dx = (e.clientX - drag.px) / view.s, dy = (e.clientY - drag.py) / view.s;
+      const dxp = e.clientX - drag.px, dyp = e.clientY - drag.py;
+      if (!drag.moved && Math.abs(dxp) + Math.abs(dyp) < 5) return;   // 数ピクセルはクリック扱い
+      drag.moved = true;
+      const dx = dxp / view.s, dy = dyp / view.s;
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
         model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
       } else if (drag.kind === 'actor') {
-        // 参加者は横ドラッグで並び替え（元の並びから毎回計算する）。
         const steps = Math.round(dx / drag.spacing);
         const o = drag.order.slice(), f = o.indexOf(drag.id);
         o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]);
@@ -1388,11 +1722,87 @@ function boot() {
         const steps = Math.round(dy / L.rowH);
         if (steps) { const o = drag.order.slice(), f = o.indexOf(drag.id); o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]); model.layout.order = o; }
       }
-      const keep = { ...view }; canvas.innerHTML = draw(model, L = layout(model)); Object.assign(view, keep); applyView();
-    } else if (pan) { view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView(); }
+      redraw();
+    } else if (pan) {
+      if (Math.abs(e.clientX - pan.px) + Math.abs(e.clientY - pan.py) > 3) pan.moved = true;
+      view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView();
+    }
   });
-  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); pushHistory(); } drag = null; pan = null; stage.classList.remove('panning'); }
-  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+
+  function endPointer(e) {
+    if (e) pointers.delete(e.pointerId);
+    if (pinch) { if (pointers.size < 2) pinch = null; return; }
+    if (connect) {
+      const el = e && document.elementFromPoint(e.clientX, e.clientY);
+      const tgt = el && el.closest && el.closest('[data-drag="node"]');
+      removeTempLine();
+      if (tgt && tgt.dataset.id !== connect.from) {
+        if (model.edges.some((x) => x.from === connect.from && x.to === tgt.dataset.id)) toast('もうつながっています');
+        else { model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true }); selected = null; commitModel(); toast('つなぎました'); return; }
+      }
+      connect = null; selected = null; redraw(); return;
+    }
+    if (drag) {
+      if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
+      else if (drag.kind === 'node') { selected = selected === drag.id ? null : drag.id; redraw(); }  // クリック＝選択
+    } else if (pan && !pan.moved && selected) { selected = null; redraw(); }                            // 空クリック＝選択解除
+    drag = null; pan = null; connect = null; stage.classList.remove('panning');
+  }
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+
+  // ---- ハイパーリンク（↗ バッジ）----
+  canvas.addEventListener('click', (e) => {
+    const lb = e.target.closest('[data-linkbtn]');
+    if (lb) { e.preventDefault(); window.open(lb.dataset.url, '_blank', 'noopener'); }
+  });
+
+  // ---- ポトペタ：ダブルタップでリネーム／追加 ----
+  function onDoubleTap(e) {
+    const eg = e.target.closest('[data-edit]');
+    if (eg && eg.dataset.edit === 'edge') { startRename('edge', +eg.dataset.i, eg); return; }
+    const g = e.target.closest('[data-drag]');
+    if (g) { startRename(g.dataset.drag, g.dataset.id, g); return; }
+    const [wx, wy] = toWorld(e.clientX, e.clientY);
+    if (model.kind === 'flowchart') {                        // 空きに、新しいノードをその場へ
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      const id = 'n' + k;
+      model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected = id; commitModel();
+    } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
+    else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
+  }
+
+  const inline = $('inline');
+  let renameCtx = null;
+  function startRename(kind, ref, el) {
+    const r = el.getBoundingClientRect();
+    let value = kind === 'edge' ? (model.edges[ref]?.label ?? '')
+      : (model.items.find((x) => x.id === ref)?.label ?? '');
+    renameCtx = { kind, ref };
+    inline.value = value;
+    inline.style.left = Math.min(Math.max(6, r.left), window.innerWidth - 190) + 'px';
+    inline.style.top = Math.max(6, r.top + r.height / 2 - 15) + 'px';
+    inline.style.width = Math.max(130, Math.min(280, r.width + 40)) + 'px';
+    inline.hidden = false; inline.focus(); inline.select();
+  }
+  function commitRename(ok) {
+    if (!renameCtx) return;
+    const { kind, ref } = renameCtx; renameCtx = null; inline.hidden = true;
+    if (!ok) return;
+    const v = inline.value.trim();
+    if (kind === 'edge') { if (model.edges[ref] != null) model.edges[ref].label = v; }
+    else { const it = model.items.find((x) => x.id === ref); if (it && v) it.label = v; else return; }
+    commitModel();
+  }
+  inline.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(true); }
+    else if (e.key === 'Escape') commitRename(false);
+    e.stopPropagation();
+  });
+  inline.addEventListener('blur', () => commitRename(true));
 
   // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
   const history = { stack: [], idx: -1 };
@@ -1549,9 +1959,34 @@ function boot() {
     img.src = url;
   }
 
+  // ---- 取り込み（CSV / TSV を貼る・選ぶ・ドロップする）----
+  const dlg = $('importDlg');
+  function runImport(text) {
+    const t = String(text || '').trim();
+    if (!t) return;
+    if (/^(gantt|flowchart|graph|sequenceDiagram)\b/.test(t)) {   // Mermaid ならそのまま
+      setText(t, true); dlg.hidden = true; toast('Mermaid を読み込みました'); return;
+    }
+    const r = csvToMermaid(t);
+    if (r.error) { toast('⚠ ' + r.error); return; }
+    setText(r.text, true); dlg.hidden = true;
+    toast(`表から ${r.kind === 'gantt' ? 'ガント' : 'フローチャート'}にしました`);
+  }
+  $('bImport').onclick = () => { dlg.hidden = false; $('csvIn').focus(); };
+  $('csvCancel').onclick = () => { dlg.hidden = true; };
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.hidden = true; });
+  $('csvGo').onclick = () => runImport($('csvIn').value);
+  $('csvPick').onclick = (e) => { e.preventDefault(); $('csvFile').click(); };
+  $('csvFile').onchange = async (e) => { const f = e.target.files[0]; if (f) runImport(await f.text()); e.target.value = ''; };
+  // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) runImport(await f.text()); });
+
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
   $('vToggle').onclick = () => document.body.classList.toggle('viewmax');
+  // スマホでは、まず図に全画面を譲る（「コード ◧」で開ける）。
+  if (window.matchMedia('(max-width: 820px)').matches) document.body.classList.add('viewmax');
   problems.addEventListener('click', (e) => { const p = e.target.closest('.p'); if (!p || !p.dataset.ln) return; const ln = +p.dataset.ln; const pos = src.value.split('\n').slice(0, ln - 1).join('\n').length + (ln > 1 ? 1 : 0); src.focus(); src.selectionStart = src.selectionEnd = pos; });
   window.addEventListener('resize', () => { if (L) applyView(); });
 

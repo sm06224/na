@@ -100,6 +100,11 @@ function parseGantt(lines, model) {
     if (head === 'axisFormat') { model.meta.axisFormat = rest; continue; }
     if (head === 'section') { section = rest; continue; }
     if (['excludes', 'todayMarker', 'weekday', 'tickInterval'].includes(head)) continue; // 体裁系は無視
+    if (head === 'click') {                                   // click id href "url" — タスクにリンクを張る
+      const m = /^click\s+([A-Za-z0-9_.-]+)\s+(?:href\s+)?"([^"]+)"/.exec(line);
+      if (m) { const it = model.items.find((x) => x.id === m[1]); if (it) it.link = m[2]; else model.errors.push(`L${ln}: click の相手が見つからない「${m[1]}」`); }
+      continue;                                                // call など未対応の形は静かに流す（Mermaid 互換）
+    }
     // タスク行：「ラベル : spec」
     const c = line.indexOf(':');
     if (c < 0) { if (line) model.errors.push(`L${ln}: タスク行に ':' がない「${line}」`); continue; }
@@ -189,7 +194,12 @@ function parseFlow(lines, model, dir) {
     }
     if (line === 'end') { stack.pop(); continue; }
     if (head === 'direction') { model.meta.dir = line.split(/\s+/)[1] || model.meta.dir; continue; }
-    if (['classDef', 'class', 'style', 'click', 'linkStyle'].includes(head)) continue; // 体裁系は無視
+    if (head === 'click') {                                   // click id "url" — ノードにリンクを張る
+      const m = /^click\s+([A-Za-z0-9_.-]+)\s+(?:href\s+)?"([^"]+)"/.exec(line);
+      if (m) { const n = model.items.find((x) => x.id === m[1]); if (n) n.link = m[2]; else model.errors.push(`L${ln}: click の相手が見つからない「${m[1]}」`); }
+      continue;                                                // call など未対応の形は静かに流す
+    }
+    if (['classDef', 'class', 'style', 'linkStyle'].includes(head)) continue; // 体裁系は無視
     // ノード/エッジ行。subgraph 内なら、この行で触れたノードをそのグループに入れる。
     const touched = parseFlowLine(line, model, ln);
     if (stack.length) {

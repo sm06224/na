@@ -3,6 +3,7 @@
   --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
   --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
   font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
@@ -79,9 +80,32 @@ main { flex: 1; display: flex; min-height: 0; }
   opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
 #toast.on { opacity: 1; }
 
+/* ポトペタのその場リネーム（浮きインプット） */
+#inline { position: fixed; z-index: 70; background: #101724; border: 1.5px solid var(--acc); border-radius: 7px;
+  color: var(--fg); font: inherit; font-size: .84rem; padding: .3em .6em; outline: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+
+/* 取り込みダイアログ */
+.dlg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,10,.55); backdrop-filter: blur(3px); padding: 1rem; }
+.dlg .box { width: min(560px, 94vw); max-height: 88vh; overflow: auto; background: #0e1420; border: 1px solid var(--line2);
+  border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .65rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.dlg h3 { font-size: .92rem; font-weight: 600; }
+.dlg .hint { font-size: .72rem; color: var(--dim); line-height: 1.8; }
+.dlg .hint a { color: var(--acc); }
+.dlg textarea { min-height: 170px; resize: vertical; background: #0a0e16; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.6; padding: .6rem; outline: none; }
+.dlg .row { display: flex; gap: .5rem; align-items: center; }
+.ghost2 { background: transparent; }
+
 @media (max-width: 820px) {
-  header { gap: .4rem; }
-  .pick, .ins { display: none; }
+  header { gap: .35rem .45rem; padding-bottom: .4rem; }
+  #status { display: none; }                                 /* 指摘は problems 一覧で見える */
+  .pick { order: 5; flex-basis: calc(100% - 96px); }
+  .pick select { flex: 1; min-width: 0; max-width: 100%; }
+  #bImport { order: 6; }
+  .ins { order: 7; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .ins button { flex: none; padding: .45em .8em; }           /* 指で押しやすく */
+  .zoombar button { padding: .4em .8em; }
   main { flex-direction: column; }
   .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
   .view { flex: 1; }

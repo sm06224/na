@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js',
-  'engine/serialize.js', 'render/draw.js', 'ui/editor.js'];
+  'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
 
 const read = (p) => readFileSync(join(HERE, p), 'utf8');
 const strip = (s) => s.split('\n')
