@@ -4,7 +4,7 @@
 
 ### Mermaid で書けて、グリグリ動かせる — 作図エディタ
 
-ガントチャートと機能構成図（フローチャート）。**書けば図に、図を動かせば書き戻る。**<br>
+ガントチャート・機能構成図（フローチャート）・シーケンス図。**書けば図に、図を動かせば書き戻る。**<br>
 1 図 ＝ 自己完結の単一 HTML（フル機能エディタ同梱・オフライン・どこでも開ける）。
 
 </div>
@@ -17,7 +17,7 @@
 
 ねらいは三つ。
 
-1. **みんなが知っている記法** — DSL は **Mermaid 互換**（`gantt` と `flowchart`）。人も AI も、すでに知っている書き方でそのまま書ける。
+1. **みんなが知っている記法** — DSL は **Mermaid 互換**（`gantt`・`flowchart`・`sequenceDiagram`）。人も AI も、すでに知っている書き方でそのまま書ける。
 2. **グリグリ動かせる** — ブラウザでノードや棒をドラッグして整える。Mermaid は自動整列だけだが、studio は**手で置いた位置を保持**する。
 3. **AI に優しい往復** — ドラッグの結果は Mermaid の**コメント `%% @layout`** にだけ書き戻る。意味部（何があり、何に依存するか）は汚れないので、**次の AI が差分をきれいに読める**。しかも `%%` はコメントなので、**本物の Mermaid でもそのまま描ける**。
 
@@ -32,7 +32,8 @@
 - **オートコンプリート** — キーワード・タスク id・ノード id を文脈で補完（↑↓・Enter）
 - **ライブ・ドラッグ可能プレビュー** — ホイールでズーム、空きをドラッグでパン、フィット、要素をドラッグで配置（8px スナップ）
 - **スニペット挿入**（＋タスク／＋ノード／＋エッジ…）と**サンプル**切替
-- **エクスポート** — DSL コピー／`.mmd`／`SVG`／**単一 HTML**（その図だけで動くエディタを書き出す）
+- **アンドゥ／リドゥ** — Ctrl+Z / Ctrl+Y。ドラッグやスニペット挿入も履歴に入る
+- **エクスポート** — DSL コピー／`.mmd`／`SVG`／`PNG`（2 倍解像度）／**単一 HTML**（その図だけで動くエディタを書き出す）
 
 ## Mermaid 記法
 
@@ -68,7 +69,26 @@ flowchart TD
 
 - 向き `TD` / `LR` …、形状 `[]`(四角) `()`(丸) `([])`(スタジアム) `[()]`(円柱) `(())`(円) `{}`(菱形) `{{}}`(六角) `[[]]`(サブルーチン)
 - エッジ `-->` / `---` / `-.->`(点線) / `==>`(太線)、ラベル `-->|text|`、`subgraph … end` でグループ
-- 位置を書かなければ**依存の深さで自動段組み**（最長経路）。ドラッグで自由配置 → `%% pos id x y`
+- 位置を書かなければ**依存の深さで自動段組み**（最長経路）。ドラッグで自由配置 → `%% pos id x y`。段の中の並びは**重心法（barycenter）で交差をほどき**、エッジは曲線で結ぶ
+
+### シーケンス図
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant u as 利用者
+    u->>w: ログイン要求
+    w-->>u: ようこそ
+    alt 失敗
+      w--xu: 拒否
+    end
+    Note over u,w: 3回失敗でロック
+```
+
+- `participant id as 別名`（宣言なしの登場者は自動で足される）、`autonumber` で番号
+- 矢印 `->>`(実線) `-->>`(点線) `->`(線のみ) `-x`(バツ) `-)`(非同期)、`Note over/left of/right of`
+- 枠 `loop` / `alt` / `opt` / `par` … と `else` / `end`
+- **参加者を横ドラッグ**で並び替え → `%% order`（ライフラインごと入れ替わる）
 
 ## 使い方
 
@@ -76,10 +96,10 @@ flowchart TD
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 16 tests
+node --test tests/*.test.js            # 24 tests
 ```
 
-同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）
+同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）
 
 ## アーキテクチャ
 
@@ -89,8 +109,8 @@ studio/
 ├─ ui/editor.js                      編集体験：ハイライト・検証・補完・ズーム/パン・ドラッグ・出力
 ├─ engine/                           純粋コア（DOM 非依存・決定的・テスト対象）
 │  ├─ date.js                        日付の道具（UTC 固定）
-│  ├─ parse.js                       Mermaid（gantt/flowchart）→ モデル（意味部＋%% @layout を分離）
-│  ├─ layout.js                      ガントの日程解決／フローの自動段組み（向き対応）
+│  ├─ parse.js                       Mermaid（gantt/flowchart/sequence）→ モデル（意味部＋%% @layout を分離）
+│  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
 │  └─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
 ├─ render/draw.js                    モデル＋配置 → SVG 文字列（形状・状態色・矢印）
 ├─ build.js                          エディタ一式を畳んで 1 図 1 枚の単一 HTML に

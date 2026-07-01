@@ -53,12 +53,30 @@ export const SAMPLES = {
     b -->|承認| c[公開]
     b -->|差戻し| a
     c --> e([終了])`,
+  'シーケンス — 認証フロー': `sequenceDiagram
+    autonumber
+    participant u as 利用者
+    participant w as Web
+    participant a as 認証サービス
+    participant d as DB
+    u->>w: ログイン要求
+    w->>a: 資格情報を検証
+    a->>d: 利用者を照会
+    d-->>a: レコード
+    alt 検証OK
+      a-->>w: トークン発行
+      w-->>u: ようこそ
+    else 失敗
+      a--xw: 拒否
+      w-->>u: エラー表示
+    end
+    Note over u,w: 3回失敗でロック`,
 };
 
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(-->|---|-\.->|-\.-|==>|===|--o|--x)|(\|[^|]*\|)|\b(gantt|flowchart|graph|title|dateFormat|axisFormat|section|subgraph|end|direction|after)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -131,6 +149,10 @@ export function boot() {
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
       if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY }; }
+      else if (kind === 'actor') {
+        const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
+        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY };
+      }
       else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY }; }
     } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY }; stage.classList.add('panning'); }
     stage.setPointerCapture?.(e.pointerId); e.preventDefault();
@@ -141,6 +163,12 @@ export function boot() {
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
         model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
+      } else if (drag.kind === 'actor') {
+        // 参加者は横ドラッグで並び替え（元の並びから毎回計算する）。
+        const steps = Math.round(dx / drag.spacing);
+        const o = drag.order.slice(), f = o.indexOf(drag.id);
+        o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]);
+        model.layout.order = o;
       } else {
         model.layout.at[drag.id] = addDays(L.base, drag.day0 + Math.round(dx / L.dayW));
         const steps = Math.round(dy / L.rowH);
@@ -149,11 +177,28 @@ export function boot() {
       const keep = { ...view }; canvas.innerHTML = draw(model, L = layout(model)); Object.assign(view, keep); applyView();
     } else if (pan) { view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView(); }
   });
-  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); } drag = null; pan = null; stage.classList.remove('panning'); }
+  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); pushHistory(); } drag = null; pan = null; stage.classList.remove('panning'); }
   stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
 
+  // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
+  const history = { stack: [], idx: -1 };
+  function pushHistory() {
+    const v = src.value;
+    if (history.stack[history.idx] === v) return;
+    history.stack = history.stack.slice(0, history.idx + 1);
+    history.stack.push(v);
+    if (history.stack.length > 200) history.stack.shift();
+    history.idx = history.stack.length - 1;
+  }
+  function timeTravel(d) {
+    const to = history.idx + d;
+    if (to < 0 || to >= history.stack.length) return;
+    history.idx = to; src.value = history.stack[to];
+    highlight(); render(); hideAc();
+  }
+
   // ---- 入力（編集 → 図）----
-  let t; src.addEventListener('input', () => { highlight(); clearTimeout(t); t = setTimeout(render, 140); autocomplete(); });
+  let t; src.addEventListener('input', () => { highlight(); clearTimeout(t); t = setTimeout(() => { render(); pushHistory(); }, 140); autocomplete(); });
   src.addEventListener('scroll', syncScroll);
   src.addEventListener('keydown', onKey);
 
@@ -163,7 +208,9 @@ export function boot() {
   function suggestions(ctx) {
     const kw = model.kind === 'gantt'
       ? ['title', 'dateFormat', 'section', 'done', 'active', 'crit', 'milestone', 'after']
-      : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+      : model.kind === 'sequence'
+        ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
+        : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -198,6 +245,11 @@ export function boot() {
   }
   ac.addEventListener('pointerdown', (e) => { const opt = e.target.closest('.opt'); if (opt) { acSel = +opt.dataset.i; acceptAc(); e.preventDefault(); } });
   function onKey(e) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'z') { e.preventDefault(); timeTravel(e.shiftKey ? 1 : -1); return; }
+      if (k === 'y') { e.preventDefault(); timeTravel(1); return; }
+    }
     if (!ac.hidden && acItems.length) {
       if (e.key === 'ArrowDown') { acSel = (acSel + 1) % acItems.length; drawAc(); e.preventDefault(); return; }
       if (e.key === 'ArrowUp') { acSel = (acSel - 1 + acItems.length) % acItems.length; drawAc(); e.preventDefault(); return; }
@@ -213,7 +265,9 @@ export function boot() {
     const ins = $('insbar');
     const snips = model.kind === 'gantt'
       ? [['＋タスク', '\n      新しいタスク :t{N}, after {last}, 3d'], ['＋セクション', '\n    section 新しい区分'], ['＋マイルストン', '\n      節目 :milestone, m{N}, after {last}, 0d']]
-      : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+      : model.kind === 'sequence'
+        ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
+        : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
     ins.innerHTML = snips.map((s, i) => `<button data-i="${i}">${s[0]}</button>`).join('');
     for (const b of ins.children) b.onclick = () => insert(snips[+b.dataset.i][1]);
   }
@@ -222,7 +276,7 @@ export function boot() {
     const text = tpl.replace(/\{N\}/g, n).replace(/\{last\}/g, last);
     const end = src.value.replace(/\n+$/, '').length;
     src.value = src.value.slice(0, end) + text + src.value.slice(end);
-    highlight(); render();
+    highlight(); render(); pushHistory();
   }
 
   // ---- サンプル ----
@@ -255,8 +309,31 @@ export function boot() {
     if (x === 'dsl') { try { await navigator.clipboard.writeText(serialize(model)); toast('DSL をコピーしました'); } catch (_) { toast('コピーできませんでした'); } }
     else if (x === 'mmd') download(name + '.mmd', serialize(model), 'text/plain');
     else if (x === 'svg') { const s = canvas.querySelector('svg'); download(name + '.svg', '<?xml version="1.0"?>\n' + s.outerHTML, 'image/svg+xml'); }
+    else if (x === 'png') exportPng(name);
     else if (x === 'html') { try { download(name + '.html', await standalone(serialize(model)), 'text/html'); toast('単一 HTML を保存しました'); } catch (_) { toast('HTML 化に失敗（オンラインのエディタでお試しを）'); } }
   });
+  // SVG → 2 倍解像度の PNG（背景を敷いてから焼く）。
+  function exportPng(name) {
+    const s = canvas.querySelector('svg'); if (!s) return;
+    const xml = new XMLSerializer().serializeToString(s);
+    const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      const k = 2, c = document.createElement('canvas');
+      c.width = Math.ceil(s.viewBox.baseVal.width * k); c.height = Math.ceil(s.viewBox.baseVal.height * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      g.scale(k, k); g.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => {
+        if (!b) { toast('PNG 化に失敗しました'); return; }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '.png'; a.click();
+        URL.revokeObjectURL(a.href); toast('PNG を保存しました');
+      });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('PNG 化に失敗しました'); };
+    img.src = url;
+  }
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
@@ -265,7 +342,7 @@ export function boot() {
   window.addEventListener('resize', () => { if (L) applyView(); });
 
   // ---- 起動 ----
-  function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); }
+  function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); pushHistory(); }
   const initial = window.STUDIO_SOURCE || SAMPLES[Object.keys(SAMPLES)[0]];
   setText(initial, true);
 }

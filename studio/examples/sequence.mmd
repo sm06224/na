@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant u as 利用者
+    participant w as Web
+    participant a as 認証サービス
+    participant d as DB
+    u->>w: ログイン要求
+    w->>a: 資格情報を検証
+    a->>d: 利用者を照会
+    d-->>a: レコード
+    alt 検証OK
+      a-->>w: トークン発行
+      w-->>u: ようこそ
+    else 失敗
+      a--xw: 拒否
+      w-->>u: エラー表示
+    end
+    Note over u,w: 3回失敗でロック

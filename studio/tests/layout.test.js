@@ -78,6 +78,25 @@ test('フロー：@pos が自動配置を上書きし、グループが包む', 
   assert.ok(g.x <= a.x && g.y <= a.y, 'グループが A を包む');
 });
 
+test('フロー：交差がほどける（barycenter で段の中の並びが整う）', () => {
+  // 宣言順のままだと a→q と b→p が交差する形。並び替えで q が左へ来るはず。
+  const L = layoutFlow(parse(`flowchart TD
+  a[A]
+  b[B]
+  b --> p[P]
+  a --> q[Q]`));
+  const x = (id) => L.nodes.find((n) => n.id === id).x;
+  assert.ok(x('a') < x('b'), '前段は宣言順のまま');
+  assert.ok(x('q') < x('p'), '交差がほどけていない（q が p の左に来ない）');
+});
+
+test('フロー：エッジはベジェ曲線（制御点と中点を持つ）', () => {
+  const L = layoutFlow(parse(`flowchart LR
+  a --> b`));
+  const e = L.edges[0];
+  for (const k of ['c1x', 'c1y', 'c2x', 'c2y', 'mx', 'my']) assert.ok(Number.isFinite(e[k]), `${k} が無い`);
+});
+
 test('決定的：同じモデルからは寸分たがわぬ同じ配置', () => {
   assert.deepEqual(layout(parse(G)), layout(parse(G)));
 });
