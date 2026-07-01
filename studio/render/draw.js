@@ -10,6 +10,13 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const HUES = ['#6aa9ff', '#7ad1b0', '#f5b86a', '#d68ad6', '#f57a8a', '#8ad1f5', '#b8a6ff', '#9ad17a'];
 const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
 
+// ハイパーリンクの ↗ バッジ（要素の右肩）。UI がクリックで開く。
+function linkBadge(url, cx, cy) {
+  return `<g data-linkbtn="1" data-url="${esc(url)}" style="cursor:pointer">`
+    + `<circle cx="${cx}" cy="${cy}" r="8" fill="#18202e" stroke="#6aa9ff" stroke-width="1.2"/>`
+    + `<text x="${cx}" y="${cy + 3.5}" fill="#8fb6ff" font-size="9" text-anchor="middle">↗</text></g>`;
+}
+
 const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
   <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
@@ -60,10 +67,12 @@ function drawGantt(model, L) {
     } else {
       const crit = b.status === 'crit', active = b.status === 'active', done = b.status === 'done';
       const fillOp = done ? 0.95 : active ? 0.5 : 0.9;
+      const it2 = model.items.find((x) => x.id === b.id);
       let g = `<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab">`
         + `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4" fill="${hue}" opacity="${fillOp}"`
         + (crit ? ` stroke="#f5667a" stroke-width="2"` : active ? ` stroke="${hue}" stroke-width="1.5" stroke-dasharray="4 3"` : '') + `/>`;
       if (done) g += `<path d="M${b.x + 5},${b.y + b.h / 2} l3,4 l6,-7" fill="none" stroke="#0b0e14" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
+      if (it2?.link) g += linkBadge(it2.link, b.x + b.w + 11, b.y + b.h / 2);
       parts.push(g + `</g>`);
     }
   }
@@ -86,29 +95,37 @@ function shapePath(n) {
   }
 }
 
-function drawFlow(model, L) {
+function drawFlow(model, L, opts = {}) {
   const parts = [];
   for (const g of L.groups) {
     parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
     parts.push(`<text x="${g.x + 12}" y="${g.y + 16}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(g.name)}</text>`);
   }
-  for (const e of L.edges) {
+  L.edges.forEach((e, i) => {
     const dash = e.dotted ? ` stroke-dasharray="2 4"` : '';
     const wdt = e.thick ? 2.5 : 1.4;
     parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
-      parts.push(`<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
-        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text>`);
+      parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
     }
-  }
+  });
   L.nodes.forEach((n, i) => {
     const hue = hueOf(i);
+    const sel = opts.selected === n.id;
     const inner = shapePath(n).replace(/<(rect|ellipse|polygon|path)([^>]*?)\/>/g,
-      `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`)
+      `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
-    parts.push(`<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">${inner}`
-      + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text></g>`);
+    let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
+    if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="10" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+    g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
+    if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
+    parts.push(g + `</g>`);
+    if (sel) parts.push(`<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
+      + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
+      + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
   });
   return wrap(L, parts.join('\n'));
 }
@@ -159,8 +176,8 @@ function drawSeq(model, L) {
   return wrap(L, parts.join('\n'));
 }
 
-export function draw(model, L) {
-  if (L.kind === 'flowchart') return drawFlow(model, L);
+export function draw(model, L, opts = {}) {
+  if (L.kind === 'flowchart') return drawFlow(model, L, opts);
   if (L.kind === 'sequence') return drawSeq(model, L);
   return drawGantt(model, L);
 }

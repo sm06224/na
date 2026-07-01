@@ -33,7 +33,14 @@
 - **ライブ・ドラッグ可能プレビュー** — ホイールでズーム、空きをドラッグでパン、フィット、要素をドラッグで配置（8px スナップ）
 - **スニペット挿入**（＋タスク／＋ノード／＋エッジ…）と**サンプル**切替
 - **アンドゥ／リドゥ** — Ctrl+Z / Ctrl+Y。ドラッグやスニペット挿入も履歴に入る
-- **エクスポート** — DSL コピー／`.mmd`／`SVG`／`PNG`（2 倍解像度）／**単一 HTML**（その図だけで動くエディタを書き出す）
+- **エクスポート** — DSL コピー／`.mmd`／`SVG`／`PNG`（2 倍解像度）／**単一 HTML**（その図だけで動くエディタを書き出す)
+
+### 手数が減る（ポトペタ・流し込み・リンク）
+
+- **ポトペタ編集** — ノードを**クリックで選択**すると → ハンドルが生え、**別のノードへ引っぱるだけでエッジ**がつながる。**ダブルタップでその場リネーム**（ノード・タスク・参加者・エッジラベル）。**空きをダブルタップで新しいノード**がその場に生える（ガントはタスク、シーケンスは参加者）。すべて DSL に書き戻る
+- **CSV / TSV の流し込み** — 「取り込み」に表を貼る・ファイルを選ぶ・**画面へドロップ**するだけで図に。列名は日英ゆらぎを吸収（名前/label・開始/start・期間/duration・依存/after・状態/status・区分/section・link、フローは from/to/label）。依存は **id でもラベルでも**書ける
+- **ハイパーリンク** — Mermaid 純正の `click id "url"`（ガントは `click id href "url"`）でノード・タスクに **↗ バッジ**が生え、タップで開く。大きな図を**複数の単一 HTML に分割してリンクで渡り歩く**のに効く
+- **スマホ** — **ピンチでズーム**、起動時は図が全画面（「コード ◧」でエディタ）、スニペットは横スクロールでいつでも
 
 ## Mermaid 記法
 
@@ -96,7 +103,7 @@ sequenceDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 24 tests
+node --test tests/*.test.js            # 30 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）
@@ -111,7 +118,8 @@ studio/
 │  ├─ date.js                        日付の道具（UTC 固定）
 │  ├─ parse.js                       Mermaid（gantt/flowchart/sequence）→ モデル（意味部＋%% @layout を分離）
 │  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
-│  └─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
+│  ├─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
+│  └─ import.js                      流し込み：CSV/TSV → Mermaid（日英ヘッダ吸収・link 列対応）
 ├─ render/draw.js                    モデル＋配置 → SVG 文字列（形状・状態色・矢印）
 ├─ build.js                          エディタ一式を畳んで 1 図 1 枚の単一 HTML に
 ├─ examples/*.mmd                    図のソース（Mermaid）

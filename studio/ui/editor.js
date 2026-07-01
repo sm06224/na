@@ -9,6 +9,7 @@ import { layout } from '../engine/layout.js';
 import { serialize } from '../engine/serialize.js';
 import { draw } from '../render/draw.js';
 import { addDays } from '../engine/date.js';
+import { csvToMermaid } from '../engine/import.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -73,7 +74,7 @@ export const SAMPLES = {
     Note over u,w: 3回失敗でロック`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -108,7 +109,8 @@ export function boot() {
   function render() {
     model = parse(src.value);
     L = layout(model);
-    canvas.innerHTML = draw(model, L);
+    if (selected && !model.items.some((x) => x.id === selected)) selected = null;
+    canvas.innerHTML = draw(model, L, { selected });
     applyView();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
@@ -132,39 +134,101 @@ export function boot() {
     view.tx = (r.width - L.width * view.s) / 2; view.ty = Math.max(16, (r.height - L.height * view.s) / 2);
     applyView();
   }
-  function zoomAt(cx, cy, factor) {
+  function zoomTo(cx, cy, ns) {
     const r = stage.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
-    const ns = Math.max(0.15, Math.min(4, view.s * factor));
+    ns = Math.max(0.15, Math.min(4, ns));
     view.tx = x - (x - view.tx) * (ns / view.s); view.ty = y - (y - view.ty) * (ns / view.s); view.s = ns; applyView();
   }
+  const zoomAt = (cx, cy, factor) => zoomTo(cx, cy, view.s * factor);
   stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   $('zIn').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); };
   $('zOut').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); };
   $('zFit').onclick = fit;
 
-  // ---- ドラッグ（要素を動かす／空きをパン）----
-  let drag = null, pan = null;
+  // ---- ポインタ（選択・ドラッグ・接続・パン・ピンチ・ダブルタップ）----
+  let selected = null, drag = null, pan = null, connect = null, pinch = null;
+  const pointers = new Map();
+  let lastTap = { t: 0, x: 0, y: 0 };
+
+  function toWorld(cx, cy) {
+    const r = stage.getBoundingClientRect();
+    return [(cx - r.left - view.tx) / view.s, (cy - r.top - view.ty) / view.s];
+  }
+  const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
+  function redraw() {
+    const keep = { ...view };
+    canvas.innerHTML = draw(model, L = layout(model), { selected });
+    Object.assign(view, keep); applyView();
+  }
+  // ポトペタで意味部を書き換えたら、DSL に反映して履歴へ。
+  function commitModel() { src.value = serialize(model); highlight(); render(); pushHistory(); }
+
+  function tempLine(x1, y1, x2, y2) {
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    let l = svg.querySelector('#tmpedge');
+    if (!l) {
+      l = document.createElementNS('http://www.w3.org/2000/svg', 'line'); l.id = 'tmpedge';
+      l.setAttribute('stroke', '#6aa9ff'); l.setAttribute('stroke-width', '2'); l.setAttribute('stroke-dasharray', '5 4');
+      l.setAttribute('pointer-events', 'none');              // 落とし先の判定を邪魔しない
+      svg.appendChild(l);
+    }
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  }
+  const removeTempLine = () => canvas.querySelector('#tmpedge')?.remove();
+
   stage.addEventListener('pointerdown', (e) => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {                               // 二本指＝ピンチ。進行中の操作は畳む。
+      drag = null; pan = null; connect = null; removeTempLine(); stage.classList.remove('panning');
+      const [a, b] = [...pointers.values()];
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: view.s };
+      capture(e); e.preventDefault(); return;
+    }
+    if (e.target.closest('[data-linkbtn]')) return;          // リンクは click に任せる（開くだけ）
+    const now = performance.now();
+    const isDouble = now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24;
+    lastTap = { t: now, x: e.clientX, y: e.clientY };
+    if (isDouble) { lastTap.t = 0; e.preventDefault(); onDoubleTap(e); return; }
+
+    const c = e.target.closest('[data-connect]');
+    if (c) { connect = { from: c.dataset.id }; capture(e); e.preventDefault(); return; }
     const g = e.target.closest('[data-drag]');
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
-      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY }; }
+      if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY, moved: false }; }
       else if (kind === 'actor') {
         const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
-        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY };
+        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY, moved: false };
       }
-      else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY }; }
-    } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY }; stage.classList.add('panning'); }
-    stage.setPointerCapture?.(e.pointerId); e.preventDefault();
+      else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY, moved: false }; }
+    } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); }
+    capture(e); e.preventDefault();
   });
+
   stage.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch) {
+      if (pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        zoomTo((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.s0 * (Math.hypot(a.x - b.x, a.y - b.y) || 1) / pinch.d0);
+      }
+      return;
+    }
+    if (connect) {
+      const n = L.nodes.find((x) => x.id === connect.from); if (!n) return;
+      const [wx, wy] = toWorld(e.clientX, e.clientY);
+      tempLine(n.x + n.w + 14, n.y + n.h / 2, wx, wy);
+      return;
+    }
     if (drag) {
-      const dx = (e.clientX - drag.px) / view.s, dy = (e.clientY - drag.py) / view.s;
+      const dxp = e.clientX - drag.px, dyp = e.clientY - drag.py;
+      if (!drag.moved && Math.abs(dxp) + Math.abs(dyp) < 5) return;   // 数ピクセルはクリック扱い
+      drag.moved = true;
+      const dx = dxp / view.s, dy = dyp / view.s;
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
         model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
       } else if (drag.kind === 'actor') {
-        // 参加者は横ドラッグで並び替え（元の並びから毎回計算する）。
         const steps = Math.round(dx / drag.spacing);
         const o = drag.order.slice(), f = o.indexOf(drag.id);
         o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]);
@@ -174,11 +238,87 @@ export function boot() {
         const steps = Math.round(dy / L.rowH);
         if (steps) { const o = drag.order.slice(), f = o.indexOf(drag.id); o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]); model.layout.order = o; }
       }
-      const keep = { ...view }; canvas.innerHTML = draw(model, L = layout(model)); Object.assign(view, keep); applyView();
-    } else if (pan) { view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView(); }
+      redraw();
+    } else if (pan) {
+      if (Math.abs(e.clientX - pan.px) + Math.abs(e.clientY - pan.py) > 3) pan.moved = true;
+      view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView();
+    }
   });
-  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); pushHistory(); } drag = null; pan = null; stage.classList.remove('panning'); }
-  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+
+  function endPointer(e) {
+    if (e) pointers.delete(e.pointerId);
+    if (pinch) { if (pointers.size < 2) pinch = null; return; }
+    if (connect) {
+      const el = e && document.elementFromPoint(e.clientX, e.clientY);
+      const tgt = el && el.closest && el.closest('[data-drag="node"]');
+      removeTempLine();
+      if (tgt && tgt.dataset.id !== connect.from) {
+        if (model.edges.some((x) => x.from === connect.from && x.to === tgt.dataset.id)) toast('もうつながっています');
+        else { model.edges.push({ from: connect.from, to: tgt.dataset.id, label: '', dotted: false, thick: false, arrow: true }); selected = null; commitModel(); toast('つなぎました'); return; }
+      }
+      connect = null; selected = null; redraw(); return;
+    }
+    if (drag) {
+      if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
+      else if (drag.kind === 'node') { selected = selected === drag.id ? null : drag.id; redraw(); }  // クリック＝選択
+    } else if (pan && !pan.moved && selected) { selected = null; redraw(); }                            // 空クリック＝選択解除
+    drag = null; pan = null; connect = null; stage.classList.remove('panning');
+  }
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+
+  // ---- ハイパーリンク（↗ バッジ）----
+  canvas.addEventListener('click', (e) => {
+    const lb = e.target.closest('[data-linkbtn]');
+    if (lb) { e.preventDefault(); window.open(lb.dataset.url, '_blank', 'noopener'); }
+  });
+
+  // ---- ポトペタ：ダブルタップでリネーム／追加 ----
+  function onDoubleTap(e) {
+    const eg = e.target.closest('[data-edit]');
+    if (eg && eg.dataset.edit === 'edge') { startRename('edge', +eg.dataset.i, eg); return; }
+    const g = e.target.closest('[data-drag]');
+    if (g) { startRename(g.dataset.drag, g.dataset.id, g); return; }
+    const [wx, wy] = toWorld(e.clientX, e.clientY);
+    if (model.kind === 'flowchart') {                        // 空きに、新しいノードをその場へ
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      const id = 'n' + k;
+      model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected = id; commitModel();
+    } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
+    else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
+  }
+
+  const inline = $('inline');
+  let renameCtx = null;
+  function startRename(kind, ref, el) {
+    const r = el.getBoundingClientRect();
+    let value = kind === 'edge' ? (model.edges[ref]?.label ?? '')
+      : (model.items.find((x) => x.id === ref)?.label ?? '');
+    renameCtx = { kind, ref };
+    inline.value = value;
+    inline.style.left = Math.min(Math.max(6, r.left), window.innerWidth - 190) + 'px';
+    inline.style.top = Math.max(6, r.top + r.height / 2 - 15) + 'px';
+    inline.style.width = Math.max(130, Math.min(280, r.width + 40)) + 'px';
+    inline.hidden = false; inline.focus(); inline.select();
+  }
+  function commitRename(ok) {
+    if (!renameCtx) return;
+    const { kind, ref } = renameCtx; renameCtx = null; inline.hidden = true;
+    if (!ok) return;
+    const v = inline.value.trim();
+    if (kind === 'edge') { if (model.edges[ref] != null) model.edges[ref].label = v; }
+    else { const it = model.items.find((x) => x.id === ref); if (it && v) it.label = v; else return; }
+    commitModel();
+  }
+  inline.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(true); }
+    else if (e.key === 'Escape') commitRename(false);
+    e.stopPropagation();
+  });
+  inline.addEventListener('blur', () => commitRename(true));
 
   // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
   const history = { stack: [], idx: -1 };
@@ -335,9 +475,34 @@ export function boot() {
     img.src = url;
   }
 
+  // ---- 取り込み（CSV / TSV を貼る・選ぶ・ドロップする）----
+  const dlg = $('importDlg');
+  function runImport(text) {
+    const t = String(text || '').trim();
+    if (!t) return;
+    if (/^(gantt|flowchart|graph|sequenceDiagram)\b/.test(t)) {   // Mermaid ならそのまま
+      setText(t, true); dlg.hidden = true; toast('Mermaid を読み込みました'); return;
+    }
+    const r = csvToMermaid(t);
+    if (r.error) { toast('⚠ ' + r.error); return; }
+    setText(r.text, true); dlg.hidden = true;
+    toast(`表から ${r.kind === 'gantt' ? 'ガント' : 'フローチャート'}にしました`);
+  }
+  $('bImport').onclick = () => { dlg.hidden = false; $('csvIn').focus(); };
+  $('csvCancel').onclick = () => { dlg.hidden = true; };
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.hidden = true; });
+  $('csvGo').onclick = () => runImport($('csvIn').value);
+  $('csvPick').onclick = (e) => { e.preventDefault(); $('csvFile').click(); };
+  $('csvFile').onchange = async (e) => { const f = e.target.files[0]; if (f) runImport(await f.text()); e.target.value = ''; };
+  // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) runImport(await f.text()); });
+
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
   $('vToggle').onclick = () => document.body.classList.toggle('viewmax');
+  // スマホでは、まず図に全画面を譲る（「コード ◧」で開ける）。
+  if (window.matchMedia('(max-width: 820px)').matches) document.body.classList.add('viewmax');
   problems.addEventListener('click', (e) => { const p = e.target.closest('.p'); if (!p || !p.dataset.ln) return; const ln = +p.dataset.ln; const pos = src.value.split('\n').slice(0, ln - 1).join('\n').length + (ln > 1 ? 1 : 0); src.focus(); src.selectionStart = src.selectionEnd = pos; });
   window.addEventListener('resize', () => { if (L) applyView(); });
 

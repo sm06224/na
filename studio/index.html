@@ -18,6 +18,7 @@
   <span class="sp"></span>
   <div class="ins" id="insbar"></div>
   <span id="status" class="status"></span>
+  <button id="bImport">取り込み</button>
   <div class="menu">
     <button id="bExport">エクスポート ▾</button>
     <div id="exportMenu" class="dropdown" hidden>
@@ -56,6 +57,23 @@
 
 <div id="ac" class="ac" hidden></div>
 <div id="toast" hidden></div>
+<input id="inline" type="text" hidden>
+
+<div id="importDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>データの流し込み（CSV / TSV / Mermaid）</h3>
+    <p class="hint">1 行目はヘッダ。<b>ガント</b>：名前(label)・開始(start)・期間(duration)・依存(after)・状態(status)・区分(section)・link。<b>フロー</b>：from・to・label。列名は日英どちらでも。Mermaid テキストはそのまま読み込みます。</p>
+    <textarea id="csvIn" spellcheck="false" placeholder="名前,開始,期間,依存,状態,区分
+要件定義,2026-07-01,5,,完了,設計
+基本設計,,7,要件定義,進行中,設計
+API 実装,,10,基本設計,,実装"></textarea>
+    <div class="row">
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <button id="csvCancel" class="ghost2">閉じる</button>
+      <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
   import { boot } from './ui/editor.js';
