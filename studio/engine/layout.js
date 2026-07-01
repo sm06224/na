@@ -9,6 +9,7 @@ import { diffDays, addDays, weekday } from './date.js';
 
 export const GANTT = { PAD: 16, LABEL_W: 176, AXIS_H: 44, ROW_H: 32, SEC_H: 26, DAY_W: 26, BAR_H: 18 };
 export const FLOW = { PAD: 28, NODE_H: 48, GAP_MAIN: 70, GAP_CROSS: 30, GROUP_PAD: 18, GROUP_HEAD: 24 };
+export const SEQ = { PAD: 24, TOP: 14, ACTOR_H: 36, GAP: 30, MSG_H: 34, SELF_W: 44, HEAD_GAP: 20 };
 
 // ---- ガント ---------------------------------------------------------------
 
@@ -146,6 +147,27 @@ export function layoutFlow(model) {
   const keys = Object.keys(layers).map(Number).sort((a, b) => a - b);
   const maxDepth = keys.length ? keys[keys.length - 1] : 0;
 
+  // 交差をほどく：隣の段の重心（barycenter）で段の中の並びを整える。決定的（同点は元の順）。
+  const succs = new Map(nodes.map((n) => [n.id, []]));
+  for (const e of model.edges) if (byId.has(e.from) && byId.has(e.to)) succs.get(e.from).push(e.to);
+  const pos = new Map();
+  const setPos = () => { for (const c of keys) layers[c].forEach((id, i) => pos.set(id, i)); };
+  setPos();
+  for (let sweep = 0; sweep < 4; sweep++) {
+    const down = sweep % 2 === 0;
+    const ks = down ? keys.slice(1) : keys.slice(0, -1).reverse();
+    const ref = down ? preds : succs;
+    for (const c of ks) {
+      const arr = layers[c].map((id, i) => {
+        const ns = (ref.get(id) || []).map((p) => pos.get(p)).filter((v) => v != null);
+        return { id, i, b: ns.length ? ns.reduce((a, v) => a + v, 0) / ns.length : i };
+      });
+      arr.sort((p, q) => p.b - q.b || p.i - q.i);
+      layers[c] = arr.map((o) => o.id);
+      setPos();
+    }
+  }
+
   const placed = new Map();
   const sizeOf = (id) => nodeSize(byId.get(id).label, byId.get(id).shape);
   // 段ごとの主軸サイズ（縦なら高さ、横なら幅）の最大で段の位置を決める。
@@ -178,11 +200,18 @@ export function layoutFlow(model) {
       w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD });
   }
 
+  // エッジは主軸に沿うベジェ曲線。ラベルは曲線の中点（t=0.5）へ。
   const edges = [];
   for (const e of model.edges) {
     const a = placed.get(e.from), b = placed.get(e.to);
-    if (a && b) { const c = clip(a, b); edges.push({ ...e, x1: c.from[0], y1: c.from[1], x2: c.to[0], y2: c.to[1],
-      mx: (c.from[0] + c.to[0]) / 2, my: (c.from[1] + c.to[1]) / 2 }); }
+    if (!a || !b) continue;
+    const c = clip(a, b);
+    const [x1, y1] = c.from, [x2, y2] = c.to;
+    let c1x, c1y, c2x, c2y;
+    if (vertical) { const d = (y2 - y1) * 0.45; c1x = x1; c1y = y1 + d; c2x = x2; c2y = y2 - d; }
+    else { const d = (x2 - x1) * 0.45; c1x = x1 + d; c1y = y1; c2x = x2 - d; c2y = y2; }
+    const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8, my = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
+    edges.push({ ...e, x1, y1, x2, y2, c1x, c1y, c2x, c2y, mx, my });
   }
 
   let width = FLOW.PAD, height = FLOW.PAD;
@@ -192,6 +221,65 @@ export function layoutFlow(model) {
     width: width + FLOW.PAD, height: height + FLOW.PAD, errors: [] };
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+export function layoutSeq(model) {
+  const S = SEQ, errors = [];
+  const byId = new Map(model.items.map((a) => [a.id, a]));
+  const ordSet = new Set(model.layout.order);
+  const order = model.layout.order.filter((id) => byId.has(id))
+    .concat(model.order.filter((id) => !ordSet.has(id)));
+
+  // 参加者を左から並べる（幅はラベルなり）。
+  const wOf = (label) => { let w = 0; for (const ch of label) w += ch.charCodeAt(0) > 0x2e7f ? 15 : 8.5; return Math.max(76, Math.min(220, w + 28)); };
+  const actors = []; let x = S.PAD;
+  for (const id of order) {
+    const a = byId.get(id); if (!a) continue;
+    const w = wOf(a.label);
+    actors.push({ id, label: a.label, x, y: S.TOP, w, h: S.ACTOR_H, cx: x + w / 2 });
+    x += w + S.GAP;
+  }
+  const cxOf = new Map(actors.map((a) => [a.id, a.cx]));
+
+  // 出来事を上から順に積む。枠（loop/alt…）はスタックで開き、end で閉じる。
+  let y = S.TOP + S.ACTOR_H + S.HEAD_GAP;
+  const msgs = [], notes = [], frames = [], stack = [];
+  let num = 0;
+  for (const ev of (model.events || [])) {
+    if (ev.type === 'fstart') { stack.push({ kind: ev.kind, label: ev.label, y0: y, divs: [] }); y += 26; continue; }
+    if (ev.type === 'fdiv') { const f = stack[stack.length - 1]; if (f) { f.divs.push({ y, label: ev.label }); y += 24; } continue; }
+    if (ev.type === 'fend') { const f = stack.pop(); if (f) frames.push({ ...f, y1: y + 4 }); y += 18; continue; }
+    if (ev.type === 'note') {
+      const cxs = ev.ids.map((id) => cxOf.get(id)).filter((v) => v != null);
+      if (!cxs.length) { errors.push(`Note の相手が見つからない: ${ev.ids.join(',')}`); continue; }
+      const tw = Math.max(64, ev.label.length * 8 + 22);
+      let nx, nw;
+      if (ev.pos === 'over') { const lo = Math.min(...cxs), hi = Math.max(...cxs); nw = Math.max(hi - lo + 40, tw); nx = (lo + hi) / 2 - nw / 2; }
+      else if (ev.pos === 'left of') { nw = tw; nx = cxs[0] - tw - 12; }
+      else { nw = tw; nx = cxs[0] + 12; }
+      notes.push({ x: nx, y, w: nw, h: 26, label: ev.label });
+      y += 38; continue;
+    }
+    const x1 = cxOf.get(ev.from), x2 = cxOf.get(ev.to);
+    if (x1 == null || x2 == null) { errors.push(`メッセージの相手が見つからない: ${ev.from}→${ev.to}`); continue; }
+    num++;
+    const self = ev.from === ev.to;
+    msgs.push({ ...ev, n: num, x1, x2, y, self });
+    y += self ? S.MSG_H + 12 : S.MSG_H;
+  }
+  while (stack.length) { const f = stack.pop(); frames.push({ ...f, y1: y }); }
+
+  const height = y + S.PAD;
+  const width = Math.max(x - S.GAP + S.PAD, 220);
+  for (const f of frames) { f.x = S.PAD / 2 + 2; f.w = width - S.PAD - 4; }   // 枠は全幅に淡く
+
+  return { kind: 'sequence', actors, msgs, notes, frames,
+    lifeTop: S.TOP + S.ACTOR_H, selfW: S.SELF_W, autonumber: !!model.meta.autonumber,
+    width, height, errors };
+}
+
 export function layout(model) {
-  return model.kind === 'flowchart' ? layoutFlow(model) : layoutGantt(model);
+  if (model.kind === 'flowchart') return layoutFlow(model);
+  if (model.kind === 'sequence') return layoutSeq(model);
+  return layoutGantt(model);
 }

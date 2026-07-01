@@ -1,6 +1,6 @@
 /* ============================================================
    studio DSL のパーサ — Mermaid 記法を読む。
-   みんなと AI が既に知っている書き方に寄せる：`gantt` と `flowchart`。
+   みんなと AI が既に知っている書き方に寄せる：`gantt`・`flowchart`・`sequenceDiagram`。
    レイアウト（ドラッグした位置・並び）は Mermaid のコメント `%% @layout`
    ブロックに畳むので、本物の Mermaid でもそのまま開ける。意味部は汚れない。
 
@@ -21,10 +21,19 @@
          C
          D
        end
+   sequenceDiagram:
+     sequenceDiagram
+       participant u as 利用者
+       u->>w: ログイン要求
+       w-->>u: ようこそ
+       Note over u,w: 3回失敗でロック
+       loop 毎分
+         u->>w: ping
+       end
    トレイラ（Mermaid から見ればただのコメント）:
      %% @layout
      %% pos A 40 80          flowchart：ノード座標
-     %% order req design …   gantt：行の並び
+     %% order req design …   gantt：行の並び／sequence：参加者の並び
      %% at req 2026-07-03    gantt：手で動かした開始日
      %% today 2026-07-16     gantt：基準日（決定的な例のため）
    ============================================================ */
@@ -33,7 +42,7 @@ import { isDate, isDur, parseDur } from './date.js';
 const TAGS = new Set(['done', 'active', 'crit', 'milestone']);
 
 function blankModel() {
-  return { kind: null, meta: {}, items: [], edges: [], groups: [],
+  return { kind: null, meta: {}, items: [], edges: [], groups: [], events: [],
     order: [], layout: { pos: {}, order: [], at: {} }, errors: [] };
 }
 
@@ -191,6 +200,69 @@ function parseFlow(lines, model, dir) {
   return model;
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+// メッセージ：A->>B: text ／ 線は - 実線・-- 点線、先は >>(矢) >(なし) x(バツ) )(非同期)。
+// id のハイフンは内部のみ（末尾の - を線と取り違えないため）。
+const SEQ_ID = '[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*';
+const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?$`);
+const FRAMES = new Set(['loop', 'opt', 'alt', 'par', 'rect', 'critical', 'break']);
+
+function parseSeq(lines, model) {
+  model.kind = 'sequence';
+  // 参加者：宣言で並びが決まり、宣言なしで登場した者は登場順に足される。
+  const ensure = (id, label) => {
+    let a = model.items.find((n) => n.id === id);
+    if (!a) { a = { type: 'actor', id, label: label ?? id }; model.items.push(a); model.order.push(id); }
+    else if (label != null) a.label = label;
+    return a;
+  };
+  let depth = 0;
+  for (const { raw, ln } of lines) {
+    const line = raw.trim();
+    if (!line || line === 'sequenceDiagram') continue;
+    const head = line.split(/\s+/)[0];
+    if (head === 'participant' || head === 'actor') {
+      const m = /^(?:participant|actor)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/.exec(line);
+      if (m) ensure(m[1], m[2]?.trim());
+      else model.errors.push(`L${ln}: participant が読めない「${line}」`);
+      continue;
+    }
+    if (head === 'title') { model.meta.title = line.slice(5).trim(); continue; }
+    if (head === 'autonumber') { model.meta.autonumber = true; continue; }
+    if (head === 'activate' || head === 'deactivate') continue;   // 活性帯は v1 では描かない
+    if (FRAMES.has(head)) {
+      model.events.push({ type: 'fstart', kind: head, label: line.slice(head.length).trim() });
+      depth++; continue;
+    }
+    if (head === 'else' || head === 'and') {
+      model.events.push({ type: 'fdiv', kind: head, label: line.slice(head.length).trim() }); continue;
+    }
+    if (line === 'end') {
+      if (depth > 0) { model.events.push({ type: 'fend' }); depth--; }
+      else model.errors.push(`L${ln}: 対応しない end`);
+      continue;
+    }
+    let m = /^[Nn]ote\s+(over|left of|right of)\s+([A-Za-z0-9_.-]+(?:\s*,\s*[A-Za-z0-9_.-]+)?)\s*:\s*(.*)$/.exec(line);
+    if (m) {
+      const ids = m[2].split(',').map((s) => s.trim());
+      for (const id of ids) ensure(id);
+      model.events.push({ type: 'note', pos: m[1], ids, label: m[3].trim() });
+      continue;
+    }
+    m = SEQ_MSG.exec(line);
+    if (m) {
+      ensure(m[1]); ensure(m[4]);
+      model.events.push({ type: 'msg', from: m[1], to: m[4], label: (m[5] ?? '').trim(),
+        dotted: m[2] === '--', arrow: m[3] !== '>', cross: m[3] === 'x', async: m[3] === ')' });
+      continue;
+    }
+    model.errors.push(`L${ln}: 読めない行「${line}」`);
+  }
+  if (depth > 0) model.errors.push('閉じていない loop/alt/opt（end が足りない）');
+  return model;
+}
+
 // ---- 入口（共通：コメントと @layout の切り出し） ---------------------------
 
 export function parse(text) {
@@ -217,11 +289,12 @@ export function parse(text) {
     body.push({ raw, ln });
   }
 
-  if (!body.length) { model.errors.push('図がありません（gantt か flowchart で始めてください）'); return model; }
+  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram で始めてください）'); return model; }
   const first = body[0].raw.trim();
   const headWord = first.split(/\s+/)[0];
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
-  else model.errors.push(`先頭が gantt / flowchart ではありません「${headWord}」`);
+  else if (headWord === 'sequenceDiagram') parseSeq(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram ではありません「${headWord}」`);
   return model;
 }

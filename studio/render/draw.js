@@ -12,6 +12,8 @@ const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
 
 const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
+  <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
+  <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#9aa3b5" stroke-width="1.4"/></marker>
 </defs>`;
 
 function wrap(L, inner) {
@@ -93,7 +95,7 @@ function drawFlow(model, L) {
   for (const e of L.edges) {
     const dash = e.dotted ? ` stroke-dasharray="2 4"` : '';
     const wdt = e.thick ? 2.5 : 1.4;
-    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
+    parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
       parts.push(`<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
@@ -111,6 +113,54 @@ function drawFlow(model, L) {
   return wrap(L, parts.join('\n'));
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+function drawSeq(model, L) {
+  const parts = [];
+  // 枠（loop/alt…）：全幅の淡い矩形＋左肩のラベル札＋区切り（else）。
+  for (const f of L.frames) {
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${f.w}" height="${f.y1 - f.y0}" rx="8" fill="#ffffff" fill-opacity="0.025" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
+    const tag = f.kind + (f.label ? ' ' + f.label : '');
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${tag.length * 8 + 18}" height="20" rx="6" fill="#1c2436"/>`
+      + `<text x="${f.x + 9}" y="${f.y0 + 14}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(tag)}</text>`);
+    for (const d of (f.divs || [])) {
+      parts.push(`<line x1="${f.x}" y1="${d.y + 10}" x2="${f.x + f.w}" y2="${d.y + 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.7"/>`
+        + `<text x="${f.x + 9}" y="${d.y + 6}" fill="#8a93a6" font-size="10.5" font-style="italic">[${esc(d.label || 'else')}]</text>`);
+    }
+  }
+  // ライフライン（点線）。
+  for (const a of L.actors)
+    parts.push(`<line x1="${a.cx}" y1="${L.lifeTop}" x2="${a.cx}" y2="${L.height - 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.55"/>`);
+  // メッセージ。
+  for (const m of L.msgs) {
+    const dash = m.dotted ? ` stroke-dasharray="3 4"` : '';
+    const marker = m.cross ? 'cross' : m.arrow ? (m.async ? 'open' : 'arrow') : null;
+    const tag = (L.autonumber ? `${m.n}. ` : '') + m.label;
+    if (m.self) {
+      const w = L.selfW;
+      parts.push(`<path d="M${m.x1},${m.y} h${w} v14 h${-w + 4}" fill="none" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${m.x1 + w + 8}" y="${m.y + 11}" fill="#c7d0e0" font-size="11.5">${esc(tag)}</text>`);
+    } else {
+      parts.push(`<line x1="${m.x1}" y1="${m.y}" x2="${m.x2}" y2="${m.y}" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${(m.x1 + m.x2) / 2}" y="${m.y - 6}" fill="#c7d0e0" font-size="11.5" text-anchor="middle">${esc(tag)}</text>`);
+    }
+  }
+  // ノート（琥珀の付箋）。
+  for (const n of L.notes)
+    parts.push(`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="4" fill="#2e2a1c" stroke="#f5b86a" stroke-opacity="0.55"/>`
+      + `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e8dcb0" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`);
+  // 参加者（上端の札。つかんで並び替えられる）。
+  L.actors.forEach((a, i) => {
+    const hue = hueOf(i);
+    parts.push(`<g data-drag="actor" data-id="${esc(a.id)}" style="cursor:grab">`
+      + `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`
+      + `<text x="${a.cx}" y="${a.y + a.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(a.label)}</text></g>`);
+  });
+  return wrap(L, parts.join('\n'));
+}
+
 export function draw(model, L) {
-  return L.kind === 'flowchart' ? drawFlow(model, L) : drawGantt(model, L);
+  if (L.kind === 'flowchart') return drawFlow(model, L);
+  if (L.kind === 'sequence') return drawSeq(model, L);
+  return drawGantt(model, L);
 }

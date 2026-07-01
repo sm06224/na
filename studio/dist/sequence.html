@@ -151,7 +151,7 @@ main { flex: 1; display: flex; min-height: 0; }
 <div id="toast" hidden></div>
 
 <script>
-window.STUDIO_SOURCE="gantt\n    title 製品リリース計画\n    dateFormat YYYY-MM-DD\n    section 設計\n      要件定義   :done, req, 2026-07-01, 5d\n      基本設計   :active, design, after req, 7d\n    section 実装\n      API 実装   :api, after design, 10d\n      UI 実装    :ui, after design, 12d\n      基盤構築   :crit, infra, 2026-07-08, 9d\n    section 検証と出荷\n      結合テスト :test, after api ui, 6d\n      受け入れ   :uat, after test, 4d\n      出荷       :milestone, ship, after uat, 0d\n%% @layout\n%% today 2026-07-16\n";
+window.STUDIO_SOURCE="sequenceDiagram\n    autonumber\n    participant u as 利用者\n    participant w as Web\n    participant a as 認証サービス\n    participant d as DB\n    u->>w: ログイン要求\n    w->>a: 資格情報を検証\n    a->>d: 利用者を照会\n    d-->>a: レコード\n    alt 検証OK\n      a-->>w: トークン発行\n      w-->>u: ようこそ\n    else 失敗\n      a--xw: 拒否\n      w-->>u: エラー表示\n    end\n    Note over u,w: 3回失敗でロック\n";
 /* ============================================================
    日付のちいさな道具 — 依存ゼロ、UTC 固定で時差の罠を避ける。
    ガントは「日」を単位に動く。ここはその物差し。

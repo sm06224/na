@@ -63,10 +63,34 @@ function flowBody(model) {
   return out;
 }
 
+function seqBody(model) {
+  const out = ['sequenceDiagram'];
+  if (model.meta.title) out.push(`    title ${model.meta.title}`);
+  if (model.meta.autonumber) out.push('    autonumber');
+  for (const id of model.order) {
+    const a = model.items.find((x) => x.id === id);
+    if (a) out.push(`    participant ${a.id}${a.label !== a.id ? ` as ${a.label}` : ''}`);
+  }
+  let indent = '    ';
+  for (const ev of (model.events || [])) {
+    if (ev.type === 'fstart') { out.push(`${indent}${ev.kind}${ev.label ? ' ' + ev.label : ''}`); indent += '  '; }
+    else if (ev.type === 'fdiv') out.push(`${indent.slice(2)}${ev.kind}${ev.label ? ' ' + ev.label : ''}`);
+    else if (ev.type === 'fend') { indent = indent.slice(0, -2); out.push(`${indent}end`); }
+    else if (ev.type === 'note') out.push(`${indent}Note ${ev.pos} ${ev.ids.join(',')}: ${ev.label}`);
+    else {
+      const op = (ev.dotted ? '--' : '-') + (ev.cross ? 'x' : ev.async ? ')' : ev.arrow ? '>>' : '>');
+      out.push(`${indent}${ev.from}${op}${ev.to}${ev.label ? ': ' + ev.label : ''}`);
+    }
+  }
+  return out;
+}
+
 function trailer(model) {
   const L = model.layout, out = [];
   if (model.kind === 'flowchart') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
+  } else if (model.kind === 'sequence') {
+    if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
   } else {
     if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
     for (const id of Object.keys(L.at)) out.push(`%% at ${id} ${L.at[id]}`);
@@ -76,6 +100,7 @@ function trailer(model) {
 }
 
 export function serialize(model) {
-  const body = model.kind === 'flowchart' ? flowBody(model) : ganttBody(model);
+  const body = model.kind === 'flowchart' ? flowBody(model)
+    : model.kind === 'sequence' ? seqBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }

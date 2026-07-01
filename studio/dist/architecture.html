@@ -117,6 +117,7 @@ main { flex: 1; display: flex; min-height: 0; }
       <button data-x="dsl">DSL をコピー</button>
       <button data-x="mmd">.mmd を保存</button>
       <button data-x="svg">SVG を保存</button>
+      <button data-x="png">PNG を保存</button>
       <button data-x="html">単一 HTML を保存</button>
     </div>
   </div>
@@ -207,7 +208,7 @@ function isDur(s) { return /^\d+(?:\.\d+)?\s*(d|w|h)$/.test(String(s).trim()); }
 
 /* ============================================================
    studio DSL のパーサ — Mermaid 記法を読む。
-   みんなと AI が既に知っている書き方に寄せる：`gantt` と `flowchart`。
+   みんなと AI が既に知っている書き方に寄せる：`gantt`・`flowchart`・`sequenceDiagram`。
    レイアウト（ドラッグした位置・並び）は Mermaid のコメント `%% @layout`
    ブロックに畳むので、本物の Mermaid でもそのまま開ける。意味部は汚れない。
 
@@ -228,10 +229,19 @@ function isDur(s) { return /^\d+(?:\.\d+)?\s*(d|w|h)$/.test(String(s).trim()); }
          C
          D
        end
+   sequenceDiagram:
+     sequenceDiagram
+       participant u as 利用者
+       u->>w: ログイン要求
+       w-->>u: ようこそ
+       Note over u,w: 3回失敗でロック
+       loop 毎分
+         u->>w: ping
+       end
    トレイラ（Mermaid から見ればただのコメント）:
      %% @layout
      %% pos A 40 80          flowchart：ノード座標
-     %% order req design …   gantt：行の並び
+     %% order req design …   gantt：行の並び／sequence：参加者の並び
      %% at req 2026-07-03    gantt：手で動かした開始日
      %% today 2026-07-16     gantt：基準日（決定的な例のため）
    ============================================================ */
@@ -239,7 +249,7 @@ function isDur(s) { return /^\d+(?:\.\d+)?\s*(d|w|h)$/.test(String(s).trim()); }
 const TAGS = new Set(['done', 'active', 'crit', 'milestone']);
 
 function blankModel() {
-  return { kind: null, meta: {}, items: [], edges: [], groups: [],
+  return { kind: null, meta: {}, items: [], edges: [], groups: [], events: [],
     order: [], layout: { pos: {}, order: [], at: {} }, errors: [] };
 }
 
@@ -397,6 +407,221 @@ function parseFlow(lines, model, dir) {
   return model;
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+// メッセージ：A->>B: text ／ 線は - 実線・-- 点線、先は >>(矢) >(なし) x(バツ) )(非同期)。
+// id のハイフンは内部のみ（末尾の - を線と取り違えないため）。
+const SEQ_ID = '[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*';
+const SEQ_MSG = new RegExp(`^(${SEQ_ID})\\s*(--?)(>>|>|x|\\))\\s*(${SEQ_ID})\\s*(?::\\s*(.*))?<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="studio — Mermaid 記法で書けて、グリグリ動かせる作図エディタ。ガントチャートと機能構成図（フローチャート）。構文ハイライト・リアルタイム検証・補完・ドラッグ・各種エクスポート。">
+<meta name="theme-color" content="#0b0e14">
+<title>studio — Mermaid で書く作図エディタ</title>
+<style>
+:root { color-scheme: dark;
+  --bg: #0b0e14; --bg2: #0c1119; --line: #1c2230; --line2: #2a3344;
+  --fg: #e7ebf4; --dim: #8a93a6; --acc: #6aa9ff;
+  --kw: #7aa2ff; --id: #7ad1b0; --tag: #f5b86a; --date: #d68ad6; --arrow: #9aa3b5; --str: #cbd3e6; --com: #5a6b86; --bad: #f5667a; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); overflow: hidden;
+  font-family: ui-sans-serif, system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
+
+header { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+  padding: calc(.45rem + env(safe-area-inset-top)) .8rem .45rem; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.brand { font-weight: 700; letter-spacing: .03em; }
+.badge { font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--acc);
+  border: 1px solid var(--line2); border-radius: 999px; padding: .12em .7em; }
+.pick { font-size: .72rem; color: var(--dim); display: flex; align-items: center; gap: .4rem; }
+select, button { font: inherit; color: var(--fg); background: #18202e; border: 1px solid var(--line2); border-radius: 7px;
+  padding: .32em .8em; font-size: .76rem; cursor: pointer; transition: background .15s, border-color .15s; touch-action: manipulation; }
+select:hover, button:hover { background: #20293a; border-color: #3a4660; }
+.sp { flex: 1; }
+.ins { display: flex; gap: .35rem; flex-wrap: wrap; }
+.ins button { padding: .3em .6em; font-size: .72rem; }
+.status { font-size: .72rem; color: var(--dim); }
+.status[data-bad="1"] { color: var(--tag); }
+.menu { position: relative; }
+.dropdown { position: absolute; right: 0; top: 110%; background: #131a26; border: 1px solid var(--line2); border-radius: 9px;
+  padding: .3rem; display: flex; flex-direction: column; gap: .2rem; z-index: 30; min-width: 160px; box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+.dropdown button { text-align: left; background: transparent; border: 0; }
+.dropdown button:hover { background: #20293a; }
+
+main { flex: 1; display: flex; min-height: 0; }
+.editor { width: 44%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0; }
+.codewrap { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+.gutter { width: 42px; flex: none; overflow: hidden; text-align: right; padding: 12px 8px 12px 0; color: #4a5670;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 20px; user-select: none; background: #0a0e16; }
+.gutter .ln { height: 20px; }
+.gutter .ln.bad { color: var(--bad); font-weight: 700; }
+.code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.hl, #src { margin: 0; border: 0; padding: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px; line-height: 20px; tab-size: 2; white-space: pre; overflow: auto; }
+.hl { position: absolute; inset: 0; pointer-events: none; color: var(--str); }
+#src { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; background: transparent; color: transparent;
+  caret-color: var(--fg); outline: none; }
+#src::selection { background: rgba(106,169,255,.28); }
+.tk-kw { color: var(--kw); } .tk-id { color: var(--id); } .tk-tag { color: var(--tag); }
+.tk-date { color: var(--date); } .tk-arrow { color: var(--arrow); } .tk-com { color: var(--com); font-style: italic; }
+.tk-shape { color: var(--str); } .tk-bad { text-decoration: wavy underline var(--bad); }
+
+.problems { flex: none; max-height: 30%; overflow: auto; border-top: 1px solid var(--line); padding: .3rem 0; }
+.problems:empty { display: none; }
+.problems .p { display: flex; gap: .5rem; padding: .25rem .8rem; font-size: .74rem; color: #d8b48a; cursor: pointer; }
+.problems .p:hover { background: #161d2a; }
+.problems .p .ln { color: var(--bad); font-variant-numeric: tabular-nums; }
+
+.view { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.stage { flex: 1; overflow: hidden; touch-action: none; cursor: grab;
+  background: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14);
+  background-image: radial-gradient(120% 100% at 30% 0%, #0f1420, #0b0e14),
+    linear-gradient(#ffffff09 1px, transparent 1px), linear-gradient(90deg, #ffffff09 1px, transparent 1px);
+  background-size: 100% 100%, 22px 22px, 22px 22px; }
+.stage.panning { cursor: grabbing; }
+#canvas { transform-origin: 0 0; will-change: transform; }
+#canvas svg { display: block; }
+#canvas [data-drag] { cursor: grab; }
+.zoombar { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: .3rem; align-items: center;
+  background: #131a26cc; border: 1px solid var(--line2); border-radius: 10px; padding: .25rem .4rem; backdrop-filter: blur(6px); }
+.zoombar button { padding: .2em .6em; }
+#zLabel { font-size: .72rem; color: var(--dim); min-width: 3em; text-align: center; font-variant-numeric: tabular-nums; }
+.only-mobile { display: none; }
+
+.ac { position: fixed; z-index: 40; background: #131a26; border: 1px solid var(--line2); border-radius: 8px;
+  padding: .2rem; max-height: 220px; overflow: auto; box-shadow: 0 14px 34px rgba(0,0,0,.5); min-width: 160px; }
+.ac .opt { padding: .3em .6em; font-size: .78rem; border-radius: 5px; cursor: pointer; display: flex; gap: .5rem; align-items: baseline; }
+.ac .opt .k { font-family: ui-monospace, Menlo, monospace; color: var(--id); }
+.ac .opt .d { color: var(--dim); font-size: .68rem; }
+.ac .opt.sel { background: #24304a; }
+
+#toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: #18202e; border: 1px solid var(--line2); padding: .5em 1.1em; border-radius: 999px; font-size: .76rem;
+  opacity: 0; transition: opacity .35s; pointer-events: none; z-index: 50; }
+#toast.on { opacity: 1; }
+
+@media (max-width: 820px) {
+  header { gap: .4rem; }
+  .pick, .ins { display: none; }
+  main { flex-direction: column; }
+  .editor { width: 100%; height: 50%; border-right: 0; border-bottom: 1px solid var(--line); }
+  .view { flex: 1; }
+  .only-mobile { display: inline-block; }
+  body.viewmax .editor { display: none; }
+  body.viewmax .view { height: 100%; }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">studio</span>
+  <span id="kind" class="badge">—</span>
+  <label class="pick">サンプル
+    <select id="samples"></select>
+  </label>
+  <span class="sp"></span>
+  <div class="ins" id="insbar"></div>
+  <span id="status" class="status"></span>
+  <div class="menu">
+    <button id="bExport">エクスポート ▾</button>
+    <div id="exportMenu" class="dropdown" hidden>
+      <button data-x="dsl">DSL をコピー</button>
+      <button data-x="mmd">.mmd を保存</button>
+      <button data-x="svg">SVG を保存</button>
+      <button data-x="png">PNG を保存</button>
+      <button data-x="html">単一 HTML を保存</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="editor" id="editor">
+    <div class="codewrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code">
+        <pre class="hl" aria-hidden="true"><code id="hl"></code></pre>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+      </div>
+    </div>
+    <div class="problems" id="problems"></div>
+  </section>
+
+  <section class="view" id="view">
+    <div class="stage" id="stage"><div id="canvas"></div></div>
+    <div class="zoombar">
+      <button id="zOut">－</button>
+      <span id="zLabel">100%</span>
+      <button id="zIn">＋</button>
+      <button id="zFit">フィット</button>
+      <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+  </section>
+</main>
+
+<div id="ac" class="ac" hidden></div>
+<div id="toast" hidden></div>
+
+);
+const FRAMES = new Set(['loop', 'opt', 'alt', 'par', 'rect', 'critical', 'break']);
+
+function parseSeq(lines, model) {
+  model.kind = 'sequence';
+  // 参加者：宣言で並びが決まり、宣言なしで登場した者は登場順に足される。
+  const ensure = (id, label) => {
+    let a = model.items.find((n) => n.id === id);
+    if (!a) { a = { type: 'actor', id, label: label ?? id }; model.items.push(a); model.order.push(id); }
+    else if (label != null) a.label = label;
+    return a;
+  };
+  let depth = 0;
+  for (const { raw, ln } of lines) {
+    const line = raw.trim();
+    if (!line || line === 'sequenceDiagram') continue;
+    const head = line.split(/\s+/)[0];
+    if (head === 'participant' || head === 'actor') {
+      const m = /^(?:participant|actor)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/.exec(line);
+      if (m) ensure(m[1], m[2]?.trim());
+      else model.errors.push(`L${ln}: participant が読めない「${line}」`);
+      continue;
+    }
+    if (head === 'title') { model.meta.title = line.slice(5).trim(); continue; }
+    if (head === 'autonumber') { model.meta.autonumber = true; continue; }
+    if (head === 'activate' || head === 'deactivate') continue;   // 活性帯は v1 では描かない
+    if (FRAMES.has(head)) {
+      model.events.push({ type: 'fstart', kind: head, label: line.slice(head.length).trim() });
+      depth++; continue;
+    }
+    if (head === 'else' || head === 'and') {
+      model.events.push({ type: 'fdiv', kind: head, label: line.slice(head.length).trim() }); continue;
+    }
+    if (line === 'end') {
+      if (depth > 0) { model.events.push({ type: 'fend' }); depth--; }
+      else model.errors.push(`L${ln}: 対応しない end`);
+      continue;
+    }
+    let m = /^[Nn]ote\s+(over|left of|right of)\s+([A-Za-z0-9_.-]+(?:\s*,\s*[A-Za-z0-9_.-]+)?)\s*:\s*(.*)$/.exec(line);
+    if (m) {
+      const ids = m[2].split(',').map((s) => s.trim());
+      for (const id of ids) ensure(id);
+      model.events.push({ type: 'note', pos: m[1], ids, label: m[3].trim() });
+      continue;
+    }
+    m = SEQ_MSG.exec(line);
+    if (m) {
+      ensure(m[1]); ensure(m[4]);
+      model.events.push({ type: 'msg', from: m[1], to: m[4], label: (m[5] ?? '').trim(),
+        dotted: m[2] === '--', arrow: m[3] !== '>', cross: m[3] === 'x', async: m[3] === ')' });
+      continue;
+    }
+    model.errors.push(`L${ln}: 読めない行「${line}」`);
+  }
+  if (depth > 0) model.errors.push('閉じていない loop/alt/opt（end が足りない）');
+  return model;
+}
+
 // ---- 入口（共通：コメントと @layout の切り出し） ---------------------------
 
 function parse(text) {
@@ -423,12 +648,13 @@ function parse(text) {
     body.push({ raw, ln });
   }
 
-  if (!body.length) { model.errors.push('図がありません（gantt か flowchart で始めてください）'); return model; }
+  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram で始めてください）'); return model; }
   const first = body[0].raw.trim();
   const headWord = first.split(/\s+/)[0];
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
-  else model.errors.push(`先頭が gantt / flowchart ではありません「${headWord}」`);
+  else if (headWord === 'sequenceDiagram') parseSeq(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram ではありません「${headWord}」`);
   return model;
 }
 
@@ -442,6 +668,7 @@ function parse(text) {
 
 const GANTT = { PAD: 16, LABEL_W: 176, AXIS_H: 44, ROW_H: 32, SEC_H: 26, DAY_W: 26, BAR_H: 18 };
 const FLOW = { PAD: 28, NODE_H: 48, GAP_MAIN: 70, GAP_CROSS: 30, GROUP_PAD: 18, GROUP_HEAD: 24 };
+const SEQ = { PAD: 24, TOP: 14, ACTOR_H: 36, GAP: 30, MSG_H: 34, SELF_W: 44, HEAD_GAP: 20 };
 
 // ---- ガント ---------------------------------------------------------------
 
@@ -579,6 +806,27 @@ function layoutFlow(model) {
   const keys = Object.keys(layers).map(Number).sort((a, b) => a - b);
   const maxDepth = keys.length ? keys[keys.length - 1] : 0;
 
+  // 交差をほどく：隣の段の重心（barycenter）で段の中の並びを整える。決定的（同点は元の順）。
+  const succs = new Map(nodes.map((n) => [n.id, []]));
+  for (const e of model.edges) if (byId.has(e.from) && byId.has(e.to)) succs.get(e.from).push(e.to);
+  const pos = new Map();
+  const setPos = () => { for (const c of keys) layers[c].forEach((id, i) => pos.set(id, i)); };
+  setPos();
+  for (let sweep = 0; sweep < 4; sweep++) {
+    const down = sweep % 2 === 0;
+    const ks = down ? keys.slice(1) : keys.slice(0, -1).reverse();
+    const ref = down ? preds : succs;
+    for (const c of ks) {
+      const arr = layers[c].map((id, i) => {
+        const ns = (ref.get(id) || []).map((p) => pos.get(p)).filter((v) => v != null);
+        return { id, i, b: ns.length ? ns.reduce((a, v) => a + v, 0) / ns.length : i };
+      });
+      arr.sort((p, q) => p.b - q.b || p.i - q.i);
+      layers[c] = arr.map((o) => o.id);
+      setPos();
+    }
+  }
+
   const placed = new Map();
   const sizeOf = (id) => nodeSize(byId.get(id).label, byId.get(id).shape);
   // 段ごとの主軸サイズ（縦なら高さ、横なら幅）の最大で段の位置を決める。
@@ -611,11 +859,18 @@ function layoutFlow(model) {
       w: (x1 - x0) + FLOW.GROUP_PAD * 2, h: (y1 - y0) + FLOW.GROUP_PAD * 2 + FLOW.GROUP_HEAD });
   }
 
+  // エッジは主軸に沿うベジェ曲線。ラベルは曲線の中点（t=0.5）へ。
   const edges = [];
   for (const e of model.edges) {
     const a = placed.get(e.from), b = placed.get(e.to);
-    if (a && b) { const c = clip(a, b); edges.push({ ...e, x1: c.from[0], y1: c.from[1], x2: c.to[0], y2: c.to[1],
-      mx: (c.from[0] + c.to[0]) / 2, my: (c.from[1] + c.to[1]) / 2 }); }
+    if (!a || !b) continue;
+    const c = clip(a, b);
+    const [x1, y1] = c.from, [x2, y2] = c.to;
+    let c1x, c1y, c2x, c2y;
+    if (vertical) { const d = (y2 - y1) * 0.45; c1x = x1; c1y = y1 + d; c2x = x2; c2y = y2 - d; }
+    else { const d = (x2 - x1) * 0.45; c1x = x1 + d; c1y = y1; c2x = x2 - d; c2y = y2; }
+    const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8, my = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
+    edges.push({ ...e, x1, y1, x2, y2, c1x, c1y, c2x, c2y, mx, my });
   }
 
   let width = FLOW.PAD, height = FLOW.PAD;
@@ -625,8 +880,67 @@ function layoutFlow(model) {
     width: width + FLOW.PAD, height: height + FLOW.PAD, errors: [] };
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+function layoutSeq(model) {
+  const S = SEQ, errors = [];
+  const byId = new Map(model.items.map((a) => [a.id, a]));
+  const ordSet = new Set(model.layout.order);
+  const order = model.layout.order.filter((id) => byId.has(id))
+    .concat(model.order.filter((id) => !ordSet.has(id)));
+
+  // 参加者を左から並べる（幅はラベルなり）。
+  const wOf = (label) => { let w = 0; for (const ch of label) w += ch.charCodeAt(0) > 0x2e7f ? 15 : 8.5; return Math.max(76, Math.min(220, w + 28)); };
+  const actors = []; let x = S.PAD;
+  for (const id of order) {
+    const a = byId.get(id); if (!a) continue;
+    const w = wOf(a.label);
+    actors.push({ id, label: a.label, x, y: S.TOP, w, h: S.ACTOR_H, cx: x + w / 2 });
+    x += w + S.GAP;
+  }
+  const cxOf = new Map(actors.map((a) => [a.id, a.cx]));
+
+  // 出来事を上から順に積む。枠（loop/alt…）はスタックで開き、end で閉じる。
+  let y = S.TOP + S.ACTOR_H + S.HEAD_GAP;
+  const msgs = [], notes = [], frames = [], stack = [];
+  let num = 0;
+  for (const ev of (model.events || [])) {
+    if (ev.type === 'fstart') { stack.push({ kind: ev.kind, label: ev.label, y0: y, divs: [] }); y += 26; continue; }
+    if (ev.type === 'fdiv') { const f = stack[stack.length - 1]; if (f) { f.divs.push({ y, label: ev.label }); y += 24; } continue; }
+    if (ev.type === 'fend') { const f = stack.pop(); if (f) frames.push({ ...f, y1: y + 4 }); y += 18; continue; }
+    if (ev.type === 'note') {
+      const cxs = ev.ids.map((id) => cxOf.get(id)).filter((v) => v != null);
+      if (!cxs.length) { errors.push(`Note の相手が見つからない: ${ev.ids.join(',')}`); continue; }
+      const tw = Math.max(64, ev.label.length * 8 + 22);
+      let nx, nw;
+      if (ev.pos === 'over') { const lo = Math.min(...cxs), hi = Math.max(...cxs); nw = Math.max(hi - lo + 40, tw); nx = (lo + hi) / 2 - nw / 2; }
+      else if (ev.pos === 'left of') { nw = tw; nx = cxs[0] - tw - 12; }
+      else { nw = tw; nx = cxs[0] + 12; }
+      notes.push({ x: nx, y, w: nw, h: 26, label: ev.label });
+      y += 38; continue;
+    }
+    const x1 = cxOf.get(ev.from), x2 = cxOf.get(ev.to);
+    if (x1 == null || x2 == null) { errors.push(`メッセージの相手が見つからない: ${ev.from}→${ev.to}`); continue; }
+    num++;
+    const self = ev.from === ev.to;
+    msgs.push({ ...ev, n: num, x1, x2, y, self });
+    y += self ? S.MSG_H + 12 : S.MSG_H;
+  }
+  while (stack.length) { const f = stack.pop(); frames.push({ ...f, y1: y }); }
+
+  const height = y + S.PAD;
+  const width = Math.max(x - S.GAP + S.PAD, 220);
+  for (const f of frames) { f.x = S.PAD / 2 + 2; f.w = width - S.PAD - 4; }   // 枠は全幅に淡く
+
+  return { kind: 'sequence', actors, msgs, notes, frames,
+    lifeTop: S.TOP + S.ACTOR_H, selfW: S.SELF_W, autonumber: !!model.meta.autonumber,
+    width, height, errors };
+}
+
 function layout(model) {
-  return model.kind === 'flowchart' ? layoutFlow(model) : layoutGantt(model);
+  if (model.kind === 'flowchart') return layoutFlow(model);
+  if (model.kind === 'sequence') return layoutSeq(model);
+  return layoutGantt(model);
 }
 
 /* ============================================================
@@ -694,10 +1008,34 @@ function flowBody(model) {
   return out;
 }
 
+function seqBody(model) {
+  const out = ['sequenceDiagram'];
+  if (model.meta.title) out.push(`    title ${model.meta.title}`);
+  if (model.meta.autonumber) out.push('    autonumber');
+  for (const id of model.order) {
+    const a = model.items.find((x) => x.id === id);
+    if (a) out.push(`    participant ${a.id}${a.label !== a.id ? ` as ${a.label}` : ''}`);
+  }
+  let indent = '    ';
+  for (const ev of (model.events || [])) {
+    if (ev.type === 'fstart') { out.push(`${indent}${ev.kind}${ev.label ? ' ' + ev.label : ''}`); indent += '  '; }
+    else if (ev.type === 'fdiv') out.push(`${indent.slice(2)}${ev.kind}${ev.label ? ' ' + ev.label : ''}`);
+    else if (ev.type === 'fend') { indent = indent.slice(0, -2); out.push(`${indent}end`); }
+    else if (ev.type === 'note') out.push(`${indent}Note ${ev.pos} ${ev.ids.join(',')}: ${ev.label}`);
+    else {
+      const op = (ev.dotted ? '--' : '-') + (ev.cross ? 'x' : ev.async ? ')' : ev.arrow ? '>>' : '>');
+      out.push(`${indent}${ev.from}${op}${ev.to}${ev.label ? ': ' + ev.label : ''}`);
+    }
+  }
+  return out;
+}
+
 function trailer(model) {
   const L = model.layout, out = [];
   if (model.kind === 'flowchart') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
+  } else if (model.kind === 'sequence') {
+    if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
   } else {
     if (L.order && L.order.length) out.push(`%% order ${L.order.join(' ')}`);
     for (const id of Object.keys(L.at)) out.push(`%% at ${id} ${L.at[id]}`);
@@ -707,7 +1045,8 @@ function trailer(model) {
 }
 
 function serialize(model) {
-  const body = model.kind === 'flowchart' ? flowBody(model) : ganttBody(model);
+  const body = model.kind === 'flowchart' ? flowBody(model)
+    : model.kind === 'sequence' ? seqBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }
 
@@ -725,6 +1064,8 @@ const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
 
 const DEFS = `<defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
+  <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
+  <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#9aa3b5" stroke-width="1.4"/></marker>
 </defs>`;
 
 function wrap(L, inner) {
@@ -806,7 +1147,7 @@ function drawFlow(model, L) {
   for (const e of L.edges) {
     const dash = e.dotted ? ` stroke-dasharray="2 4"` : '';
     const wdt = e.thick ? 2.5 : 1.4;
-    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
+    parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
       parts.push(`<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
@@ -824,8 +1165,56 @@ function drawFlow(model, L) {
   return wrap(L, parts.join('\n'));
 }
 
+// ---- シーケンス図 -----------------------------------------------------------
+
+function drawSeq(model, L) {
+  const parts = [];
+  // 枠（loop/alt…）：全幅の淡い矩形＋左肩のラベル札＋区切り（else）。
+  for (const f of L.frames) {
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${f.w}" height="${f.y1 - f.y0}" rx="8" fill="#ffffff" fill-opacity="0.025" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
+    const tag = f.kind + (f.label ? ' ' + f.label : '');
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${tag.length * 8 + 18}" height="20" rx="6" fill="#1c2436"/>`
+      + `<text x="${f.x + 9}" y="${f.y0 + 14}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(tag)}</text>`);
+    for (const d of (f.divs || [])) {
+      parts.push(`<line x1="${f.x}" y1="${d.y + 10}" x2="${f.x + f.w}" y2="${d.y + 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.7"/>`
+        + `<text x="${f.x + 9}" y="${d.y + 6}" fill="#8a93a6" font-size="10.5" font-style="italic">[${esc(d.label || 'else')}]</text>`);
+    }
+  }
+  // ライフライン（点線）。
+  for (const a of L.actors)
+    parts.push(`<line x1="${a.cx}" y1="${L.lifeTop}" x2="${a.cx}" y2="${L.height - 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.55"/>`);
+  // メッセージ。
+  for (const m of L.msgs) {
+    const dash = m.dotted ? ` stroke-dasharray="3 4"` : '';
+    const marker = m.cross ? 'cross' : m.arrow ? (m.async ? 'open' : 'arrow') : null;
+    const tag = (L.autonumber ? `${m.n}. ` : '') + m.label;
+    if (m.self) {
+      const w = L.selfW;
+      parts.push(`<path d="M${m.x1},${m.y} h${w} v14 h${-w + 4}" fill="none" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${m.x1 + w + 8}" y="${m.y + 11}" fill="#c7d0e0" font-size="11.5">${esc(tag)}</text>`);
+    } else {
+      parts.push(`<line x1="${m.x1}" y1="${m.y}" x2="${m.x2}" y2="${m.y}" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${(m.x1 + m.x2) / 2}" y="${m.y - 6}" fill="#c7d0e0" font-size="11.5" text-anchor="middle">${esc(tag)}</text>`);
+    }
+  }
+  // ノート（琥珀の付箋）。
+  for (const n of L.notes)
+    parts.push(`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="4" fill="#2e2a1c" stroke="#f5b86a" stroke-opacity="0.55"/>`
+      + `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e8dcb0" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`);
+  // 参加者（上端の札。つかんで並び替えられる）。
+  L.actors.forEach((a, i) => {
+    const hue = hueOf(i);
+    parts.push(`<g data-drag="actor" data-id="${esc(a.id)}" style="cursor:grab">`
+      + `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`
+      + `<text x="${a.cx}" y="${a.y + a.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(a.label)}</text></g>`);
+  });
+  return wrap(L, parts.join('\n'));
+}
+
 function draw(model, L) {
-  return L.kind === 'flowchart' ? drawFlow(model, L) : drawGantt(model, L);
+  if (L.kind === 'flowchart') return drawFlow(model, L);
+  if (L.kind === 'sequence') return drawSeq(model, L);
+  return drawGantt(model, L);
 }
 
 /* ============================================================
@@ -878,12 +1267,30 @@ const SAMPLES = {
     b -->|承認| c[公開]
     b -->|差戻し| a
     c --> e([終了])`,
+  'シーケンス — 認証フロー': `sequenceDiagram
+    autonumber
+    participant u as 利用者
+    participant w as Web
+    participant a as 認証サービス
+    participant d as DB
+    u->>w: ログイン要求
+    w->>a: 資格情報を検証
+    a->>d: 利用者を照会
+    d-->>a: レコード
+    alt 検証OK
+      a-->>w: トークン発行
+      w-->>u: ようこそ
+    else 失敗
+      a--xw: 拒否
+      w-->>u: エラー表示
+    end
+    Note over u,w: 3回失敗でロック`,
 };
 
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(-->|---|-\.->|-\.-|==>|===|--o|--x)|(\|[^|]*\|)|\b(gantt|flowchart|graph|title|dateFormat|axisFormat|section|subgraph|end|direction|after)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -956,6 +1363,10 @@ function boot() {
     if (g) {
       const id = g.dataset.id, kind = g.dataset.drag;
       if (kind === 'node') { const n = L.nodes.find((x) => x.id === id); drag = { id, kind, x0: n.x, y0: n.y, px: e.clientX, py: e.clientY }; }
+      else if (kind === 'actor') {
+        const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
+        drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY };
+      }
       else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY }; }
     } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY }; stage.classList.add('panning'); }
     stage.setPointerCapture?.(e.pointerId); e.preventDefault();
@@ -966,6 +1377,12 @@ function boot() {
       if (drag.kind === 'node') {
         const snap = (v) => Math.round(v / 8) * 8;
         model.layout.pos[drag.id] = [snap(drag.x0 + dx), snap(drag.y0 + dy)];
+      } else if (drag.kind === 'actor') {
+        // 参加者は横ドラッグで並び替え（元の並びから毎回計算する）。
+        const steps = Math.round(dx / drag.spacing);
+        const o = drag.order.slice(), f = o.indexOf(drag.id);
+        o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]);
+        model.layout.order = o;
       } else {
         model.layout.at[drag.id] = addDays(L.base, drag.day0 + Math.round(dx / L.dayW));
         const steps = Math.round(dy / L.rowH);
@@ -974,11 +1391,28 @@ function boot() {
       const keep = { ...view }; canvas.innerHTML = draw(model, L = layout(model)); Object.assign(view, keep); applyView();
     } else if (pan) { view.tx = pan.tx + (e.clientX - pan.px); view.ty = pan.ty + (e.clientY - pan.py); applyView(); }
   });
-  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); } drag = null; pan = null; stage.classList.remove('panning'); }
+  function endDrag() { if (drag) { src.value = serialize(model); highlight(); render(); pushHistory(); } drag = null; pan = null; stage.classList.remove('panning'); }
   stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
 
+  // ---- アンドゥ／リドゥ（ドラッグやスニペットで textarea を書き換えるので自前で持つ）----
+  const history = { stack: [], idx: -1 };
+  function pushHistory() {
+    const v = src.value;
+    if (history.stack[history.idx] === v) return;
+    history.stack = history.stack.slice(0, history.idx + 1);
+    history.stack.push(v);
+    if (history.stack.length > 200) history.stack.shift();
+    history.idx = history.stack.length - 1;
+  }
+  function timeTravel(d) {
+    const to = history.idx + d;
+    if (to < 0 || to >= history.stack.length) return;
+    history.idx = to; src.value = history.stack[to];
+    highlight(); render(); hideAc();
+  }
+
   // ---- 入力（編集 → 図）----
-  let t; src.addEventListener('input', () => { highlight(); clearTimeout(t); t = setTimeout(render, 140); autocomplete(); });
+  let t; src.addEventListener('input', () => { highlight(); clearTimeout(t); t = setTimeout(() => { render(); pushHistory(); }, 140); autocomplete(); });
   src.addEventListener('scroll', syncScroll);
   src.addEventListener('keydown', onKey);
 
@@ -988,7 +1422,9 @@ function boot() {
   function suggestions(ctx) {
     const kw = model.kind === 'gantt'
       ? ['title', 'dateFormat', 'section', 'done', 'active', 'crit', 'milestone', 'after']
-      : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+      : model.kind === 'sequence'
+        ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
+        : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -1023,6 +1459,11 @@ function boot() {
   }
   ac.addEventListener('pointerdown', (e) => { const opt = e.target.closest('.opt'); if (opt) { acSel = +opt.dataset.i; acceptAc(); e.preventDefault(); } });
   function onKey(e) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'z') { e.preventDefault(); timeTravel(e.shiftKey ? 1 : -1); return; }
+      if (k === 'y') { e.preventDefault(); timeTravel(1); return; }
+    }
     if (!ac.hidden && acItems.length) {
       if (e.key === 'ArrowDown') { acSel = (acSel + 1) % acItems.length; drawAc(); e.preventDefault(); return; }
       if (e.key === 'ArrowUp') { acSel = (acSel - 1 + acItems.length) % acItems.length; drawAc(); e.preventDefault(); return; }
@@ -1038,7 +1479,9 @@ function boot() {
     const ins = $('insbar');
     const snips = model.kind === 'gantt'
       ? [['＋タスク', '\n      新しいタスク :t{N}, after {last}, 3d'], ['＋セクション', '\n    section 新しい区分'], ['＋マイルストン', '\n      節目 :milestone, m{N}, after {last}, 0d']]
-      : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+      : model.kind === 'sequence'
+        ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
+        : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
     ins.innerHTML = snips.map((s, i) => `<button data-i="${i}">${s[0]}</button>`).join('');
     for (const b of ins.children) b.onclick = () => insert(snips[+b.dataset.i][1]);
   }
@@ -1047,7 +1490,7 @@ function boot() {
     const text = tpl.replace(/\{N\}/g, n).replace(/\{last\}/g, last);
     const end = src.value.replace(/\n+$/, '').length;
     src.value = src.value.slice(0, end) + text + src.value.slice(end);
-    highlight(); render();
+    highlight(); render(); pushHistory();
   }
 
   // ---- サンプル ----
@@ -1080,8 +1523,31 @@ function boot() {
     if (x === 'dsl') { try { await navigator.clipboard.writeText(serialize(model)); toast('DSL をコピーしました'); } catch (_) { toast('コピーできませんでした'); } }
     else if (x === 'mmd') download(name + '.mmd', serialize(model), 'text/plain');
     else if (x === 'svg') { const s = canvas.querySelector('svg'); download(name + '.svg', '<?xml version="1.0"?>\n' + s.outerHTML, 'image/svg+xml'); }
+    else if (x === 'png') exportPng(name);
     else if (x === 'html') { try { download(name + '.html', await standalone(serialize(model)), 'text/html'); toast('単一 HTML を保存しました'); } catch (_) { toast('HTML 化に失敗（オンラインのエディタでお試しを）'); } }
   });
+  // SVG → 2 倍解像度の PNG（背景を敷いてから焼く）。
+  function exportPng(name) {
+    const s = canvas.querySelector('svg'); if (!s) return;
+    const xml = new XMLSerializer().serializeToString(s);
+    const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      const k = 2, c = document.createElement('canvas');
+      c.width = Math.ceil(s.viewBox.baseVal.width * k); c.height = Math.ceil(s.viewBox.baseVal.height * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      g.scale(k, k); g.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => {
+        if (!b) { toast('PNG 化に失敗しました'); return; }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '.png'; a.click();
+        URL.revokeObjectURL(a.href); toast('PNG を保存しました');
+      });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('PNG 化に失敗しました'); };
+    img.src = url;
+  }
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
@@ -1090,7 +1556,7 @@ function boot() {
   window.addEventListener('resize', () => { if (L) applyView(); });
 
   // ---- 起動 ----
-  function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); }
+  function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); pushHistory(); }
   const initial = window.STUDIO_SOURCE || SAMPLES[Object.keys(SAMPLES)[0]];
   setText(initial, true);
 }

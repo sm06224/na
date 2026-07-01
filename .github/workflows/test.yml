@@ -464,7 +464,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Parse Mermaid gantt and flowchart, resolve a schedule, auto-layer a graph, round-trip the layout and bundle a single HTML headless
+      - name: Parse Mermaid gantt, flowchart and sequence diagrams, resolve a schedule, untangle crossings, round-trip the layout and bundle a single HTML headless
         working-directory: studio
         run: node --test tests/*.test.js
 
