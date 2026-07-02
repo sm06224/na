@@ -110,3 +110,68 @@ test('決定的：同じ入力からは同じ包絡線・同じ P', () => {
   assert.deepEqual(envelope(FLEET5, BASE), envelope(FLEET5, BASE));
   assert.deepEqual(betaGrid(2, 5), betaGrid(2, 5));
 });
+
+// ---- v2: 残置プール・調達断絶・観測 --------------------------------------------
+const { poolTrajectory, depletionRange, reorderPoint, ltbPlan, poolReview, evalObservations } =
+  await import('../js/core/model.js');
+
+test('§5補 残置プール軌跡：早い側≤遅い側、在庫が多いほど枯渇は遅い', () => {
+  const env = envelope(FLEET5, BASE);
+  const tr = poolTrajectory(env, { stock: 375, fromYear: 2026, toYear: 2052 });
+  assert.equal(tr.years[0], 2026);
+  assert.equal(tr.years[tr.years.length - 1], 2052);            // 退役で打ち切る
+  assert.equal(tr.fast[0], 375);                                 // 起点は在庫そのもの
+  for (let i = 0; i < tr.years.length; i++)
+    assert.ok(tr.fast[i] <= tr.slow[i] + 1e-9, '上縁消費の側が常に下');
+  const d1 = depletionRange(env, { stock: 375, fromYear: 2026, toYear: 2052 });
+  const d2 = depletionRange(env, { stock: 40, fromYear: 2026, toYear: 2052 });
+  assert.ok(d1.earliest === null || d2.earliest <= d1.earliest, '在庫が少ないほど早く尽きる');
+  if (d1.earliest && d1.latest) assert.ok(d1.earliest <= d1.latest, '最早 ≤ 最遅');
+});
+
+test('§5補 発注点：今後 L 年の上縁消費。L に対して単調増', () => {
+  const env = envelope(FLEET5, BASE);
+  const rp1 = reorderPoint(env, { year: 2026, L: 1 });
+  const rp2 = reorderPoint(env, { year: 2026, L: 2 });
+  const rp3 = reorderPoint(env, { year: 2026, L: 3 });
+  assert.ok(rp1 > 0 && rp1 < rp2 && rp2 < rp3);
+  // 定義：max_β ( D_β(now+L) − D_β(now) )——β 毎の増分を取ってから包絡。
+  // 点包絡の差 cumMax(now+L)−cumMax(now) は支配βの入れ替わりで増分を取り違える
+  // （差分の包絡 ≠ 包絡の差分。実装時にテストが検出した落とし穴）。
+  const i = env.years.indexOf(2026), j = env.years.indexOf(2028);
+  const expected = Math.max(...env.all.map((s) => s.D[j] - s.D[i]));
+  assert.ok(Math.abs(rp2 - expected) < 1e-9);
+  assert.ok(rp2 >= env.cumMax[j] - env.cumMax[i] - 1e-9, 'β毎の増分包絡は点包絡の差と同等以上に保守的');
+});
+
+test('§5補 LTB：断絶が早いほど必要量は大きく、断絶=退役なら 0。lower ≤ need', () => {
+  const env = envelope(FLEET5, BASE);
+  const a = ltbPlan(env, { eolYear: 2035, retireYear: 2052 });
+  const b = ltbPlan(env, { eolYear: 2045, retireYear: 2052 });
+  const c = ltbPlan(env, { eolYear: 2052, retireYear: 2052 });
+  assert.ok(a.need > b.need && b.need > 0, `${a.need} > ${b.need} > 0`);
+  assert.equal(c.need, 0);
+  assert.ok(a.lower <= a.need);
+});
+
+test('§5補 プール見直し 3 段水位：order < review < ok', () => {
+  const env = envelope(FLEET5, BASE);
+  const args = { nowYear: 2026, L: 2, ks: 1.3, retireYear: 2052 };
+  assert.equal(poolReview(env, { ...args, stock: 0 }).status, 'order');
+  const rp = reorderPoint(env, { year: 2026, L: 2 });
+  assert.equal(poolReview(env, { ...args, stock: rp + 1 }).status, 'review');
+  assert.equal(poolReview(env, { ...args, stock: 100000 }).status, 'ok');
+});
+
+test('§6補 観測突き合わせ：ゼロ故障なら全トリガー沈黙、超過なら該当だけ発火', () => {
+  const env = envelope(FLEET1, BASE);
+  const base = { cohorts: FLEET1, nowYear: 2026, L: 2, alpha: 0.5, ks: 1.3, retireYear: 2050, stock: 375 };
+  const quiet = evalObservations(env, { ...base, actuals: [] });
+  assert.ok(!quiet.t1.fired && !quiet.t2.fired && !quiet.t3.fired);
+  assert.equal(quiet.meanAge, 16);                               // 2010納入・2026現在
+  assert.ok(quiet.t3.inRandomRegime);                            // 摩耗開始（20年）前 → T3 が見張る域
+  // 累積10台（λ̂=10/48000 > 3/48000）→ T3 発火。T1（水位 ~百台）はまだ。
+  const hot = evalObservations(env, { ...base, actuals: [{ year: 2024, cum: 8 }, { year: 2026, cum: 10 }] });
+  assert.ok(hot.t3.fired && !hot.t1.fired);
+  assert.ok(Math.abs(hot.t2.rate - 1) < 1e-9, '直近レート = (10−8)/(2026−2024) = 1台/年');
+});

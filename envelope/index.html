@@ -52,6 +52,12 @@
   details{margin-top:10px} summary{cursor:pointer;color:var(--ink2);font-size:13px}
   .vnote li{font-size:13px;margin:6px 0} .vnote li b{color:var(--bandLo)}
   .vnote li.gap b{color:var(--warn)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .badge.ok{background:rgba(25,158,112,.16);color:var(--bandLo)}
+  .badge.warn{background:rgba(201,133,0,.16);color:var(--warn)}
+  .badge.crit{background:rgba(230,103,103,.16);color:var(--crit)}
+  .badge.mute{background:rgba(255,255,255,.06);color:var(--ink2)}
+  td.l,th.l{text-align:left}
   .scroll{overflow-x:auto}
   .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--ink2);margin:6px 0 0}
   .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
@@ -108,6 +114,14 @@
     <div><label><b>現在年</b></label><input id="in-now" type="number" value="2026" step="1"></div>
   </div>
   <p class="why">全トリガーは L 年ぶん手前に置く（§6.1）：摩耗バーストは急峻で、「超えてから」動くと L 年遅れるため。</p>
+
+  <div class="row2">
+    <div><label><b>残置プール在庫</b>（台）</label><input id="in-stock" type="number" min="0" step="1" placeholder="空なら P">
+      <p class="why">いま手元にある予備品。空欄なら計算した P を仮置き。</p></div>
+    <div><label><b>調達断絶年</b>（任意）</label><input id="in-eol" type="number" step="1" placeholder="例: 2035">
+      <p class="why">製造中止・EOL の通告年。入れると LTB（最終発注量）を計算。</p></div>
+  </div>
+  <p class="why">退役年は自動：最終納入年 + T_design（フリートの寿命の終わり。需要はここで止まる）。</p>
 </aside>
 
 <div>
@@ -136,6 +150,34 @@
   </div>
 
   <div class="card">
+    <h2>残置プールの見直し — 無補充ならいつまで持つか（§5補）</h2>
+    <div id="pool-stats" class="tiles" style="margin-bottom:10px"></div>
+    <div id="chart-pool" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>残置在庫の帯（最悪β経路 〜 最良β経路）</span>
+      <span><i style="background:var(--warn)"></i>発注点</span>
+      <span><i style="background:var(--crit)"></i>調達断絶・枯渇最早</span>
+    </div>
+    <p class="note">P（§5）は<b>補充が回っている前提の水位</b>。この図は補充を止めた場合の別の問い——「いまの在庫はいつまで持つか」——に答える。
+    見直し基準は 3 段の水位で宣言：在庫 &lt; <b>発注点</b>（今後 L 年の最大消費）なら<b>直ちに調達着手</b>、発注点＋最悪1年分未満なら<b>見直し着手</b>、それ以上は年次監視。
+    ⚠ 増分の計算は「β ごとに増分 → 包絡」の順（差分の包絡 ≠ 包絡の差分——検証ノート参照）。</p>
+  </div>
+
+  <div class="card">
+    <h2>調達不可能時の方策はしご — 上から順に、条件が立ったら降りる</h2>
+    <div class="scroll" id="ladder"></div>
+    <p class="note">包絡線モデルの答えは「幾つ・いつまでに」まで。<b>どうやって確保するか</b>はこの表——各段の発動条件を上の計算値で判定して示す。
+    下の段ほど不確実でコストが高い：早い段で動けるかどうかは、結局トリガーの先読み（§6.1）が効いているかで決まる。</p>
+  </div>
+
+  <div class="card">
+    <h2>観測方法 — 何を・いつ・何と比べ、超えたらどうするか（§6補）</h2>
+    <div class="scroll" id="obs-table"></div>
+    <p class="note">観測は「実行可能な形」で定義する：観測量ごとに比較対象（水位）と発火時のアクションを固定し、
+    現在の入力（故障実績・在庫）に対する<b>判定をその場で計算</b>して表示する。この表がそのまま年次レビューのチェックリストになる。</p>
+  </div>
+
+  <div class="card">
     <h2>感度分析 — 宣言した仮定はどれだけ結論を動かすか（§9）</h2>
     <div class="scroll" id="sens"></div>
     <p class="note" id="mix-note"></p>
@@ -151,6 +193,7 @@
       <li><b>確認</b> §3.3 rule of three：45,000 台年ゼロ故障 → λ ≤ 6.7×10⁻⁵/台年（95%信頼上限）。有効なのは<b>偶発域のみ</b>で、摩耗域のカーブには何も言えない——この限定の明記が査読防御の要点。</li>
       <li class="gap"><b>曖昧→解決</b> §5 R_L「ピーク近傍 L 年分」は窓の置き方が未定義。本実装は保守側に倒し<b>「最悪の L 年転がし窓（annMax の L 年和の最大）」</b>と定義して宣言する。</li>
       <li class="gap"><b>穴→修正</b> §6.2 T2 のしきい値（バンド下限 d(y)）は運用初期ほぼ 0 になり、<b>故障 1 件で発火</b>してしまう。本実装は rule of three の年間期待上限を<b>床</b>として敷く（偶発ノイズで発火しない。共通原因の検出は T3 の受け持ち）。</li>
+      <li class="gap"><b>落とし穴→回避</b> 期間消費（発注点・LTB・枯渇レンジ）の包絡は<b>「差分の包絡 ≠ 包絡の差分」</b>：点ごとの包絡線の差を取ると、窓の途中で支配 β が入れ替わったとき増分を取り違える。本実装は β ごとに増分を取ってから包絡を取る（1 本の真の β が経路全体を生成するという物理とも一致）。テストが実装時に検出。</li>
     </ul>
   </div>
 

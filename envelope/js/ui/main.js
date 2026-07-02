@@ -4,8 +4,9 @@
    計算はすべて純粋関数なので、ここは「読んで・呼んで・描く」以外をしない。
    ============================================================ */
 import { envelope, poolPlan, triggers, ruleOfThree, totalUnitYears,
-  mixtureFlattening, sensitivity, etaFromAnchor, parseCohorts } from '../core/model.js';
-import { cumChart, annChart } from './charts.js';
+  mixtureFlattening, sensitivity, etaFromAnchor, parseCohorts,
+  poolTrajectory, reorderPoint, ltbPlan, poolReview, evalObservations } from '../core/model.js';
+import { cumChart, annChart, poolChart } from './charts.js';
 
 const $ = (id) => document.getElementById(id);
 const num = (v, d = 1) => v == null ? '—' : (v >= 1000 ? Math.round(v).toLocaleString() : Number(v.toFixed(d)).toLocaleString());
@@ -43,7 +44,106 @@ function compute() {
   const a = parseCohorts($('in-actuals').value);
   $('err-actuals').textContent = a.errors.join('\n');
   const actuals = a.cohorts.map((c) => ({ year: c.year, cum: c.count }));
-  return { cohorts, params, env, plan, trg, N, r3, T1curve, actuals };
+  // 残置プール・調達断絶・退役。退役 = 最終納入 + T_design（需要はそこで止まる）。
+  const retireYear = Math.max(...cohorts.map((c) => c.year)) + p.Tdesign;
+  const stock = $('in-stock').value === '' ? plan.P : Math.max(0, +$('in-stock').value);
+  const eolYear = $('in-eol').value === '' ? null : Math.round(+$('in-eol').value);
+  const review = poolReview(env, { stock, nowYear: p.nowYear, L: params.L, ks: params.ks, retireYear });
+  const traj = poolTrajectory(env, { stock, fromYear: p.nowYear, toYear: retireYear });
+  const ltb = eolYear != null ? ltbPlan(env, { eolYear, retireYear }) : null;
+  const obs = evalObservations(env, { actuals, stock, cohorts, ...params, retireYear });
+  return { cohorts, params, env, plan, trg, N, r3, T1curve, actuals,
+    retireYear, stock, eolYear, review, traj, ltb, obs };
+}
+
+const BADGE = {
+  ok: '<span class="badge ok">監視継続</span>', review: '<span class="badge warn">見直し着手</span>',
+  order: '<span class="badge crit">直ちに調達</span>',
+};
+const fire = (fired, okText = '境界内', firedText = '発火') =>
+  fired ? `<span class="badge crit">${firedText}</span>` : `<span class="badge ok">${okText}</span>`;
+
+// 残置プール：ミニ統計＋軌跡チャート
+function poolSection(m) {
+  const { review, traj, ltb, stock, retireYear, eolYear, params } = m;
+  const d = review.depletion;
+  const range = d.earliest
+    ? `${d.earliest}年 〜 ${d.latest ? d.latest + '年' : '退役まで持つ'}`
+    : '退役（' + retireYear + '年）まで持つ';
+  const t = [
+    [review.status === 'order' ? 'crit' : review.status === 'review' ? 'warn' : 'lo',
+      '見直し判定', BADGE[review.status],
+      `在庫 ${num(stock)} vs 発注点 ${num(review.rp)}／見直し水位 ${num(review.warnLevel)}（§5補）`],
+    ['warn', '発注点', `${num(review.rp)}<small> 台</small>`,
+      `今後 L=${params.L} 年で消費され得る最大量 — これを割る前に発注（在庫版の先読み §6.1）`],
+    ['band', '枯渇レンジ（無補充）', `<small style="font-size:15px;font-weight:700">${range}</small>`,
+      `早い側=最悪β経路・遅い側=最良β経路。レンジで意思決定し点で誤魔化さない`],
+    ltb ? ['crit', `LTB 最終発注量（${eolYear}断絶）`, `${ltb.need.toLocaleString()}<small> 台</small>`,
+      `断絶〜退役(${retireYear})の最大消費。下限 ${ltb.lower.toLocaleString()} 台とのレンジで交渉する`] : null,
+  ].filter(Boolean);
+  $('pool-stats').innerHTML = t.map(([cls, k, v, f]) =>
+    `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="f">${f}</div></div>`).join('');
+  $('chart-pool').innerHTML = poolChart(traj, { rp: review.rp, eolYear, retireYear, depletion: d });
+}
+
+// 方策はしご：各段の発動条件を計算値で判定して表示する。
+function ladder(m) {
+  const { review, ltb, eolYear, retireYear, params } = m;
+  const d = review.depletion;
+  const yearsLeft = d.earliest ? d.earliest - params.nowYear : null;
+  const rows = [
+    ['1. 通常調達', '在庫 < 発注点', review.status === 'order' ? BADGE.order : '<span class="badge mute">未発動</span>',
+      '通常リードタイム L 年で補充。T1/発注点の先読みが効いていればここで済む'],
+    ['2. LTB（最終発注）', '製造中止・EOL の通告', eolYear != null
+      ? `<span class="badge crit">断絶 ${eolYear} 年</span> → ${ltb.need.toLocaleString()} 台`
+      : '<span class="badge mute">通告なし</span>',
+      '退役までの最大消費を一括確保。数量は上のタイル（下限〜最悪のレンジで交渉）'],
+    ['3. 代替品認定', `枯渇最早 − 現在 < 認定リードタイム（目安 ${params.L + 1} 年）`,
+      yearsLeft != null && yearsLeft < params.L + 1
+        ? `<span class="badge warn">残 ${yearsLeft} 年 — 着手</span>` : '<span class="badge mute">余裕あり</span>',
+      '同等品・後継品の認定試験を開始。認定にもリードタイムがあるので枯渇レンジから逆算して着手'],
+    ['4. 共食い（ドナー機）', '枯渇レンジが退役より手前 かつ LTB 不可',
+      d.earliest && d.earliest < retireYear && eolYear == null
+        ? '<span class="badge warn">候補</span>' : '<span class="badge mute">—</span>',
+      '退役機・低稼働機から部品回収してプールに加算。回収数を在庫に足して本ページで再計算'],
+    ['5. 延命・優先度運用', '上の全段で不足が残る',
+      '<span class="badge mute">最後の手段</span>',
+      '負荷低減（derating）で η を伸ばす／重要系統に優先割当。効果は感度分析で事前に定量化'],
+  ];
+  $('ladder').innerHTML =
+    `<table><thead><tr><th class="l">方策</th><th class="l">発動条件</th><th class="l">現在の判定</th><th class="l">内容</th></tr></thead><tbody>${
+      rows.map((r) => `<tr>${r.map((c) => `<td class="l">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// 観測表：evalObservations の結果をそのまま写す＝観測方法の実行可能な定義。
+function obsTable(m) {
+  const { obs, params, plan } = m;
+  const e = (v, d = 2) => v == null ? '—' : v < 0.01 ? v.toExponential(1) : num(v, d);
+  const rows = [
+    ['累積故障数 D_obs', '年次', `T1 = ${num(obs.t1.level)} 台（α×上縁 ${params.nowYear + params.L} 年）`,
+      `${num(obs.t1.obs)} 台 ` + fire(obs.t1.fired, '境界内', 'T1 発火'),
+      '追加調達の検討を開始（§6.2）'],
+    ['年間故障数（3年移動平均）', '年次', `T2 = ${e(obs.t2.level)} 台/年（β下限＋偶発床）`,
+      obs.t2.rate == null ? '<span class="badge mute">実績2点以上で判定</span>'
+        : `${e(obs.t2.rate)} 台/年 ` + fire(obs.t2.fired, '境界内', 'T2 発火'),
+      'WeiBayes（β固定・η最尤）で宣言値を点検し包絡線を更新（§6.3）'],
+    ['偶発率 λ̂ = D_obs / N', '故障の都度', `λ_upper = ${obs.t3.lambdaUpper.toExponential(1)} /台年（3/N）`,
+      !obs.t3.inRandomRegime ? `<span class="badge mute">平均機齢 ${num(obs.meanAge)} 年 — 摩耗域は対象外</span>`
+        : (obs.t3.lambdaHat ? obs.t3.lambdaHat.toExponential(1) + ' ' : 'ゼロ故障 ') + fire(obs.t3.fired, '境界内', 'T3 発火'),
+      '共通原因故障を疑い調査。本モデルの適用範囲外へ（§7）'],
+    ['残置プール在庫 S', '年次棚卸', `発注点 ${num(obs.pool.rp)} 台／見直し水位 ${num(obs.pool.warnLevel)} 台`,
+      `${num(m.stock)} 台 ` + BADGE[obs.pool.status],
+      '発注点割れ→調達着手。調達不可なら方策はしごを降りる'],
+    ['修繕滞留数', '四半期', `目安 (k_s−1)×max d = ${num((params.ks - 1) * plan.maxD)} 台`,
+      '<span class="badge mute">入力外 — 現場で記録</span>',
+      '恒常的に超えるなら k_s を見直す（滞留は在庫拘束 §5）'],
+    ['故障の記録項目', '故障の都度', '納入年・故障日・機齢・故障モード',
+      '<span class="badge mute">—</span>',
+      '機齢はワイブルの t。モード別に分ければ将来モード別包絡線に分解できる'],
+  ];
+  $('obs-table').innerHTML =
+    `<table><thead><tr><th class="l">観測量</th><th class="l">頻度</th><th class="l">比較対象（水位）</th><th class="l">現在の判定</th><th class="l">超えたら</th></tr></thead><tbody>${
+      rows.map((r) => `<tr>${r.map((c) => `<td class="l">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
 function tiles(m) {
@@ -114,6 +214,9 @@ function render() {
   tiles(m);
   $('chart-cum').innerHTML = cumChart(m.env, { actuals: m.actuals, T1curve: m.T1curve, nowYear: m.params.nowYear });
   $('chart-ann').innerHTML = annChart(m.env, m.plan, { L: m.params.L, T2floor: m.trg.lambdaFloor });
+  poolSection(m);
+  ladder(m);
+  obsTable(m);
   sensTables(m);
   yearTable(m);
 }

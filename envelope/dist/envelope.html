@@ -52,6 +52,12 @@
   details{margin-top:10px} summary{cursor:pointer;color:var(--ink2);font-size:13px}
   .vnote li{font-size:13px;margin:6px 0} .vnote li b{color:var(--bandLo)}
   .vnote li.gap b{color:var(--warn)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .badge.ok{background:rgba(25,158,112,.16);color:var(--bandLo)}
+  .badge.warn{background:rgba(201,133,0,.16);color:var(--warn)}
+  .badge.crit{background:rgba(230,103,103,.16);color:var(--crit)}
+  .badge.mute{background:rgba(255,255,255,.06);color:var(--ink2)}
+  td.l,th.l{text-align:left}
   .scroll{overflow-x:auto}
   .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--ink2);margin:6px 0 0}
   .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
@@ -108,6 +114,14 @@
     <div><label><b>現在年</b></label><input id="in-now" type="number" value="2026" step="1"></div>
   </div>
   <p class="why">全トリガーは L 年ぶん手前に置く（§6.1）：摩耗バーストは急峻で、「超えてから」動くと L 年遅れるため。</p>
+
+  <div class="row2">
+    <div><label><b>残置プール在庫</b>（台）</label><input id="in-stock" type="number" min="0" step="1" placeholder="空なら P">
+      <p class="why">いま手元にある予備品。空欄なら計算した P を仮置き。</p></div>
+    <div><label><b>調達断絶年</b>（任意）</label><input id="in-eol" type="number" step="1" placeholder="例: 2035">
+      <p class="why">製造中止・EOL の通告年。入れると LTB（最終発注量）を計算。</p></div>
+  </div>
+  <p class="why">退役年は自動：最終納入年 + T_design（フリートの寿命の終わり。需要はここで止まる）。</p>
 </aside>
 
 <div>
@@ -136,6 +150,34 @@
   </div>
 
   <div class="card">
+    <h2>残置プールの見直し — 無補充ならいつまで持つか（§5補）</h2>
+    <div id="pool-stats" class="tiles" style="margin-bottom:10px"></div>
+    <div id="chart-pool" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>残置在庫の帯（最悪β経路 〜 最良β経路）</span>
+      <span><i style="background:var(--warn)"></i>発注点</span>
+      <span><i style="background:var(--crit)"></i>調達断絶・枯渇最早</span>
+    </div>
+    <p class="note">P（§5）は<b>補充が回っている前提の水位</b>。この図は補充を止めた場合の別の問い——「いまの在庫はいつまで持つか」——に答える。
+    見直し基準は 3 段の水位で宣言：在庫 &lt; <b>発注点</b>（今後 L 年の最大消費）なら<b>直ちに調達着手</b>、発注点＋最悪1年分未満なら<b>見直し着手</b>、それ以上は年次監視。
+    ⚠ 増分の計算は「β ごとに増分 → 包絡」の順（差分の包絡 ≠ 包絡の差分——検証ノート参照）。</p>
+  </div>
+
+  <div class="card">
+    <h2>調達不可能時の方策はしご — 上から順に、条件が立ったら降りる</h2>
+    <div class="scroll" id="ladder"></div>
+    <p class="note">包絡線モデルの答えは「幾つ・いつまでに」まで。<b>どうやって確保するか</b>はこの表——各段の発動条件を上の計算値で判定して示す。
+    下の段ほど不確実でコストが高い：早い段で動けるかどうかは、結局トリガーの先読み（§6.1）が効いているかで決まる。</p>
+  </div>
+
+  <div class="card">
+    <h2>観測方法 — 何を・いつ・何と比べ、超えたらどうするか（§6補）</h2>
+    <div class="scroll" id="obs-table"></div>
+    <p class="note">観測は「実行可能な形」で定義する：観測量ごとに比較対象（水位）と発火時のアクションを固定し、
+    現在の入力（故障実績・在庫）に対する<b>判定をその場で計算</b>して表示する。この表がそのまま年次レビューのチェックリストになる。</p>
+  </div>
+
+  <div class="card">
     <h2>感度分析 — 宣言した仮定はどれだけ結論を動かすか（§9）</h2>
     <div class="scroll" id="sens"></div>
     <p class="note" id="mix-note"></p>
@@ -151,6 +193,7 @@
       <li><b>確認</b> §3.3 rule of three：45,000 台年ゼロ故障 → λ ≤ 6.7×10⁻⁵/台年（95%信頼上限）。有効なのは<b>偶発域のみ</b>で、摩耗域のカーブには何も言えない——この限定の明記が査読防御の要点。</li>
       <li class="gap"><b>曖昧→解決</b> §5 R_L「ピーク近傍 L 年分」は窓の置き方が未定義。本実装は保守側に倒し<b>「最悪の L 年転がし窓（annMax の L 年和の最大）」</b>と定義して宣言する。</li>
       <li class="gap"><b>穴→修正</b> §6.2 T2 のしきい値（バンド下限 d(y)）は運用初期ほぼ 0 になり、<b>故障 1 件で発火</b>してしまう。本実装は rule of three の年間期待上限を<b>床</b>として敷く（偶発ノイズで発火しない。共通原因の検出は T3 の受け持ち）。</li>
+      <li class="gap"><b>落とし穴→回避</b> 期間消費（発注点・LTB・枯渇レンジ）の包絡は<b>「差分の包絡 ≠ 包絡の差分」</b>：点ごとの包絡線の差を取ると、窓の途中で支配 β が入れ替わったとき増分を取り違える。本実装は β ごとに増分を取ってから包絡を取る（1 本の真の β が経路全体を生成するという物理とも一致）。テストが実装時に検出。</li>
     </ul>
   </div>
 
@@ -353,6 +396,119 @@ function sensitivity(cohorts, base) {
   return out;
 }
 
+// ---- §5補 残置プールの見直し ---------------------------------------------------
+// P（§5）は「補充が回っている前提の水位」。補充が止まったら別の問いになる：
+// 「いまの残置在庫 S₀ は、無補充でいつまで持つか」。
+//   S_β(y) = S₀ − ( D_β(y) − D_β(y₀) )
+// 落とし穴（実装時にテストが検出）：「差分の包絡 ≠ 包絡の差分」。
+// 点ごとの包絡線 cumMax の差 cumMax(y)−cumMax(y₀) は、窓の途中で支配 β が
+// 入れ替わると増分の大小関係が壊れる。正しくは β ごとに増分を取ってから
+// 包絡を取る——1 本の真の β が経路全体を生成する、という物理にも一致する。
+// toYear は既定で退役年：退役後の需要は存在しないので、そこで軌跡を打ち切る。
+function poolTrajectory(env, { stock, fromYear, toYear = Infinity }) {
+  const { years, all } = env;
+  const i0 = years.indexOf(fromYear);
+  if (i0 < 0) return null;
+  const out = { years: [], fast: [], slow: [] };
+  for (let i = i0; i < years.length && years[i] <= toYear; i++) {
+    let incMax = 0, incMin = Infinity;
+    for (const s of all) {
+      const inc = s.D[i] - s.D[i0];
+      if (inc > incMax) incMax = inc;
+      if (inc < incMin) incMin = inc;
+    }
+    out.years.push(years[i]);
+    out.fast.push(stock - incMax);
+    out.slow.push(stock - incMin);
+  }
+  return out;
+}
+
+// 枯渇レンジ：在庫が 1 台を切る最初の年。早い側（上縁消費）と遅い側（下縁消費）。
+// 期間内に尽きなければ null ＝「退役まで持つ」。
+function depletionRange(env, opts) {
+  const tr = poolTrajectory(env, opts);
+  if (!tr) return null;
+  const firstBelow = (arr) => { for (let i = 0; i < arr.length; i++) if (arr[i] < 1) return tr.years[i]; return null; };
+  return { earliest: firstBelow(tr.fast), latest: firstBelow(tr.slow) };
+}
+
+// 窓 [y_i, y_j] の消費増分の包絡（β ごとに増分 → min/max）。上の落とし穴の共通解。
+function windowConsumption(env, i, j) {
+  let max = 0, min = Infinity;
+  for (const s of env.all) {
+    const inc = s.D[j] - s.D[i];
+    if (inc > max) max = inc;
+    if (inc < min) min = inc;
+  }
+  return { max, min };
+}
+
+// 発注点（§6.1 の在庫版）：今後 L 年で消費され得る最大量。
+// 在庫がこれを割ってから発注しても、届く前に尽きるリスクがある——だから
+// 「割ったら発注」ではなく「割る前に発注」。残置プール見直しの一次基準。
+function reorderPoint(env, { year, L }) {
+  const i = env.years.indexOf(year), j = env.years.indexOf(year + L);
+  if (i < 0 || j < 0) return null;
+  return windowConsumption(env, i, j).max;
+}
+
+// LTB（Last Time Buy・最終発注量）：調達断絶年 eol から退役年 retire までに
+// 消費され得る最大量 ＝「これを最後に買えなくなるなら、いま幾つ買うか」。
+// 下限も返す：意思決定は「最低 lower・最悪 need」のレンジで行う（点で誤魔化さない）。
+function ltbPlan(env, { eolYear, retireYear }) {
+  const { years } = env;
+  const i = years.indexOf(eolYear);
+  const j = years.indexOf(Math.min(retireYear, years[years.length - 1]));
+  if (i < 0 || j < 0 || j < i) return null;
+  const w = windowConsumption(env, i, j);
+  return { need: Math.ceil(w.max), lower: Math.ceil(w.min) };
+}
+
+// 残置プール総合判定：見直しの基準を 3 段の水位で宣言する。
+//   order  … 在庫 < 発注点 RP        → 直ちに調達着手（先読み代がもう無い）
+//   review … 在庫 < RP + maxD×k_s   → 見直し着手（最悪1年分の余裕しか無い）
+//   ok     … それ以上                → 年次監視の継続
+function poolReview(env, { stock, nowYear, L, ks, retireYear = Infinity }) {
+  const rp = reorderPoint(env, { year: nowYear, L });
+  if (rp == null) return null;
+  const maxD = Math.max(...env.annMax);
+  const warnLevel = rp + maxD * ks;
+  const status = stock < rp ? 'order' : stock < warnLevel ? 'review' : 'ok';
+  return { rp, warnLevel, status, depletion: depletionRange(env, { stock, fromYear: nowYear, toYear: retireYear }) };
+}
+
+// ---- §6補 観測の突き合わせ ------------------------------------------------------
+// 「観測方法」を文章でなく実行可能な形で定義する：観測量ごとに
+// 比較対象（トリガー水位）と現在の判定を返す。UI の観測表はこの結果をそのまま写す。
+//   T1: 累積実績 vs α×上縁(now+L)
+//   T2: 直近レート（実績2点の差分＝移動平均の代用）vs バンド下限＋偶発床
+//   T3: λ̂ = 累積/延べ台年 vs 3/N ——平均機齢が摩耗開始前（既定20年）のときだけ意味を持つ
+//   プール: 在庫 vs 発注点
+function evalObservations(env, { actuals, stock, cohorts, nowYear, L, alpha, ks, retireYear, wearOnsetAge = 20 }) {
+  const trg = triggers(env, { nowYear, L, alpha, cohorts });
+  const N = totalUnitYears(cohorts, nowYear);
+  const lambdaUpper = ruleOfThree(N).lambdaUpper;
+  const last = actuals.length ? actuals[actuals.length - 1] : null;
+  const obsCum = last ? last.cum : 0;
+  let rate = null;
+  if (actuals.length >= 2) {
+    const prev = actuals[actuals.length - 2];
+    if (last.year > prev.year) rate = (last.cum - prev.cum) / (last.year - prev.year);
+  }
+  const fleet = cohorts.reduce((s, c) => s + c.count, 0);
+  const meanAge = fleet ? cohorts.reduce((s, c) => s + c.count * Math.max(0, nowYear - c.year), 0) / fleet : 0;
+  const lambdaHat = N > 0 ? obsCum / N : null;
+  const pool = stock != null ? poolReview(env, { stock, nowYear, L, ks, retireYear }) : null;
+  return {
+    t1: { level: trg.T1_level, obs: obsCum, fired: trg.T1_level != null && obsCum >= trg.T1_level },
+    t2: { level: trg.T2_level, rate, fired: rate != null && trg.T2_level != null && rate > trg.T2_level },
+    t3: { lambdaHat, lambdaUpper, inRandomRegime: meanAge < wearOnsetAge,
+      fired: lambdaHat != null && meanAge < wearOnsetAge && lambdaHat > lambdaUpper },
+    pool, meanAge, N,
+  };
+}
+
 // ---- 入力（CSV: 納入年,台数）---------------------------------------------------
 function parseCohorts(text) {
   const cohorts = [], errors = [];
@@ -462,6 +618,49 @@ function annChart(env, plan, { W = 720, H = 300, L = 2, T2floor = 0 }) {
   return svgWrap(W, H, s);
 }
 
+// ---- 残置プール S(y)：無補充での枯渇帯＋発注点＋断絶・退役 ---------------------
+// 帯の下側（早く減る側）が 0 を切る年が「枯渇最早」。見る人の問いは
+// 「いまの在庫はいつまで持つか」——だから縦軸は在庫そのもの、水平線は発注点。
+function poolChart(traj, { W = 720, H = 280, rp, eolYear, retireYear, depletion }) {
+  const { years, fast, slow } = traj;
+  const yMax = Math.max(slow[0], rp || 0) * 1.12;
+  const f = frame(W, H, 52, 26, yMax, years, '残置在庫（台）');
+  const clamp = (v) => Math.max(0, v);
+  const up = years.map((yr, i) => [f.x(yr), f.y(clamp(slow[i]))]);
+  const lo = years.map((yr, i) => [f.x(yr), f.y(clamp(fast[i]))]).reverse();
+  let s = f.g;
+  s += `<path d="${poly(up)} ${poly(lo).replace('M', 'L')} Z" fill="${C.band}" fill-opacity="0.16"/>`;
+  s += `<path d="${poly(years.map((yr, i) => [f.x(yr), f.y(clamp(fast[i]))]))}" fill="none" stroke="${C.band}" stroke-width="2"/>`;
+  s += `<path d="${poly(up)}" fill="none" stroke="${C.band}" stroke-width="1.4" stroke-dasharray="4 4" stroke-opacity="0.7"/>`;
+  const mid = Math.max(1, Math.floor(years.length * 0.3));
+  s += `<text x="${f.x(years[mid])}" y="${f.y(clamp(fast[mid])) + 14}" fill="${C.band}" font-size="11">早く減る側（最悪β経路）</text>`;
+  // 発注点：ここを割る前に発注しないと、届く前に尽きるリスク（在庫版の先読み）。
+  if (rp != null && rp < yMax) {
+    s += `<line x1="${f.padL}" y1="${f.y(rp)}" x2="${W - 16}" y2="${f.y(rp)}" stroke="${C.warn}" stroke-width="1.6" stroke-dasharray="6 4"/>`
+      + `<text x="${f.padL + 4}" y="${f.y(rp) - 6}" fill="${C.warn}" font-size="11">発注点 = 今後L年の最大消費 ${fmt(rp)} 台</text>`;
+  }
+  // 調達断絶（あれば）と退役の縦線。
+  if (eolYear != null && eolYear >= years[0] && eolYear <= years[years.length - 1]) {
+    s += `<line x1="${f.x(eolYear)}" y1="${f.padT}" x2="${f.x(eolYear)}" y2="${f.padT + f.plotH}" stroke="${C.crit}" stroke-dasharray="2 4"/>`
+      + `<text x="${f.x(eolYear) + 4}" y="${f.padT + 10}" fill="${C.crit}" font-size="10">調達断絶</text>`;
+  }
+  if (retireYear != null && retireYear <= years[years.length - 1]) {
+    s += `<line x1="${f.x(retireYear)}" y1="${f.padT}" x2="${f.x(retireYear)}" y2="${f.padT + f.plotH}" stroke="${C.ink2}" stroke-dasharray="2 4"/>`
+      + `<text x="${f.x(retireYear) - 4}" y="${f.padT + 10}" fill="${C.ink2}" font-size="10" text-anchor="end">退役</text>`;
+  }
+  // 枯渇マーカー：早い側は深刻色、遅い側は控えめに。
+  if (depletion && depletion.earliest) {
+    s += `<circle cx="${f.x(depletion.earliest)}" cy="${f.y(0)}" r="4.5" fill="${C.crit}"/>`
+      + `<text x="${f.x(depletion.earliest) + 6}" y="${f.y(0) - 8}" fill="${C.crit}" font-size="11">枯渇最早 ${depletion.earliest}年</text>`;
+  }
+  if (depletion && depletion.latest && depletion.latest !== depletion.earliest) {
+    // 最早ラベルと重ならないよう一段上に置く
+    s += `<circle cx="${f.x(depletion.latest)}" cy="${f.y(0)}" r="3.5" fill="none" stroke="${C.ink2}" stroke-width="1.5"/>`
+      + `<text x="${f.x(depletion.latest) + 6}" y="${f.y(0) - 22}" fill="${C.ink2}" font-size="10">最遅 ${depletion.latest}年</text>`;
+  }
+  return svgWrap(W, H, s);
+}
+
 // ホバー用の透明帯（年ごと）。main.js が data-idx を拾ってツールチップを出す。
 function hoverRects(f, years, W, H) {
   let s = '';
@@ -480,6 +679,7 @@ const svgWrap = (W, H, inner) =>
    数値タイルに流し込む。DOM を触るのはこのファイルだけ。
    計算はすべて純粋関数なので、ここは「読んで・呼んで・描く」以外をしない。
    ============================================================ */
+
 
 const $ = (id) => document.getElementById(id);
 const num = (v, d = 1) => v == null ? '—' : (v >= 1000 ? Math.round(v).toLocaleString() : Number(v.toFixed(d)).toLocaleString());
@@ -517,7 +717,106 @@ function compute() {
   const a = parseCohorts($('in-actuals').value);
   $('err-actuals').textContent = a.errors.join('\n');
   const actuals = a.cohorts.map((c) => ({ year: c.year, cum: c.count }));
-  return { cohorts, params, env, plan, trg, N, r3, T1curve, actuals };
+  // 残置プール・調達断絶・退役。退役 = 最終納入 + T_design（需要はそこで止まる）。
+  const retireYear = Math.max(...cohorts.map((c) => c.year)) + p.Tdesign;
+  const stock = $('in-stock').value === '' ? plan.P : Math.max(0, +$('in-stock').value);
+  const eolYear = $('in-eol').value === '' ? null : Math.round(+$('in-eol').value);
+  const review = poolReview(env, { stock, nowYear: p.nowYear, L: params.L, ks: params.ks, retireYear });
+  const traj = poolTrajectory(env, { stock, fromYear: p.nowYear, toYear: retireYear });
+  const ltb = eolYear != null ? ltbPlan(env, { eolYear, retireYear }) : null;
+  const obs = evalObservations(env, { actuals, stock, cohorts, ...params, retireYear });
+  return { cohorts, params, env, plan, trg, N, r3, T1curve, actuals,
+    retireYear, stock, eolYear, review, traj, ltb, obs };
+}
+
+const BADGE = {
+  ok: '<span class="badge ok">監視継続</span>', review: '<span class="badge warn">見直し着手</span>',
+  order: '<span class="badge crit">直ちに調達</span>',
+};
+const fire = (fired, okText = '境界内', firedText = '発火') =>
+  fired ? `<span class="badge crit">${firedText}</span>` : `<span class="badge ok">${okText}</span>`;
+
+// 残置プール：ミニ統計＋軌跡チャート
+function poolSection(m) {
+  const { review, traj, ltb, stock, retireYear, eolYear, params } = m;
+  const d = review.depletion;
+  const range = d.earliest
+    ? `${d.earliest}年 〜 ${d.latest ? d.latest + '年' : '退役まで持つ'}`
+    : '退役（' + retireYear + '年）まで持つ';
+  const t = [
+    [review.status === 'order' ? 'crit' : review.status === 'review' ? 'warn' : 'lo',
+      '見直し判定', BADGE[review.status],
+      `在庫 ${num(stock)} vs 発注点 ${num(review.rp)}／見直し水位 ${num(review.warnLevel)}（§5補）`],
+    ['warn', '発注点', `${num(review.rp)}<small> 台</small>`,
+      `今後 L=${params.L} 年で消費され得る最大量 — これを割る前に発注（在庫版の先読み §6.1）`],
+    ['band', '枯渇レンジ（無補充）', `<small style="font-size:15px;font-weight:700">${range}</small>`,
+      `早い側=最悪β経路・遅い側=最良β経路。レンジで意思決定し点で誤魔化さない`],
+    ltb ? ['crit', `LTB 最終発注量（${eolYear}断絶）`, `${ltb.need.toLocaleString()}<small> 台</small>`,
+      `断絶〜退役(${retireYear})の最大消費。下限 ${ltb.lower.toLocaleString()} 台とのレンジで交渉する`] : null,
+  ].filter(Boolean);
+  $('pool-stats').innerHTML = t.map(([cls, k, v, f]) =>
+    `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="f">${f}</div></div>`).join('');
+  $('chart-pool').innerHTML = poolChart(traj, { rp: review.rp, eolYear, retireYear, depletion: d });
+}
+
+// 方策はしご：各段の発動条件を計算値で判定して表示する。
+function ladder(m) {
+  const { review, ltb, eolYear, retireYear, params } = m;
+  const d = review.depletion;
+  const yearsLeft = d.earliest ? d.earliest - params.nowYear : null;
+  const rows = [
+    ['1. 通常調達', '在庫 < 発注点', review.status === 'order' ? BADGE.order : '<span class="badge mute">未発動</span>',
+      '通常リードタイム L 年で補充。T1/発注点の先読みが効いていればここで済む'],
+    ['2. LTB（最終発注）', '製造中止・EOL の通告', eolYear != null
+      ? `<span class="badge crit">断絶 ${eolYear} 年</span> → ${ltb.need.toLocaleString()} 台`
+      : '<span class="badge mute">通告なし</span>',
+      '退役までの最大消費を一括確保。数量は上のタイル（下限〜最悪のレンジで交渉）'],
+    ['3. 代替品認定', `枯渇最早 − 現在 < 認定リードタイム（目安 ${params.L + 1} 年）`,
+      yearsLeft != null && yearsLeft < params.L + 1
+        ? `<span class="badge warn">残 ${yearsLeft} 年 — 着手</span>` : '<span class="badge mute">余裕あり</span>',
+      '同等品・後継品の認定試験を開始。認定にもリードタイムがあるので枯渇レンジから逆算して着手'],
+    ['4. 共食い（ドナー機）', '枯渇レンジが退役より手前 かつ LTB 不可',
+      d.earliest && d.earliest < retireYear && eolYear == null
+        ? '<span class="badge warn">候補</span>' : '<span class="badge mute">—</span>',
+      '退役機・低稼働機から部品回収してプールに加算。回収数を在庫に足して本ページで再計算'],
+    ['5. 延命・優先度運用', '上の全段で不足が残る',
+      '<span class="badge mute">最後の手段</span>',
+      '負荷低減（derating）で η を伸ばす／重要系統に優先割当。効果は感度分析で事前に定量化'],
+  ];
+  $('ladder').innerHTML =
+    `<table><thead><tr><th class="l">方策</th><th class="l">発動条件</th><th class="l">現在の判定</th><th class="l">内容</th></tr></thead><tbody>${
+      rows.map((r) => `<tr>${r.map((c) => `<td class="l">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// 観測表：evalObservations の結果をそのまま写す＝観測方法の実行可能な定義。
+function obsTable(m) {
+  const { obs, params, plan } = m;
+  const e = (v, d = 2) => v == null ? '—' : v < 0.01 ? v.toExponential(1) : num(v, d);
+  const rows = [
+    ['累積故障数 D_obs', '年次', `T1 = ${num(obs.t1.level)} 台（α×上縁 ${params.nowYear + params.L} 年）`,
+      `${num(obs.t1.obs)} 台 ` + fire(obs.t1.fired, '境界内', 'T1 発火'),
+      '追加調達の検討を開始（§6.2）'],
+    ['年間故障数（3年移動平均）', '年次', `T2 = ${e(obs.t2.level)} 台/年（β下限＋偶発床）`,
+      obs.t2.rate == null ? '<span class="badge mute">実績2点以上で判定</span>'
+        : `${e(obs.t2.rate)} 台/年 ` + fire(obs.t2.fired, '境界内', 'T2 発火'),
+      'WeiBayes（β固定・η最尤）で宣言値を点検し包絡線を更新（§6.3）'],
+    ['偶発率 λ̂ = D_obs / N', '故障の都度', `λ_upper = ${obs.t3.lambdaUpper.toExponential(1)} /台年（3/N）`,
+      !obs.t3.inRandomRegime ? `<span class="badge mute">平均機齢 ${num(obs.meanAge)} 年 — 摩耗域は対象外</span>`
+        : (obs.t3.lambdaHat ? obs.t3.lambdaHat.toExponential(1) + ' ' : 'ゼロ故障 ') + fire(obs.t3.fired, '境界内', 'T3 発火'),
+      '共通原因故障を疑い調査。本モデルの適用範囲外へ（§7）'],
+    ['残置プール在庫 S', '年次棚卸', `発注点 ${num(obs.pool.rp)} 台／見直し水位 ${num(obs.pool.warnLevel)} 台`,
+      `${num(m.stock)} 台 ` + BADGE[obs.pool.status],
+      '発注点割れ→調達着手。調達不可なら方策はしごを降りる'],
+    ['修繕滞留数', '四半期', `目安 (k_s−1)×max d = ${num((params.ks - 1) * plan.maxD)} 台`,
+      '<span class="badge mute">入力外 — 現場で記録</span>',
+      '恒常的に超えるなら k_s を見直す（滞留は在庫拘束 §5）'],
+    ['故障の記録項目', '故障の都度', '納入年・故障日・機齢・故障モード',
+      '<span class="badge mute">—</span>',
+      '機齢はワイブルの t。モード別に分ければ将来モード別包絡線に分解できる'],
+  ];
+  $('obs-table').innerHTML =
+    `<table><thead><tr><th class="l">観測量</th><th class="l">頻度</th><th class="l">比較対象（水位）</th><th class="l">現在の判定</th><th class="l">超えたら</th></tr></thead><tbody>${
+      rows.map((r) => `<tr>${r.map((c) => `<td class="l">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
 function tiles(m) {
@@ -588,6 +887,9 @@ function render() {
   tiles(m);
   $('chart-cum').innerHTML = cumChart(m.env, { actuals: m.actuals, T1curve: m.T1curve, nowYear: m.params.nowYear });
   $('chart-ann').innerHTML = annChart(m.env, m.plan, { L: m.params.L, T2floor: m.trg.lambdaFloor });
+  poolSection(m);
+  ladder(m);
+  obsTable(m);
   sensTables(m);
   yearTable(m);
 }
