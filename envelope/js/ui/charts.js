@@ -94,6 +94,49 @@ export function annChart(env, plan, { W = 720, H = 300, L = 2, T2floor = 0 }) {
   return svgWrap(W, H, s);
 }
 
+// ---- 残置プール S(y)：無補充での枯渇帯＋発注点＋断絶・退役 ---------------------
+// 帯の下側（早く減る側）が 0 を切る年が「枯渇最早」。見る人の問いは
+// 「いまの在庫はいつまで持つか」——だから縦軸は在庫そのもの、水平線は発注点。
+export function poolChart(traj, { W = 720, H = 280, rp, eolYear, retireYear, depletion }) {
+  const { years, fast, slow } = traj;
+  const yMax = Math.max(slow[0], rp || 0) * 1.12;
+  const f = frame(W, H, 52, 26, yMax, years, '残置在庫（台）');
+  const clamp = (v) => Math.max(0, v);
+  const up = years.map((yr, i) => [f.x(yr), f.y(clamp(slow[i]))]);
+  const lo = years.map((yr, i) => [f.x(yr), f.y(clamp(fast[i]))]).reverse();
+  let s = f.g;
+  s += `<path d="${poly(up)} ${poly(lo).replace('M', 'L')} Z" fill="${C.band}" fill-opacity="0.16"/>`;
+  s += `<path d="${poly(years.map((yr, i) => [f.x(yr), f.y(clamp(fast[i]))]))}" fill="none" stroke="${C.band}" stroke-width="2"/>`;
+  s += `<path d="${poly(up)}" fill="none" stroke="${C.band}" stroke-width="1.4" stroke-dasharray="4 4" stroke-opacity="0.7"/>`;
+  const mid = Math.max(1, Math.floor(years.length * 0.3));
+  s += `<text x="${f.x(years[mid])}" y="${f.y(clamp(fast[mid])) + 14}" fill="${C.band}" font-size="11">早く減る側（最悪β経路）</text>`;
+  // 発注点：ここを割る前に発注しないと、届く前に尽きるリスク（在庫版の先読み）。
+  if (rp != null && rp < yMax) {
+    s += `<line x1="${f.padL}" y1="${f.y(rp)}" x2="${W - 16}" y2="${f.y(rp)}" stroke="${C.warn}" stroke-width="1.6" stroke-dasharray="6 4"/>`
+      + `<text x="${f.padL + 4}" y="${f.y(rp) - 6}" fill="${C.warn}" font-size="11">発注点 = 今後L年の最大消費 ${fmt(rp)} 台</text>`;
+  }
+  // 調達断絶（あれば）と退役の縦線。
+  if (eolYear != null && eolYear >= years[0] && eolYear <= years[years.length - 1]) {
+    s += `<line x1="${f.x(eolYear)}" y1="${f.padT}" x2="${f.x(eolYear)}" y2="${f.padT + f.plotH}" stroke="${C.crit}" stroke-dasharray="2 4"/>`
+      + `<text x="${f.x(eolYear) + 4}" y="${f.padT + 10}" fill="${C.crit}" font-size="10">調達断絶</text>`;
+  }
+  if (retireYear != null && retireYear <= years[years.length - 1]) {
+    s += `<line x1="${f.x(retireYear)}" y1="${f.padT}" x2="${f.x(retireYear)}" y2="${f.padT + f.plotH}" stroke="${C.ink2}" stroke-dasharray="2 4"/>`
+      + `<text x="${f.x(retireYear) - 4}" y="${f.padT + 10}" fill="${C.ink2}" font-size="10" text-anchor="end">退役</text>`;
+  }
+  // 枯渇マーカー：早い側は深刻色、遅い側は控えめに。
+  if (depletion && depletion.earliest) {
+    s += `<circle cx="${f.x(depletion.earliest)}" cy="${f.y(0)}" r="4.5" fill="${C.crit}"/>`
+      + `<text x="${f.x(depletion.earliest) + 6}" y="${f.y(0) - 8}" fill="${C.crit}" font-size="11">枯渇最早 ${depletion.earliest}年</text>`;
+  }
+  if (depletion && depletion.latest && depletion.latest !== depletion.earliest) {
+    // 最早ラベルと重ならないよう一段上に置く
+    s += `<circle cx="${f.x(depletion.latest)}" cy="${f.y(0)}" r="3.5" fill="none" stroke="${C.ink2}" stroke-width="1.5"/>`
+      + `<text x="${f.x(depletion.latest) + 6}" y="${f.y(0) - 22}" fill="${C.ink2}" font-size="10">最遅 ${depletion.latest}年</text>`;
+  }
+  return svgWrap(W, H, s);
+}
+
 // ホバー用の透明帯（年ごと）。main.js が data-idx を拾ってツールチップを出す。
 function hoverRects(f, years, W, H) {
   let s = '';

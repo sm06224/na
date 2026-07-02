@@ -16,8 +16,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const MODULES = ['js/core/model.js', 'js/ui/charts.js', 'js/ui/main.js'];
 
 const read = (p) => readFileSync(join(HERE, p), 'utf8');
-const strip = (s) => s.split('\n')
-  .filter((l) => !/^import\b/.test(l) && !/^\s+\w.*\bfrom '\./.test(l))   // import 文（2行目連続含む）を除去
+const strip = (s) => s
+  .replace(/^import\s[\s\S]*?from\s+'[^']*';\s*$/mg, '')      // import 文（複数行でも）を丸ごと除去
+  .split('\n')
   .map((l) => l.replace(/^export\s+(function|const|class|let)\b/, '$1'))
   .join('\n')
   .replace(/<\/script/g, '<\\/script');   // 埋め込み先の <script> を早期終端させない

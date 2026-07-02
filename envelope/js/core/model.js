@@ -172,6 +172,119 @@ export function sensitivity(cohorts, base) {
   return out;
 }
 
+// ---- §5補 残置プールの見直し ---------------------------------------------------
+// P（§5）は「補充が回っている前提の水位」。補充が止まったら別の問いになる：
+// 「いまの残置在庫 S₀ は、無補充でいつまで持つか」。
+//   S_β(y) = S₀ − ( D_β(y) − D_β(y₀) )
+// 落とし穴（実装時にテストが検出）：「差分の包絡 ≠ 包絡の差分」。
+// 点ごとの包絡線 cumMax の差 cumMax(y)−cumMax(y₀) は、窓の途中で支配 β が
+// 入れ替わると増分の大小関係が壊れる。正しくは β ごとに増分を取ってから
+// 包絡を取る——1 本の真の β が経路全体を生成する、という物理にも一致する。
+// toYear は既定で退役年：退役後の需要は存在しないので、そこで軌跡を打ち切る。
+export function poolTrajectory(env, { stock, fromYear, toYear = Infinity }) {
+  const { years, all } = env;
+  const i0 = years.indexOf(fromYear);
+  if (i0 < 0) return null;
+  const out = { years: [], fast: [], slow: [] };
+  for (let i = i0; i < years.length && years[i] <= toYear; i++) {
+    let incMax = 0, incMin = Infinity;
+    for (const s of all) {
+      const inc = s.D[i] - s.D[i0];
+      if (inc > incMax) incMax = inc;
+      if (inc < incMin) incMin = inc;
+    }
+    out.years.push(years[i]);
+    out.fast.push(stock - incMax);
+    out.slow.push(stock - incMin);
+  }
+  return out;
+}
+
+// 枯渇レンジ：在庫が 1 台を切る最初の年。早い側（上縁消費）と遅い側（下縁消費）。
+// 期間内に尽きなければ null ＝「退役まで持つ」。
+export function depletionRange(env, opts) {
+  const tr = poolTrajectory(env, opts);
+  if (!tr) return null;
+  const firstBelow = (arr) => { for (let i = 0; i < arr.length; i++) if (arr[i] < 1) return tr.years[i]; return null; };
+  return { earliest: firstBelow(tr.fast), latest: firstBelow(tr.slow) };
+}
+
+// 窓 [y_i, y_j] の消費増分の包絡（β ごとに増分 → min/max）。上の落とし穴の共通解。
+function windowConsumption(env, i, j) {
+  let max = 0, min = Infinity;
+  for (const s of env.all) {
+    const inc = s.D[j] - s.D[i];
+    if (inc > max) max = inc;
+    if (inc < min) min = inc;
+  }
+  return { max, min };
+}
+
+// 発注点（§6.1 の在庫版）：今後 L 年で消費され得る最大量。
+// 在庫がこれを割ってから発注しても、届く前に尽きるリスクがある——だから
+// 「割ったら発注」ではなく「割る前に発注」。残置プール見直しの一次基準。
+export function reorderPoint(env, { year, L }) {
+  const i = env.years.indexOf(year), j = env.years.indexOf(year + L);
+  if (i < 0 || j < 0) return null;
+  return windowConsumption(env, i, j).max;
+}
+
+// LTB（Last Time Buy・最終発注量）：調達断絶年 eol から退役年 retire までに
+// 消費され得る最大量 ＝「これを最後に買えなくなるなら、いま幾つ買うか」。
+// 下限も返す：意思決定は「最低 lower・最悪 need」のレンジで行う（点で誤魔化さない）。
+export function ltbPlan(env, { eolYear, retireYear }) {
+  const { years } = env;
+  const i = years.indexOf(eolYear);
+  const j = years.indexOf(Math.min(retireYear, years[years.length - 1]));
+  if (i < 0 || j < 0 || j < i) return null;
+  const w = windowConsumption(env, i, j);
+  return { need: Math.ceil(w.max), lower: Math.ceil(w.min) };
+}
+
+// 残置プール総合判定：見直しの基準を 3 段の水位で宣言する。
+//   order  … 在庫 < 発注点 RP        → 直ちに調達着手（先読み代がもう無い）
+//   review … 在庫 < RP + maxD×k_s   → 見直し着手（最悪1年分の余裕しか無い）
+//   ok     … それ以上                → 年次監視の継続
+export function poolReview(env, { stock, nowYear, L, ks, retireYear = Infinity }) {
+  const rp = reorderPoint(env, { year: nowYear, L });
+  if (rp == null) return null;
+  const maxD = Math.max(...env.annMax);
+  const warnLevel = rp + maxD * ks;
+  const status = stock < rp ? 'order' : stock < warnLevel ? 'review' : 'ok';
+  return { rp, warnLevel, status, depletion: depletionRange(env, { stock, fromYear: nowYear, toYear: retireYear }) };
+}
+
+// ---- §6補 観測の突き合わせ ------------------------------------------------------
+// 「観測方法」を文章でなく実行可能な形で定義する：観測量ごとに
+// 比較対象（トリガー水位）と現在の判定を返す。UI の観測表はこの結果をそのまま写す。
+//   T1: 累積実績 vs α×上縁(now+L)
+//   T2: 直近レート（実績2点の差分＝移動平均の代用）vs バンド下限＋偶発床
+//   T3: λ̂ = 累積/延べ台年 vs 3/N ——平均機齢が摩耗開始前（既定20年）のときだけ意味を持つ
+//   プール: 在庫 vs 発注点
+export function evalObservations(env, { actuals, stock, cohorts, nowYear, L, alpha, ks, retireYear, wearOnsetAge = 20 }) {
+  const trg = triggers(env, { nowYear, L, alpha, cohorts });
+  const N = totalUnitYears(cohorts, nowYear);
+  const lambdaUpper = ruleOfThree(N).lambdaUpper;
+  const last = actuals.length ? actuals[actuals.length - 1] : null;
+  const obsCum = last ? last.cum : 0;
+  let rate = null;
+  if (actuals.length >= 2) {
+    const prev = actuals[actuals.length - 2];
+    if (last.year > prev.year) rate = (last.cum - prev.cum) / (last.year - prev.year);
+  }
+  const fleet = cohorts.reduce((s, c) => s + c.count, 0);
+  const meanAge = fleet ? cohorts.reduce((s, c) => s + c.count * Math.max(0, nowYear - c.year), 0) / fleet : 0;
+  const lambdaHat = N > 0 ? obsCum / N : null;
+  const pool = stock != null ? poolReview(env, { stock, nowYear, L, ks, retireYear }) : null;
+  return {
+    t1: { level: trg.T1_level, obs: obsCum, fired: trg.T1_level != null && obsCum >= trg.T1_level },
+    t2: { level: trg.T2_level, rate, fired: rate != null && trg.T2_level != null && rate > trg.T2_level },
+    t3: { lambdaHat, lambdaUpper, inRandomRegime: meanAge < wearOnsetAge,
+      fired: lambdaHat != null && meanAge < wearOnsetAge && lambdaHat > lambdaUpper },
+    pool, meanAge, N,
+  };
+}
+
 // ---- 入力（CSV: 納入年,台数）---------------------------------------------------
 export function parseCohorts(text) {
   const cohorts = [], errors = [];
