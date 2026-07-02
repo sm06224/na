@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>envelope — 信頼性包絡線コントローラ</title>
+<!-- ============================================================
+     このページは「仕様書 v2.0（信頼性包絡線制御モデル）」の実装 兼 検証報告。
+     数理は js/core/model.js（純粋・決定的・テスト済み）、描画は js/ui/charts.js、
+     配線だけを js/ui/main.js が担う。画面のあちこちにある「なぜ」の注記は
+     仕様の節番号を引く——読む人が根拠まで一目で辿れるように。
+     ============================================================ -->
+<style>
+  :root{
+    --bg:#0e131d; --panel:#141b28; --panel2:#101724; --line:rgba(255,255,255,0.08);
+    --ink:#e7ebf4; --ink2:#8a93a6; --band:#3987e5; --bandLo:#199e70; --warn:#c98500; --crit:#e66767;
+  }
+  *{box-sizing:border-box} [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.65}
+  a{color:var(--band)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 60px}
+  header h1{font-size:22px;margin:6px 0 2px}
+  header .sub{color:var(--ink2);font-size:13px;margin:0 0 10px}
+  .stance{border-left:3px solid var(--band);background:var(--panel);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;color:var(--ink2);margin:12px 0 20px}
+  .stance b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  aside,.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  aside h2,.card h2{font-size:14px;margin:0 0 10px;color:var(--ink)}
+  label{display:block;font-size:12px;color:var(--ink2);margin:10px 0 3px}
+  label b{color:var(--ink);font-weight:600}
+  .why{font-size:11px;color:var(--ink2);margin:2px 0 0;opacity:.85}
+  textarea,input{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:12px ui-monospace,Menlo,monospace}
+  textarea{resize:vertical;min-height:96px}
+  input[type=number]{font-size:13px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .errs{color:var(--crit);font-size:12px;white-space:pre-wrap;margin-top:6px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .tile .k{font-size:12px;color:var(--ink2)}
+  .tile .v{font-size:24px;font-weight:700;margin:2px 0}
+  .tile .v small{font-size:12px;font-weight:400;color:var(--ink2)}
+  .tile .f{font-size:11px;color:var(--ink2)}
+  .tile.warn .v{color:var(--warn)} .tile.crit .v{color:var(--crit)} .tile.band .v{color:var(--band)} .tile.lo .v{color:var(--bandLo)}
+  .card{margin-bottom:18px;position:relative}
+  .card p.note{font-size:12px;color:var(--ink2);margin:8px 0 0}
+  #tip{position:fixed;pointer-events:none;background:#1b2436;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:9;max-width:260px}
+  #tip b{color:var(--band)}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  th{color:var(--ink2);font-weight:600} td:first-child,th:first-child{text-align:left}
+  details{margin-top:10px} summary{cursor:pointer;color:var(--ink2);font-size:13px}
+  .vnote li{font-size:13px;margin:6px 0} .vnote li b{color:var(--bandLo)}
+  .vnote li.gap b{color:var(--warn)}
+  .scroll{overflow-x:auto}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--ink2);margin:6px 0 0}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>envelope <span style="color:var(--ink2);font-weight:400">— 信頼性包絡線コントローラ</span></h1>
+  <p class="sub">同一機器の大規模フリート（例: 3,000台・設計寿命40年・故障実績ゼロ）の予備品計画。仕様書 v2.0 の実装 兼 数値検証。</p>
+  <div class="stance">
+    <b>立場（§2-P3）</b>：故障ゼロのデータからは分布パラメータを<b>推定できない</b>。だから推定せず<b>宣言</b>する——
+    ワイブル族を「曲線形状の生成器」として使い、点予測ではなく<b>保守側の境界（包絡線）の内側に実績を抑え込む制御</b>を設計する。
+    予測が当たるかではなく、<b>境界を破ったとき早く気づけるか</b>（トリガー体系 §6）が設計の中心。
+  </div>
+</header>
+
+<div class="grid">
+<aside>
+  <h2>入力（すべて「宣言」する計画仮定）</h2>
+
+  <label><b>納入コホート</b>（CSV: 納入年,台数）</label>
+  <textarea id="in-cohorts" rows="7" spellcheck="false">納入年,台数
+2008,600
+2009,600
+2010,600
+2011,600
+2012,600</textarea>
+  <p class="why">なぜ年別か（§4）：納入年のばらつきは位相のずれたカーブの重ね合わせを生み、ピークを均す。一括扱いは過大評価。</p>
+  <div class="errs" id="err-cohorts"></div>
+
+  <label><b>故障実績</b>（CSV: 年,累積故障数・任意）</label>
+  <textarea id="in-actuals" rows="3" spellcheck="false" placeholder="2020,0
+2026,1"></textarea>
+  <p class="why">包絡線と比べる点。ゼロのままなら「境界の内側」の証拠が積み上がる。</p>
+  <div class="errs" id="err-actuals"></div>
+
+  <div class="row2">
+    <div><label><b>F_a</b> アンカー確率</label><input id="in-fa" type="number" value="0.30" step="0.05" min="0.01" max="0.9">
+      <p class="why">「設計寿命時点で3割壊れている」という計画仮定（§3.2）。感度は下の表。</p></div>
+    <div><label><b>T_design</b> 設計寿命(年)</label><input id="in-td" type="number" value="40" step="1" min="5"></div>
+  </div>
+  <div class="row2">
+    <div><label><b>β 下限</b></label><input id="in-bmin" type="number" value="2" step="0.5" min="1"></div>
+    <div><label><b>β 上限</b></label><input id="in-bmax" type="number" value="5" step="0.5" min="1"></div>
+  </div>
+  <p class="why">βバンド [2,5]＝機械部品の摩耗の経験的範囲（§3.2）。単一のβを選ばないのは、支配的なβが評価量ごとに違うから（累積の早期は低β・ピークは高β——検証ノート参照）。</p>
+  <div class="row2">
+    <div><label><b>L</b> 調達ﾘｰﾄﾞﾀｲﾑ(年)</label><input id="in-l" type="number" value="2" step="1" min="1" max="10"></div>
+    <div><label><b>k_s</b> 安全係数</label><input id="in-ks" type="number" value="1.3" step="0.1" min="1"></div>
+  </div>
+  <div class="row2">
+    <div><label><b>α</b> T1係数</label><input id="in-alpha" type="number" value="0.5" step="0.05" min="0.1" max="1"></div>
+    <div><label><b>現在年</b></label><input id="in-now" type="number" value="2026" step="1"></div>
+  </div>
+  <p class="why">全トリガーは L 年ぶん手前に置く（§6.1）：摩耗バーストは急峻で、「超えてから」動くと L 年遅れるため。</p>
+</aside>
+
+<div>
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>累積期待故障数 D(t) — 包絡線と実績</h2>
+    <div id="chart-cum" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>包絡線（βバンドの min–max）</span>
+      <span><i style="background:var(--warn)"></i>T1 検討開始線 = α × 上縁(t+L)</span>
+      <span><i style="background:#f2f4f8;height:8px;width:8px;border-radius:50%"></i>実績</span>
+    </div>
+    <p class="note">実績の点が<b>帯の内側の下寄り</b>にある限り、宣言した仮定は破られていない。T1 線（琥珀）に達したら追加調達の<b>検討を開始</b>する（§6.2）。</p>
+  </div>
+
+  <div class="card">
+    <h2>単年度消費 d(y) — ピーク・キャパ基準・調達先行窓</h2>
+    <div id="chart-ann" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>単年度の最悪値（バンド上限）</span>
+      <span><i style="background:var(--bandLo)"></i>T2 更新しきい線（β下限＋偶発床）</span>
+      <span><i style="background:var(--crit)"></i>キャパ基準・ピーク・先行窓</span>
+    </div>
+    <p class="note">修繕キャパは<b>ピーク時の必要量でロック</b>する（§2-P2：立ち上げ直しは L 年かかるので後から増やせない）。実測の3年移動平均が T2 線を超えたらパラメータを更新する（§6.2）。</p>
+  </div>
+
+  <div class="card">
+    <h2>感度分析 — 宣言した仮定はどれだけ結論を動かすか（§9）</h2>
+    <div class="scroll" id="sens"></div>
+    <p class="note" id="mix-note"></p>
+  </div>
+
+  <div class="card vnote">
+    <h2>検証ノート — 仕様の主張を数値で裏取りした結果（tests/model.test.js）</h2>
+    <ul>
+      <li><b>確認</b> §3.2 アンカー逆算 η=T/(−ln(1−F_a))^{1/β}：仕様の例示値 β=2→67.0 / β=3→56.5 / β=5→49.2 を再現。どの β でも F(T_design)=F_a を厳密に通る。</li>
+      <li><b>確認</b> §3.2 支配的な β は評価量で異なる：累積 D(t) のアンカー手前は<b>低β</b>が上、単年度ピークは<b>高β</b>が鋭い（β=5 のピークは β=2 の 1.5 倍超）。単一 β を選ばずバンド全体をスイープする設計は正当。</li>
+      <li><b>確認</b> §4 コホート畳み込みは平坦化する：5年分散納入は一括納入と総量が同じままピークだけ下がる。カーブの平行移動（v1方式）には対応する物理がなく、廃止は妥当。</li>
+      <li><b>確認</b> §9.4 環境不均一（η±20% の混合）はさらに平坦化（ピーク比 &lt; 0.95）→ 単一ワイブルは<b>保守側</b>。</li>
+      <li><b>確認</b> §3.3 rule of three：45,000 台年ゼロ故障 → λ ≤ 6.7×10⁻⁵/台年（95%信頼上限）。有効なのは<b>偶発域のみ</b>で、摩耗域のカーブには何も言えない——この限定の明記が査読防御の要点。</li>
+      <li class="gap"><b>曖昧→解決</b> §5 R_L「ピーク近傍 L 年分」は窓の置き方が未定義。本実装は保守側に倒し<b>「最悪の L 年転がし窓（annMax の L 年和の最大）」</b>と定義して宣言する。</li>
+      <li class="gap"><b>穴→修正</b> §6.2 T2 のしきい値（バンド下限 d(y)）は運用初期ほぼ 0 になり、<b>故障 1 件で発火</b>してしまう。本実装は rule of three の年間期待上限を<b>床</b>として敷く（偶発ノイズで発火しない。共通原因の検出は T3 の受け持ち）。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>適用範囲外（§7）— このモデルが答えないこと</h2>
+    <p class="note">
+      ①<b>共通原因・系統的故障</b>（設計欠陥・製造ロット不良・環境の一斉変化）：T3（摩耗域到達前の λ_upper 有意超過）で<b>検出して外へ渡す</b>のが役割で、量の予測はしない。
+      ②<b>個体追跡</b>：フリート総量の制御であり、どの個体がいつ壊れるかは言わない。
+      ③<b>偶発域の点予測</b>：rule of three は上限のみ。
+      1件目の故障が出たら WeiBayes（β固定・η最尤）で宣言値の点検を始める（§6.3）。
+    </p>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>年次テーブル（数表で見る・スクリーンリーダ向け）</summary>
+      <div class="scroll" id="year-table"></div>
+    </details>
+  </div>
+</div>
+</div>
+
+<footer style="color:var(--ink2);font-size:12px;margin-top:8px">
+  依存ゼロ・オフライン単一 HTML（<code>node build.js</code>）。数理コアは決定的で、<code>node --test</code> が仕様の数値まで検証する。<a href="../index.html">na</a>
+</footer>
+</div>
+<div id="tip" hidden></div>
+<script type="module">
+  import { boot } from './js/ui/main.js';
+  boot();
+</script>
+</body>
+</html>

@@ -468,6 +468,18 @@ jobs:
         working-directory: studio
         run: node --test tests/*.test.js
 
+  envelope:
+    name: envelope — reliability envelope controller
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify the spec's math — anchors, convolution, rule of three, pool and triggers — headless
+        working-directory: envelope
+        run: node --test tests/*.test.js
+
   hotaru:
     name: 蛍 — do the fireflies still glow?
     runs-on: ubuntu-latest

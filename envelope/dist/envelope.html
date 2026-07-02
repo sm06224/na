@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>envelope — 信頼性包絡線コントローラ</title>
+<!-- ============================================================
+     このページは「仕様書 v2.0（信頼性包絡線制御モデル）」の実装 兼 検証報告。
+     数理は js/core/model.js（純粋・決定的・テスト済み）、描画は js/ui/charts.js、
+     配線だけを js/ui/main.js が担う。画面のあちこちにある「なぜ」の注記は
+     仕様の節番号を引く——読む人が根拠まで一目で辿れるように。
+     ============================================================ -->
+<style>
+  :root{
+    --bg:#0e131d; --panel:#141b28; --panel2:#101724; --line:rgba(255,255,255,0.08);
+    --ink:#e7ebf4; --ink2:#8a93a6; --band:#3987e5; --bandLo:#199e70; --warn:#c98500; --crit:#e66767;
+  }
+  *{box-sizing:border-box} [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.65}
+  a{color:var(--band)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 60px}
+  header h1{font-size:22px;margin:6px 0 2px}
+  header .sub{color:var(--ink2);font-size:13px;margin:0 0 10px}
+  .stance{border-left:3px solid var(--band);background:var(--panel);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;color:var(--ink2);margin:12px 0 20px}
+  .stance b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  aside,.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  aside h2,.card h2{font-size:14px;margin:0 0 10px;color:var(--ink)}
+  label{display:block;font-size:12px;color:var(--ink2);margin:10px 0 3px}
+  label b{color:var(--ink);font-weight:600}
+  .why{font-size:11px;color:var(--ink2);margin:2px 0 0;opacity:.85}
+  textarea,input{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:12px ui-monospace,Menlo,monospace}
+  textarea{resize:vertical;min-height:96px}
+  input[type=number]{font-size:13px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .errs{color:var(--crit);font-size:12px;white-space:pre-wrap;margin-top:6px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .tile .k{font-size:12px;color:var(--ink2)}
+  .tile .v{font-size:24px;font-weight:700;margin:2px 0}
+  .tile .v small{font-size:12px;font-weight:400;color:var(--ink2)}
+  .tile .f{font-size:11px;color:var(--ink2)}
+  .tile.warn .v{color:var(--warn)} .tile.crit .v{color:var(--crit)} .tile.band .v{color:var(--band)} .tile.lo .v{color:var(--bandLo)}
+  .card{margin-bottom:18px;position:relative}
+  .card p.note{font-size:12px;color:var(--ink2);margin:8px 0 0}
+  #tip{position:fixed;pointer-events:none;background:#1b2436;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:9;max-width:260px}
+  #tip b{color:var(--band)}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  th{color:var(--ink2);font-weight:600} td:first-child,th:first-child{text-align:left}
+  details{margin-top:10px} summary{cursor:pointer;color:var(--ink2);font-size:13px}
+  .vnote li{font-size:13px;margin:6px 0} .vnote li b{color:var(--bandLo)}
+  .vnote li.gap b{color:var(--warn)}
+  .scroll{overflow-x:auto}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--ink2);margin:6px 0 0}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>envelope <span style="color:var(--ink2);font-weight:400">— 信頼性包絡線コントローラ</span></h1>
+  <p class="sub">同一機器の大規模フリート（例: 3,000台・設計寿命40年・故障実績ゼロ）の予備品計画。仕様書 v2.0 の実装 兼 数値検証。</p>
+  <div class="stance">
+    <b>立場（§2-P3）</b>：故障ゼロのデータからは分布パラメータを<b>推定できない</b>。だから推定せず<b>宣言</b>する——
+    ワイブル族を「曲線形状の生成器」として使い、点予測ではなく<b>保守側の境界（包絡線）の内側に実績を抑え込む制御</b>を設計する。
+    予測が当たるかではなく、<b>境界を破ったとき早く気づけるか</b>（トリガー体系 §6）が設計の中心。
+  </div>
+</header>
+
+<div class="grid">
+<aside>
+  <h2>入力（すべて「宣言」する計画仮定）</h2>
+
+  <label><b>納入コホート</b>（CSV: 納入年,台数）</label>
+  <textarea id="in-cohorts" rows="7" spellcheck="false">納入年,台数
+2008,600
+2009,600
+2010,600
+2011,600
+2012,600</textarea>
+  <p class="why">なぜ年別か（§4）：納入年のばらつきは位相のずれたカーブの重ね合わせを生み、ピークを均す。一括扱いは過大評価。</p>
+  <div class="errs" id="err-cohorts"></div>
+
+  <label><b>故障実績</b>（CSV: 年,累積故障数・任意）</label>
+  <textarea id="in-actuals" rows="3" spellcheck="false" placeholder="2020,0
+2026,1"></textarea>
+  <p class="why">包絡線と比べる点。ゼロのままなら「境界の内側」の証拠が積み上がる。</p>
+  <div class="errs" id="err-actuals"></div>
+
+  <div class="row2">
+    <div><label><b>F_a</b> アンカー確率</label><input id="in-fa" type="number" value="0.30" step="0.05" min="0.01" max="0.9">
+      <p class="why">「設計寿命時点で3割壊れている」という計画仮定（§3.2）。感度は下の表。</p></div>
+    <div><label><b>T_design</b> 設計寿命(年)</label><input id="in-td" type="number" value="40" step="1" min="5"></div>
+  </div>
+  <div class="row2">
+    <div><label><b>β 下限</b></label><input id="in-bmin" type="number" value="2" step="0.5" min="1"></div>
+    <div><label><b>β 上限</b></label><input id="in-bmax" type="number" value="5" step="0.5" min="1"></div>
+  </div>
+  <p class="why">βバンド [2,5]＝機械部品の摩耗の経験的範囲（§3.2）。単一のβを選ばないのは、支配的なβが評価量ごとに違うから（累積の早期は低β・ピークは高β——検証ノート参照）。</p>
+  <div class="row2">
+    <div><label><b>L</b> 調達ﾘｰﾄﾞﾀｲﾑ(年)</label><input id="in-l" type="number" value="2" step="1" min="1" max="10"></div>
+    <div><label><b>k_s</b> 安全係数</label><input id="in-ks" type="number" value="1.3" step="0.1" min="1"></div>
+  </div>
+  <div class="row2">
+    <div><label><b>α</b> T1係数</label><input id="in-alpha" type="number" value="0.5" step="0.05" min="0.1" max="1"></div>
+    <div><label><b>現在年</b></label><input id="in-now" type="number" value="2026" step="1"></div>
+  </div>
+  <p class="why">全トリガーは L 年ぶん手前に置く（§6.1）：摩耗バーストは急峻で、「超えてから」動くと L 年遅れるため。</p>
+</aside>
+
+<div>
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>累積期待故障数 D(t) — 包絡線と実績</h2>
+    <div id="chart-cum" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>包絡線（βバンドの min–max）</span>
+      <span><i style="background:var(--warn)"></i>T1 検討開始線 = α × 上縁(t+L)</span>
+      <span><i style="background:#f2f4f8;height:8px;width:8px;border-radius:50%"></i>実績</span>
+    </div>
+    <p class="note">実績の点が<b>帯の内側の下寄り</b>にある限り、宣言した仮定は破られていない。T1 線（琥珀）に達したら追加調達の<b>検討を開始</b>する（§6.2）。</p>
+  </div>
+
+  <div class="card">
+    <h2>単年度消費 d(y) — ピーク・キャパ基準・調達先行窓</h2>
+    <div id="chart-ann" class="scroll"></div>
+    <div class="legend">
+      <span><i style="background:var(--band)"></i>単年度の最悪値（バンド上限）</span>
+      <span><i style="background:var(--bandLo)"></i>T2 更新しきい線（β下限＋偶発床）</span>
+      <span><i style="background:var(--crit)"></i>キャパ基準・ピーク・先行窓</span>
+    </div>
+    <p class="note">修繕キャパは<b>ピーク時の必要量でロック</b>する（§2-P2：立ち上げ直しは L 年かかるので後から増やせない）。実測の3年移動平均が T2 線を超えたらパラメータを更新する（§6.2）。</p>
+  </div>
+
+  <div class="card">
+    <h2>感度分析 — 宣言した仮定はどれだけ結論を動かすか（§9）</h2>
+    <div class="scroll" id="sens"></div>
+    <p class="note" id="mix-note"></p>
+  </div>
+
+  <div class="card vnote">
+    <h2>検証ノート — 仕様の主張を数値で裏取りした結果（tests/model.test.js）</h2>
+    <ul>
+      <li><b>確認</b> §3.2 アンカー逆算 η=T/(−ln(1−F_a))^{1/β}：仕様の例示値 β=2→67.0 / β=3→56.5 / β=5→49.2 を再現。どの β でも F(T_design)=F_a を厳密に通る。</li>
+      <li><b>確認</b> §3.2 支配的な β は評価量で異なる：累積 D(t) のアンカー手前は<b>低β</b>が上、単年度ピークは<b>高β</b>が鋭い（β=5 のピークは β=2 の 1.5 倍超）。単一 β を選ばずバンド全体をスイープする設計は正当。</li>
+      <li><b>確認</b> §4 コホート畳み込みは平坦化する：5年分散納入は一括納入と総量が同じままピークだけ下がる。カーブの平行移動（v1方式）には対応する物理がなく、廃止は妥当。</li>
+      <li><b>確認</b> §9.4 環境不均一（η±20% の混合）はさらに平坦化（ピーク比 &lt; 0.95）→ 単一ワイブルは<b>保守側</b>。</li>
+      <li><b>確認</b> §3.3 rule of three：45,000 台年ゼロ故障 → λ ≤ 6.7×10⁻⁵/台年（95%信頼上限）。有効なのは<b>偶発域のみ</b>で、摩耗域のカーブには何も言えない——この限定の明記が査読防御の要点。</li>
+      <li class="gap"><b>曖昧→解決</b> §5 R_L「ピーク近傍 L 年分」は窓の置き方が未定義。本実装は保守側に倒し<b>「最悪の L 年転がし窓（annMax の L 年和の最大）」</b>と定義して宣言する。</li>
+      <li class="gap"><b>穴→修正</b> §6.2 T2 のしきい値（バンド下限 d(y)）は運用初期ほぼ 0 になり、<b>故障 1 件で発火</b>してしまう。本実装は rule of three の年間期待上限を<b>床</b>として敷く（偶発ノイズで発火しない。共通原因の検出は T3 の受け持ち）。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>適用範囲外（§7）— このモデルが答えないこと</h2>
+    <p class="note">
+      ①<b>共通原因・系統的故障</b>（設計欠陥・製造ロット不良・環境の一斉変化）：T3（摩耗域到達前の λ_upper 有意超過）で<b>検出して外へ渡す</b>のが役割で、量の予測はしない。
+      ②<b>個体追跡</b>：フリート総量の制御であり、どの個体がいつ壊れるかは言わない。
+      ③<b>偶発域の点予測</b>：rule of three は上限のみ。
+      1件目の故障が出たら WeiBayes（β固定・η最尤）で宣言値の点検を始める（§6.3）。
+    </p>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>年次テーブル（数表で見る・スクリーンリーダ向け）</summary>
+      <div class="scroll" id="year-table"></div>
+    </details>
+  </div>
+</div>
+</div>
+
+<footer style="color:var(--ink2);font-size:12px;margin-top:8px">
+  依存ゼロ・オフライン単一 HTML（<code>node build.js</code>）。数理コアは決定的で、<code>node --test</code> が仕様の数値まで検証する。<a href="../index.html">na</a>
+</footer>
+</div>
+<div id="tip" hidden></div>
+<script>
+/* ============================================================
+   信頼性包絡線コントローラ — 数理コア（仕様書 v2.0 の実装 兼 検証）
+   ------------------------------------------------------------
+   このファイルは仕様の各節と 1:1 に対応し、コメントで「なぜ」を答える。
+   すべて純粋関数・決定的・DOM/ネット非依存。tests/ が数値まで裏取りする。
+
+   仕様の立場（§2-P3・§3.1）:
+     故障ゼロのデータからはいかなる分布のパラメータも推定できない。
+     だからパラメータは「推定」せず「宣言」し、ワイブル分布族を
+     曲線形状の生成器として使う。点予測ではなく、保守側の境界
+     （包絡線）の内側に実績を抑え込む「制御」を設計する。
+   ============================================================ */
+
+// ---- §付録A ワイブルCDF -----------------------------------------------------
+// F(t) = 1 − exp(−(t/η)^β)。β>1 が摩耗（時間とともに壊れやすくなる）、
+// β=1 が偶発（指数分布）。本件は摩耗バーストが主敵なので β>1 の族を使う。
+function weibullCDF(t, beta, eta) {
+  if (t <= 0) return 0;                       // 納入前（t−t_c<0）は F=0（§4.2）
+  return 1 - Math.exp(-Math.pow(t / eta, beta));
+}
+
+// ---- §3.2 アンカー逆算 ------------------------------------------------------
+// 「設計寿命 T_design 時点の累積故障確率 = F_a」という計画仮定（宣言）から、
+// 各 β に対する尺度 η を一意に決める。導出：F(T)=F_a を η について解くだけ。
+//   1 − exp(−(T/η)^β) = F_a  →  η = T / (−ln(1−F_a))^(1/β)
+// これで βバンド内のどの曲線も必ず (T_design, F_a) を通る＝「アンカー」。
+function etaFromAnchor(beta, Tdesign, Fa) {
+  return Tdesign / Math.pow(-Math.log(1 - Fa), 1 / beta);
+}
+
+// ---- §4.2 コホート畳み込み ---------------------------------------------------
+// なぜ平行移動ではだめか（§4.1）：納入年のばらつきは、位相のずれた同じ形の
+// カーブの「重ね合わせ」を生む。重ね合わせはピークを均す（平坦化）。
+// カーブごと横にずらす操作は物理に対応する事象がなく、しかも計算はこちらの方が単純。
+//   D(t) = Σ_c n_c · F(t − t_c)   … 暦年 t までの累積期待故障数
+//   d(y) = D(y) − D(y−1)          … 暦年 y の単年度期待消費数
+// cohorts: [{year, count}] / horizon: 評価する最終暦年
+function cohortSeries(cohorts, beta, eta, horizon) {
+  const y0 = Math.min(...cohorts.map((c) => c.year));
+  const years = [], D = [], d = [];
+  let prev = 0;
+  for (let y = y0; y <= horizon; y++) {
+    let cum = 0;
+    for (const c of cohorts) cum += c.count * weibullCDF(y - c.year, beta, eta);
+    years.push(y); D.push(cum); d.push(cum - prev); prev = cum;
+  }
+  return { years, D, d };
+}
+
+// ---- §3.2 包絡線＝βバンドの最悪値 --------------------------------------------
+// 「どの β が最悪か」は評価量で違う（仕様の注意書きどおり）：
+//   ・累積 D(t) … アンカー(40年)より手前では低βが上（早く立ち上がる）
+//   ・単年度 d(y) … 高βほどピークが鋭い（束になって壊れる）
+// だから単一の β を選ばず、バンド全体をスイープして各年の min/max を取る。
+// betaGrid はバンドを等分割（端点を必ず含む）。粗すぎると最悪値を取り逃がすので既定 13 点。
+function betaGrid(betaMin, betaMax, steps = 13) {
+  const g = [];
+  for (let i = 0; i < steps; i++) g.push(betaMin + (betaMax - betaMin) * i / (steps - 1));
+  return g;
+}
+
+function envelope(cohorts, params) {
+  const { Fa, Tdesign, betaMin, betaMax, horizon } = params;
+  const betas = betaGrid(betaMin, betaMax);
+  const all = betas.map((b) => ({ beta: b, ...cohortSeries(cohorts, b, etaFromAnchor(b, Tdesign, Fa), horizon) }));
+  const years = all[0].years;
+  const n = years.length;
+  const cumMax = new Array(n).fill(0), cumMin = new Array(n).fill(Infinity);
+  const annMax = new Array(n).fill(0), annMin = new Array(n).fill(Infinity);
+  let peak = { year: years[0], value: 0, beta: betas[0] };
+  for (const s of all) {
+    for (let i = 0; i < n; i++) {
+      if (s.D[i] > cumMax[i]) cumMax[i] = s.D[i];
+      if (s.D[i] < cumMin[i]) cumMin[i] = s.D[i];
+      if (s.d[i] > annMax[i]) annMax[i] = s.d[i];
+      if (s.d[i] < annMin[i]) annMin[i] = s.d[i];
+      if (s.d[i] > peak.value) peak = { year: years[i], value: s.d[i], beta: s.beta };
+    }
+  }
+  return { years, cumMax, cumMin, annMax, annMin, peak, betas, all };
+}
+
+// ---- §5 リソース確定（意思決定変数） -----------------------------------------
+// P = max d(y) × k_s + R_L
+//   max d(y) … 包絡線上の最悪単年度消費。修繕キャパの基準値としてロック（P2）
+//   k_s      … 安全係数。期待値まわりのポアソン変動と修繕滞留（送り返し中の在庫拘束）を吸収
+//   R_L      … 「調達リードタイム L 年の間に消費される想定数」。仕様の文言
+//              「ピーク近傍 L 年分の合計」は窓の置き方が曖昧なので、本実装は
+//              保守側に倒して「annMax の L 年転がし和の最大値（最悪の L 年窓）」と定義する。
+//              → この解決は README の検証ノートにも明記（曖昧さは解消して宣言する）。
+function poolPlan(env, { ks, L }) {
+  const { annMax, years } = env;
+  const maxD = Math.max(...annMax);
+  let RL = 0;
+  for (let i = 0; i <= annMax.length - L; i++) {
+    let s = 0;
+    for (let j = 0; j < L; j++) s += annMax[i + j];
+    if (s > RL) RL = s;
+  }
+  const P = maxD * ks + RL;
+  return { maxD, RL, P: Math.ceil(P), peakYear: years[annMax.indexOf(maxD)] };
+}
+
+// ---- §3.3 rule of three ------------------------------------------------------
+// ゼロ故障で言える唯一の統計的事実：偶発故障率の 95% 信頼上限 λ ≤ 3/N。
+// 由来：ポアソン過程で N 台年ゼロ件の尤度 e^{−λN} ≥ 0.05 ⇔ λ ≤ −ln(0.05)/N ≈ 3/N。
+// 有効なのは偶発域だけ。摩耗域（30年目以降のカーブ）には一切の情報を与えない——
+// この限定を明記することが査読防御の要点（§3.3）。副次効果として
+// 「η が現経過年に近く β が高い早期摩耗シナリオ」だけは棄却できる。
+function ruleOfThree(unitYears) {
+  if (unitYears <= 0) return { lambdaUpper: Infinity, annualUpper: Infinity };
+  return { lambdaUpper: 3 / unitYears };
+}
+
+// 延べ運用台年 N = Σ_c n_c × (現在年 − 納入年)。
+function totalUnitYears(cohorts, nowYear) {
+  let s = 0;
+  for (const c of cohorts) s += c.count * Math.max(0, nowYear - c.year);
+  return s;
+}
+
+// ---- §6 トリガー体系 ---------------------------------------------------------
+// 原則（§6.1）：摩耗バーストは急峻なので「超えてから」では L 年遅れる。
+// 全トリガーを調達リードタイム L 年ぶん手前（先読み）に置く。
+//   T1: 累積実績 ≥ α × 包絡線累積(now + L) → 追加調達の検討開始
+//   T2: 直近3年移動平均の年間故障数 > 包絡線 d(y) のバンド下限 → パラメータ更新
+//   T3: 摩耗域到達前（運用20年未満）に λ_upper を有意超過 → 共通原因故障の疑い（適用範囲外へ）
+// 注意（検証で見つけた仕様の穴）：運用初期は annMin ≈ 0 なので T2 が 1 件で発火し得る。
+// 本実装は T2 のしきい値に「rule of three の年間期待上限」を床として敷き、
+// 偶発域のノイズで発火しないようにする（保守性は損なわない——床はT3が受け持つ域）。
+function triggers(env, { nowYear, L, alpha, cohorts }) {
+  const { years, cumMax, annMin } = env;
+  const idxAhead = years.indexOf(nowYear + L);
+  const T1_level = idxAhead >= 0 ? alpha * cumMax[idxAhead] : null;
+  const idxNow = years.indexOf(nowYear);
+  const N = totalUnitYears(cohorts, nowYear);
+  const fleet = cohorts.reduce((s, c) => s + c.count, 0);
+  const lambdaFloor = (3 / Math.max(N, 1)) * fleet;          // 偶発域の年間期待上限（床）
+  const T2_level = idxNow >= 0 ? Math.max(annMin[idxNow], lambdaFloor) : null;
+  return { T1_level, T2_level, lambdaFloor };
+}
+
+// ---- §9.4 混合（frailty）の参考計算 -------------------------------------------
+// 主張の検証：環境不均一（η のばらつき）は母集団カーブを「平坦化」する。
+// η を ±spread に散らした 2 成分 50:50 混合の単年度ピークを、単一 η のピークと比べる。
+// ratio < 1 なら「単一ワイブルはピークを高めに見積もる＝保守側」の裏付けになる。
+function mixtureFlattening(cohorts, beta, eta, horizon, spread = 0.2) {
+  const single = cohortSeries(cohorts, beta, eta, horizon);
+  const lo = cohortSeries(cohorts, beta, eta * (1 - spread), horizon);
+  const hi = cohortSeries(cohorts, beta, eta * (1 + spread), horizon);
+  const mixed = single.years.map((_, i) => 0.5 * lo.d[i] + 0.5 * hi.d[i]);
+  const peakSingle = Math.max(...single.d);
+  const peakMixed = Math.max(...mixed);
+  return { peakSingle, peakMixed, ratio: peakMixed / peakSingle };
+}
+
+// ---- §9 感度分析の標準セット --------------------------------------------------
+// 「宣言した仮定が結論をどれだけ動かすか」を常に添付する（P3 の実務形）。
+function sensitivity(cohorts, base) {
+  const out = { Fa: [], L: [] };
+  for (const Fa of [0.20, 0.30, 0.50]) {
+    const env = envelope(cohorts, { ...base, Fa });
+    const plan = poolPlan(env, base);
+    out.Fa.push({ Fa, P: plan.P, maxD: plan.maxD, peakYear: plan.peakYear });
+  }
+  const env0 = envelope(cohorts, base);
+  for (const L of [1, 2, 3]) {
+    const t = triggers(env0, { ...base, L, cohorts });
+    const plan = poolPlan(env0, { ...base, L });
+    out.L.push({ L, T1: t.T1_level, P: plan.P, RL: plan.RL });
+  }
+  return out;
+}
+
+// ---- 入力（CSV: 納入年,台数）---------------------------------------------------
+function parseCohorts(text) {
+  const cohorts = [], errors = [];
+  String(text).replace(/\r\n?/g, '\n').split('\n').forEach((line, i) => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return;
+    const m = /^(\d{4})\s*[,\t]\s*(\d+)$/.exec(t);
+    if (m) cohorts.push({ year: +m[1], count: +m[2] });
+    else if (!/納入|year|delivery/i.test(t)) errors.push(`L${i + 1}: 読めない行「${t}」（例: 2010,100）`);
+  });
+  return { cohorts, errors };
+}
+
+/* ============================================================
+   チャート描画 — 包絡線を SVG 文字列に。純粋（DOM を触らない）。
+   設計方針（dataviz の手順に従う）:
+     ・軸は各図 1 本。二重軸は作らない
+     ・帯（バンド）＝βスイープの min–max、縁は 2px 線＋直接ラベル
+     ・状態色は予約語として使う：警戒=琥珀(T1/T2)、深刻=赤(ピーク・キャパ・先行窓)
+     ・グリッドは退く（白 6%）。文字は文字色（系列色で塗らない）
+     ・ホバー層は main.js が data-idx を拾って共通ツールチップを出す
+   ============================================================ */
+
+const C = {
+  band: '#3987e5', bandLo: '#199e70', warn: '#c98500', crit: '#e66767',
+  ink: '#e7ebf4', ink2: '#8a93a6', grid: 'rgba(255,255,255,0.06)', actual: '#f2f4f8',
+};
+const fmt = (v) => v >= 100 ? Math.round(v).toLocaleString() : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+
+function frame(W, H, padL, padB, yMax, years, unit) {
+  const padT = 30, padR = 16;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const x = (year) => padL + (year - years[0]) / (years[years.length - 1] - years[0]) * plotW;
+  const y = (v) => padT + plotH - (v / yMax) * plotH;
+  let g = '';
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {                          // 横グリッド＋y目盛り（退く色）
+    const v = yMax * i / ticks, yy = y(v);
+    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${C.grid}"/>`
+      + `<text x="${padL - 6}" y="${yy + 4}" fill="${C.ink2}" font-size="10" text-anchor="end">${fmt(v)}</text>`;
+  }
+  const step = Math.max(5, Math.round((years.length / 8) / 5) * 5);
+  for (const yr of years) if ((yr - years[0]) % step === 0)
+    g += `<text x="${x(yr)}" y="${H - padB + 16}" fill="${C.ink2}" font-size="10" text-anchor="middle">${yr}</text>`;
+  g += `<text x="${padL - 34}" y="${padT - 12}" fill="${C.ink2}" font-size="10">${unit}</text>`;
+  return { x, y, g, padT, plotH, padL, padR };
+}
+
+const poly = (pts) => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+// ---- 累積 D(t)：帯＋実績＋T1 検討開始線 --------------------------------------
+function cumChart(env, { W = 720, H = 300, actuals = [], T1curve = null, nowYear }) {
+  const { years, cumMax, cumMin } = env;
+  const yMax = Math.max(...cumMax) * 1.08;
+  const f = frame(W, H, 52, 26, yMax, years, '累積期待故障数（台）');
+  const up = years.map((yr, i) => [f.x(yr), f.y(cumMax[i])]);
+  const lo = years.map((yr, i) => [f.x(yr), f.y(cumMin[i])]).reverse();
+  let s = f.g;
+  s += `<path d="${poly(up)} ${poly(lo).replace('M', 'L')} Z" fill="${C.band}" fill-opacity="0.16"/>`;
+  s += `<path d="${poly(up)}" fill="none" stroke="${C.band}" stroke-width="2"/>`;
+  s += `<path d="${poly(years.map((yr, i) => [f.x(yr), f.y(cumMin[i])]))}" fill="none" stroke="${C.band}" stroke-width="1.4" stroke-dasharray="4 4" stroke-opacity="0.7"/>`;
+  // T1 検討開始線：α × 包絡線(t+L)。これより実績が上に来たら調達検討を「始める」線（§6.2）。
+  if (T1curve) {
+    s += `<path d="${poly(years.map((yr, i) => [f.x(yr), f.y(T1curve[i])]).filter((_, i) => T1curve[i] != null))}" fill="none" stroke="${C.warn}" stroke-width="1.6" stroke-dasharray="6 4"/>`;
+    const li = Math.min(years.length - 1, Math.floor(years.length * 0.72));
+    s += `<text x="${f.x(years[li])}" y="${f.y(T1curve[li]) - 6}" fill="${C.warn}" font-size="11">T1 検討開始線（α×L年先読み）</text>`;
+  }
+  if (nowYear >= years[0] && nowYear <= years[years.length - 1]) {
+    s += `<line x1="${f.x(nowYear)}" y1="${f.padT}" x2="${f.x(nowYear)}" y2="${f.padT + f.plotH}" stroke="${C.ink2}" stroke-dasharray="2 4"/>`
+      + `<text x="${f.x(nowYear) + 4}" y="${f.padT + 10}" fill="${C.ink2}" font-size="10">現在</text>`;
+  }
+  for (const a of actuals)                                     // 実績（白点・2pxリング）
+    s += `<circle cx="${f.x(a.year)}" cy="${f.y(a.cum)}" r="4" fill="${C.actual}" stroke="#0e131d" stroke-width="2"/>`;
+  const mid = Math.floor(years.length * 0.45);
+  s += `<text x="${up[mid][0]}" y="${up[mid][1] - 8}" fill="${C.band}" font-size="11">包絡線上縁（βバンド最悪）</text>`;
+  s += hoverRects(f, years, W, H);
+  return svgWrap(W, H, s);
+}
+
+// ---- 単年度 d(y)：棒＋T2 しきい線＋ピーク＋キャパ＋先行 L 年窓 -----------------
+function annChart(env, plan, { W = 720, H = 300, L = 2, T2floor = 0 }) {
+  const { years, annMax, annMin, peak } = env;
+  const yMax = Math.max(...annMax) * 1.15;
+  const f = frame(W, H, 52, 26, yMax, years, '単年度消費（台/年）');
+  let s = f.g;
+  const bw = Math.max(2, Math.min(8, (W - 80) / years.length - 2));
+  years.forEach((yr, i) => {                                   // 細い棒・角丸・面は帯色
+    const h = f.y(0) - f.y(annMax[i]);
+    if (h < 0.5) return;
+    s += `<rect data-idx="${i}" x="${f.x(yr) - bw / 2}" y="${f.y(annMax[i])}" width="${bw}" height="${h}" rx="2" fill="${C.band}" fill-opacity="0.8"/>`;
+  });
+  // T2 しきい線：βバンド下限の d(y)（＋偶発域の床）。実測3年平均がこれを超えたら更新（§6.2）。
+  const t2 = years.map((yr, i) => [f.x(yr), f.y(Math.max(annMin[i], T2floor))]);
+  s += `<path d="${poly(t2)}" fill="none" stroke="${C.bandLo}" stroke-width="2" stroke-dasharray="5 4"/>`;
+  s += `<text x="${t2[Math.floor(t2.length * 0.65)][0]}" y="${t2[Math.floor(t2.length * 0.65)][1] - 7}" fill="${C.bandLo}" font-size="11">T2 しきい線（β下限＋偶発床）</text>`;
+  // 修繕キャパ基準線 = max d(y)（§5：この高さを要員・予算でロックする）。
+  s += `<line x1="${f.padL}" y1="${f.y(plan.maxD)}" x2="${W - 16}" y2="${f.y(plan.maxD)}" stroke="${C.crit}" stroke-width="1.6" stroke-dasharray="6 4"/>`
+    + `<text x="${f.padL + 4}" y="${f.y(plan.maxD) - 6}" fill="${C.crit}" font-size="11">単年度キャパ基準 = ${fmt(plan.maxD)} 台/年</text>`;
+  // 調達先行窓：ピークの L 年手前。ここまでに発注を終えていないと間に合わない（§6.1）。
+  const winX0 = f.x(peak.year - L), winX1 = f.x(peak.year);
+  s += `<rect x="${winX0}" y="${f.padT}" width="${winX1 - winX0}" height="${f.plotH}" fill="${C.crit}" fill-opacity="0.07"/>`
+    + `<text x="${winX0 + 4}" y="${f.padT + 12}" fill="${C.crit}" font-size="10">調達先行窓 L=${L}年</text>`;
+  // ピーク（最も過酷な単年度）
+  s += `<circle cx="${f.x(peak.year)}" cy="${f.y(peak.value)}" r="4.5" fill="${C.crit}"/>`
+    + `<text x="${f.x(peak.year) + 8}" y="${f.y(peak.value) - 4}" fill="${C.crit}" font-size="11">ピーク ${peak.year}年・${fmt(peak.value)}台（β=${peak.beta.toFixed(2)}）</text>`;
+  s += hoverRects(f, years, W, H);
+  return svgWrap(W, H, s);
+}
+
+// ホバー用の透明帯（年ごと）。main.js が data-idx を拾ってツールチップを出す。
+function hoverRects(f, years, W, H) {
+  let s = '';
+  const w = (W - f.padL - f.padR) / years.length;
+  years.forEach((yr, i) => {
+    s += `<rect class="hov" data-idx="${i}" x="${f.x(yr) - w / 2}" y="${f.padT}" width="${w}" height="${f.plotH}" fill="transparent"/>`;
+  });
+  return s;
+}
+
+const svgWrap = (W, H, inner) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" font-family="ui-sans-serif,system-ui,sans-serif">${inner}</svg>`;
+
+/* ============================================================
+   配線層 — 入力を読み、コア（model.js）で計算し、チャート（charts.js）と
+   数値タイルに流し込む。DOM を触るのはこのファイルだけ。
+   計算はすべて純粋関数なので、ここは「読んで・呼んで・描く」以外をしない。
+   ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const num = (v, d = 1) => v == null ? '—' : (v >= 1000 ? Math.round(v).toLocaleString() : Number(v.toFixed(d)).toLocaleString());
+
+function readParams() {
+  return {
+    Fa: +$('in-fa').value, Tdesign: +$('in-td').value,
+    betaMin: +$('in-bmin').value, betaMax: +$('in-bmax').value,
+    L: Math.max(1, Math.round(+$('in-l').value)), ks: +$('in-ks').value,
+    alpha: +$('in-alpha').value, nowYear: Math.round(+$('in-now').value),
+  };
+}
+
+// 評価の最終年は入力にしない：βバンド下限（裾が長い）のピークまで必ず含む年
+// （最終納入年 + T_design + 40）を自動で取る。knob を減らすのも手数の削減。
+const horizonOf = (cohorts, Tdesign) => Math.max(...cohorts.map((c) => c.year)) + Tdesign + 40;
+
+function compute() {
+  const { cohorts, errors } = parseCohorts($('in-cohorts').value);
+  $('err-cohorts').textContent = errors.join('\n');
+  if (!cohorts.length) return null;
+  const p = readParams();
+  if (!(p.betaMin > 0) || !(p.betaMax >= p.betaMin) || !(p.Fa > 0 && p.Fa < 1)) return null;
+  const params = { ...p, horizon: horizonOf(cohorts, p.Tdesign) };
+  const env = envelope(cohorts, params);
+  const plan = poolPlan(env, params);
+  const trg = triggers(env, { ...params, cohorts });
+  const N = totalUnitYears(cohorts, p.nowYear);
+  const r3 = ruleOfThree(N);
+  // T1 を「線」として引く：各年 t に対し α × 上縁(t+L)。t+L が地平線を越えたら打ち切り。
+  const T1curve = env.years.map((y) => {
+    const j = env.years.indexOf(y + params.L);
+    return j >= 0 ? params.alpha * env.cumMax[j] : null;
+  });
+  const a = parseCohorts($('in-actuals').value);
+  $('err-actuals').textContent = a.errors.join('\n');
+  const actuals = a.cohorts.map((c) => ({ year: c.year, cum: c.count }));
+  return { cohorts, params, env, plan, trg, N, r3, T1curve, actuals };
+}
+
+function tiles(m) {
+  const { env, plan, trg, r3, N, params } = m;
+  const t = [
+    ['crit', 'ピーク単年度 max d(y)', `${num(plan.maxD)}<small> 台/年</small>`,
+      `${plan.peakYear}年・β=${env.peak.beta.toFixed(1)} が最悪 — 修繕キャパはこの高さでロック（§5・P2）`],
+    ['band', 'プール予備 P', `${plan.P.toLocaleString()}<small> 台</small>`,
+      `= max d×k_s(${params.ks}) + R_L(${num(plan.RL)}) — R_L は最悪の L=${params.L} 年窓（§5）`],
+    ['warn', `T1 検討開始線（${params.nowYear}年）`, `${num(trg.T1_level)}<small> 台</small>`,
+      `= α(${params.alpha}) × 包絡線累積(${params.nowYear + params.L}) — 累積実績がここに達したら調達検討（§6.2）`],
+    ['lo', `T2 更新しきい値（${params.nowYear}年）`, `${num(trg.T2_level, 2)}<small> 台/年</small>`,
+      `β下限の d(y) と偶発床 ${num(trg.lambdaFloor, 2)} の大きい方 — 3年移動平均で判定（§6.2）`],
+    ['', '偶発故障率の上限 λ', `${r3.lambdaUpper < 1 ? r3.lambdaUpper.toExponential(1) : '∞'}<small> /台年</small>`,
+      `rule of three：${N.toLocaleString()} 台年ゼロ故障 → λ≤3/N（95%CL・偶発域のみ §3.3）`],
+  ];
+  $('tiles').innerHTML = t.map(([cls, k, v, f]) =>
+    `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="f">${f}</div></div>`).join('');
+}
+
+function sensTables(m) {
+  const s = sensitivity(m.cohorts, m.params);
+  const fa = s.Fa.map((r) => `<tr><td>F_a = ${r.Fa.toFixed(2)}${r.Fa === m.params.Fa ? '（現在）' : ''}</td><td>${num(r.maxD)}</td><td>${r.peakYear}</td><td>${r.P.toLocaleString()}</td></tr>`).join('');
+  const ll = s.L.map((r) => `<tr><td>L = ${r.L} 年${r.L === m.params.L ? '（現在）' : ''}</td><td>${num(r.T1)}</td><td>${num(r.RL)}</td><td>${r.P.toLocaleString()}</td></tr>`).join('');
+  $('sens').innerHTML =
+    `<table><thead><tr><th>アンカー確率</th><th>max d(y) 台/年</th><th>ピーク年</th><th>P 台</th></tr></thead><tbody>${fa}</tbody></table>
+     <p class="note">F_a はピーク高さと P をほぼ比例で動かす（ピーク年はほとんど動かない）——「どれだけ壊れるか」の仮定であり「いつ」ではないから。</p>
+     <table style="margin-top:10px"><thead><tr><th>リードタイム</th><th>T1 レベル 台</th><th>R_L 台</th><th>P 台</th></tr></thead><tbody>${ll}</tbody></table>
+     <p class="note">L が延びるほど T1 は上がり（早めに動く）、R_L と P も増える——先読み距離の代価。</p>`;
+  const beta = (m.params.betaMin + m.params.betaMax) / 2;
+  const mix = mixtureFlattening(m.cohorts, beta, etaFromAnchor(beta, m.params.Tdesign, m.params.Fa), m.params.horizon);
+  $('mix-note').innerHTML =
+    `混合チェック（§9.4）：η を ±20% に散らした 50:50 混合のピークは単一ワイブルの <b>${(mix.ratio * 100).toFixed(1)}%</b>` +
+    `（${num(mix.peakMixed)} vs ${num(mix.peakSingle)} 台/年）。環境不均一はピークを均すので、単一ワイブルの計画は保守側に立つ。`;
+}
+
+function yearTable(m) {
+  const { env, T1curve } = m;
+  const rows = env.years.map((y, i) =>
+    `<tr><td>${y}</td><td>${num(env.cumMin[i])}</td><td>${num(env.cumMax[i])}</td><td>${num(env.annMin[i], 2)}</td><td>${num(env.annMax[i])}</td><td>${T1curve[i] == null ? '—' : num(T1curve[i])}</td></tr>`).join('');
+  $('year-table').innerHTML =
+    `<table><thead><tr><th>年</th><th>累積 下縁</th><th>累積 上縁</th><th>単年度 下縁</th><th>単年度 上縁</th><th>T1 線</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// 共通ツールチップ：charts.js が置いた透明帯（.hov[data-idx]）を拾う。
+// リスナは boot で一度だけ張り、モデルは module 変数から読む（再描画で増殖させない）。
+let MODEL = null;
+function bindTooltip(container) {
+  const tip = $('tip');
+  container.addEventListener('pointermove', (e) => {
+    const r = e.target.closest('.hov');
+    if (!r || !MODEL) { tip.hidden = true; return; }
+    const i = +r.dataset.idx, { env, T1curve } = MODEL;
+    tip.innerHTML = `<b>${env.years[i]}年</b><br>累積: ${num(env.cumMin[i])} 〜 ${num(env.cumMax[i])} 台<br>` +
+      `単年度: ${num(env.annMin[i], 2)} 〜 ${num(env.annMax[i])} 台/年` +
+      (T1curve[i] != null ? `<br>T1 線: ${num(T1curve[i])} 台` : '');
+    tip.hidden = false;
+    const x = Math.min(e.clientX + 14, innerWidth - 280), y = Math.min(e.clientY + 14, innerHeight - 90);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  container.addEventListener('pointerleave', () => { tip.hidden = true; });
+}
+
+function render() {
+  const m = compute();
+  if (!m) return;
+  MODEL = m;
+  tiles(m);
+  $('chart-cum').innerHTML = cumChart(m.env, { actuals: m.actuals, T1curve: m.T1curve, nowYear: m.params.nowYear });
+  $('chart-ann').innerHTML = annChart(m.env, m.plan, { L: m.params.L, T2floor: m.trg.lambdaFloor });
+  sensTables(m);
+  yearTable(m);
+}
+
+function boot() {
+  let t = null;
+  const onInput = () => { clearTimeout(t); t = setTimeout(render, 200); };  // 打鍵中は待つ
+  for (const el of document.querySelectorAll('input,textarea')) el.addEventListener('input', onInput);
+  bindTooltip($('chart-cum'));
+  bindTooltip($('chart-ann'));
+  render();
+}
+
+boot();
+</script>
+</body>
+</html>
