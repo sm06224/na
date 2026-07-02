@@ -123,7 +123,13 @@ function drawFlow(model, L, opts = {}) {
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
     let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
     if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="10" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
-    g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
+    if (n.img) {
+      g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`
+        + `<image href="${esc(n.img)}" x="${n.x + 4}" y="${n.y + 4}" width="${n.w - 8}" height="${n.h - 26}" preserveAspectRatio="xMidYMid meet"/>`
+        + `<text x="${n.x + n.w / 2}" y="${n.y + n.h - 8}" fill="#e7ebf4" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`;
+    } else {
+      g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
+    }
     if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
     parts.push(g + `</g>`);
     if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
