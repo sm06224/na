@@ -88,6 +88,7 @@
   .c-madara:hover { background: linear-gradient(160deg, rgba(214,180,130,.15), rgba(120,58,30,.12) 55%, rgba(38,30,26,.10)); }
   .c-mure:hover { background: linear-gradient(165deg, rgba(58,47,94,.22), rgba(122,79,110,.14) 60%, rgba(200,119,90,.12)); }
   .c-studio:hover { background: linear-gradient(160deg, rgba(106,169,255,.14), rgba(122,209,176,.06)); }
+  .c-envelope:hover { background: linear-gradient(160deg, rgba(57,135,229,.14), rgba(25,158,112,.08)); }
 
   .tools { display: flex; flex-direction: column; align-items: center; gap: 1.4rem; width: min(620px, 100%); }
   .tools-head { text-align: center; }
@@ -423,6 +424,14 @@
         <p>Mermaid で書けて、グリグリ動かせる作図エディタ。ガント・フローチャート・シーケンス図・クラス図を、みんなが知っている Mermaid 記法でそのまま書ける。構文ハイライト・検証・補完・アンドゥ/リドゥ・PNG/SVG 書き出しに加え、CSV/TSV の流し込み（貼る・ドロップ）、ポトペタ編集（タップで選択→引っぱって接続、Shift で複数選択→整列、ダブルタップでリネーム/追加）、click 記法のハイパーリンク、スクショの貼り付け埋め込み、draw.io 形式やオートシェイプ向け SVG コピーでの持ち出し、ピンチズームつき。Mermaid は自動整列だけだが、studio は手で置いた位置を保持する——保持先は %% コメントなので本物の Mermaid でもそのまま描ける。位置は意味部を汚さないので、次の AI がきれいな差分で続けられる。1 図 ＝ フル機能エディタ同梱の単一 HTML（オフライン）。</p>
         <div class="tags"><span class="tag">Mermaid</span><span class="tag">gantt</span><span class="tag">flowchart</span><span class="tag">sequence</span><span class="tag">class</span><span class="tag">CSV</span><span class="tag">draw.io</span><span class="tag">editor</span><span class="tag">single-file</span></div>
         <span class="go">エディタをひらく →</span>
+      </a>
+
+      <a class="card c-envelope" href="envelope/">
+        <span class="glyph">📈</span>
+        <h2>envelope <span class="en">/ 信頼性包絡線</span></h2>
+        <p>まだ 1 台も壊れていない数千台のフリートのために、予備品をいくつ・いつ買うか。ゼロ故障からは何も推定できない——だから推定せず「宣言」する：設計寿命でのアンカー確率とワイブル形状のバンドを計画仮定として置き、バンド内の全曲線をスイープして保守側の境界（包絡線）を張る。実績が境界に近づいたら、調達リードタイムぶん手前で鳴るトリガー（T1/T2/T3）で動く。累積・単年度の包絡線、ピークと修繕キャパ基準、プール予備 P、rule of three の故障率上限、感度分析まで一画面。数理コアは仕様書の主張を一つずつテストで裏取り済みで、画面の数字の脇には「なぜ」の注記（仕様の節番号つき）。CSV を流し込むだけ・オフライン単一 HTML。</p>
+        <div class="tags"><span class="tag">tool</span><span class="tag">Weibull</span><span class="tag">envelope</span><span class="tag">spare parts</span><span class="tag">rule of three</span><span class="tag">sensitivity</span><span class="tag">single-file</span></div>
+        <span class="go">包絡線を張る →</span>
       </a>
     </div>
   </section>
