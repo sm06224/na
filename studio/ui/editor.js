@@ -10,6 +10,7 @@ import { serialize } from '../engine/serialize.js';
 import { draw } from '../render/draw.js';
 import { addDays } from '../engine/date.js';
 import { csvToMermaid } from '../engine/import.js';
+import { toDrawio } from '../engine/drawio.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -92,7 +93,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -527,8 +528,48 @@ export function boot() {
     else if (x === 'mmd') download(name + '.mmd', serialize(model), 'text/plain');
     else if (x === 'svg') { const s = canvas.querySelector('svg'); download(name + '.svg', '<?xml version="1.0"?>\n' + s.outerHTML, 'image/svg+xml'); }
     else if (x === 'png') exportPng(name);
+    else if (x === 'drawio') { download(name + '.drawio', toDrawio(model, L), 'application/xml'); toast('.drawio を保存しました（draw.io で開けます）'); }
+    else if (x === 'copydrawio') { try { await navigator.clipboard.writeText(toDrawio(model, L)); toast('draw.io XML をコピーしました（draw.io に貼り付け）'); } catch (_) { toast('コピーできませんでした'); } }
+    else if (x === 'copysvg') copySvg();
+    else if (x === 'copypng') copyPng();
     else if (x === 'html') { try { download(name + '.html', await standalone(serialize(model)), 'text/html'); toast('単一 HTML を保存しました'); } catch (_) { toast('HTML 化に失敗（オンラインのエディタでお試しを）'); } }
   });
+  // SVG をクリップボードへ：PowerPoint に貼って「図形に変換」すればオートシェイプになる。
+  async function copySvg() {
+    const el = canvas.querySelector('svg'); if (!el) return;
+    const xml = '<?xml version="1.0"?>\n' + new XMLSerializer().serializeToString(el);
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        'image/svg+xml': new Blob([xml], { type: 'image/svg+xml' }),
+        'text/plain': new Blob([xml], { type: 'text/plain' }),
+      })]);
+      toast('SVG をコピーしました（PowerPoint で図形に変換できます）');
+    } catch (_) {
+      try { await navigator.clipboard.writeText(xml); toast('SVG をテキストとしてコピーしました'); }
+      catch (_2) { toast('コピーできませんでした'); }
+    }
+  }
+  // PNG をクリップボードへ（そのまま貼れる画像）。
+  function copyPng() {
+    const el = canvas.querySelector('svg'); if (!el) return;
+    const xml = new XMLSerializer().serializeToString(el);
+    const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      const k = 2, c = document.createElement('canvas');
+      c.width = Math.ceil(el.viewBox.baseVal.width * k); c.height = Math.ceil(el.viewBox.baseVal.height * k);
+      const g = c.getContext('2d'); g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      g.scale(k, k); g.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+      c.toBlob(async (b) => {
+        if (!b) { toast('PNG 化に失敗しました'); return; }
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); toast('PNG をコピーしました'); }
+        catch (_) { toast('コピーできませんでした'); }
+      });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('PNG 化に失敗しました'); };
+    img.src = url;
+  }
+
   // SVG → 2 倍解像度の PNG（背景を敷いてから焼く）。
   function exportPng(name) {
     const s = canvas.querySelector('svg'); if (!s) return;
@@ -573,11 +614,39 @@ export function boot() {
   $('csvFile').onchange = async (e) => { const f = e.target.files[0]; if (f) runImport(await f.text()); e.target.value = ''; };
   // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
   document.addEventListener('dragover', (e) => e.preventDefault());
-  document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) runImport(await f.text()); });
-  // エディタの外に Ctrl+V：表（Excel の TSV そのまま）や Mermaid を貼るだけで図に。
-  document.addEventListener('paste', (e) => {
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0]; if (!f) return;
+    if (f.type.startsWith('image/')) embedImage(await fileToDataUrl(f), f.name.replace(/\.[^.]+$/, ''));
+    else runImport(await f.text());
+  });
+  // 画像（スクショ）をノードに埋める：選択中ノードに貼り付け、なければ新ノードを作る。
+  function embedImage(dataUrl, label) {
+    if (model.kind !== 'flowchart') { toast('画像はフローチャートに埋められます'); return; }
+    let id;
+    if (selected.size === 1) { id = [...selected][0]; }
+    else {
+      let k = 1; while (model.items.some((n) => n.id === 'img' + k)) k++;
+      id = 'img' + k;
+      model.items.push({ type: 'node', id, label: label || 'スクショ', shape: 'rect' });
+      model.order.push(id);
+      const r = stage.getBoundingClientRect();
+      const [wx, wy] = toWorld(r.left + r.width / 2, r.top + r.height / 2);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+    }
+    model.images[id] = dataUrl;
+    selected.clear(); selected.add(id);
+    commitModel(); toast('画像を埋めました');
+  }
+  const fileToDataUrl = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+
+  // エディタの外に Ctrl+V：画像はノードへ、表（Excel の TSV そのまま）や Mermaid は図に。
+  document.addEventListener('paste', async (e) => {
     const t = e.target;
     if (t === src || t === inline || t.tagName === 'TEXTAREA' || t.tagName === 'INPUT') return;
+    const items = [...(e.clipboardData?.items || [])];
+    const imgItem = items.find((it) => it.type.startsWith('image/'));
+    if (imgItem) { e.preventDefault(); embedImage(await fileToDataUrl(imgItem.getAsFile())); return; }
     const text = e.clipboardData?.getData('text/plain') || '';
     if (!text.trim()) return;
     const head = text.trim().split(/\s/)[0];

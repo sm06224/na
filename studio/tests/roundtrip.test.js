@@ -94,6 +94,24 @@ test('入れ子 subgraph：serialize→parse で親子関係が保たれる', ()
   assert.deepEqual(parse(out).groups, m.groups);
 });
 
+test('画像埋め込み：%% img は往復で保たれ、レイアウトで箱が大きくなる', async () => {
+  const { layoutFlow } = await import('../engine/layout.js');
+  const src = `flowchart TD
+  shot[スクショ]
+  a[普通]
+%% @layout
+%% img shot data:image/png;base64,abc123`;
+  const m = parse(src);
+  assert.equal(m.images.shot, 'data:image/png;base64,abc123');
+  const re = parse(serialize(m));
+  assert.deepEqual(re.images, m.images);
+  assert.match(serialize(m), /%% img shot data:image\/png;base64,abc123/);
+  const L = layoutFlow(m);
+  const shot = L.nodes.find((n) => n.id === 'shot'), plain = L.nodes.find((n) => n.id === 'a');
+  assert.equal(shot.img, m.images.shot);
+  assert.ok(shot.h > plain.h, '画像ノードが大きくなっていない');
+});
+
 test('Mermaid 互換：本物の Mermaid 記法をそのまま読める', () => {
   const m = parse(`gantt
     title A Gantt Diagram

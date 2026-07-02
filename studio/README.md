@@ -33,7 +33,13 @@
 - **ライブ・ドラッグ可能プレビュー** — ホイールでズーム、空きをドラッグでパン、フィット、要素をドラッグで配置（8px スナップ）
 - **スニペット挿入**（＋タスク／＋ノード／＋エッジ…）と**サンプル**切替
 - **アンドゥ／リドゥ** — Ctrl+Z / Ctrl+Y。ドラッグやスニペット挿入も履歴に入る
-- **エクスポート** — DSL コピー／`.mmd`／`SVG`／`PNG`（2 倍解像度）／**単一 HTML**（その図だけで動くエディタを書き出す)
+- **エクスポート** — DSL コピー／`.mmd`／`SVG`／`PNG`（2 倍解像度）／**単一 HTML**（その図だけで動くエディタを書き出す）
+
+### 他のツールへ持ち出す（オートシェイプ・draw.io・画像）
+
+- **`.drawio` を保存／draw.io XML をコピー** — ただの絵ではなく**編集できる図形**で持ち出す。ノードは対応するオートシェイプ（角丸・菱形・円柱・六角…）、フロー/クラスの**エッジはノードに接続済み**（draw.io で動かしてもついてくる）、クラスは swimlane＋stackLayout の**純正 UML クラス**。ガント・シーケンスも棒/ライフライン/矢印の図形として編集可能
+- **SVG をコピー** — クリップボードに `image/svg+xml` で載せるので、**PowerPoint に貼って「図形に変換」すればオートシェイプ**として編集できる。**PNG をコピー**はそのまま貼れる画像
+- **画像（スクショ）の埋め込み** — 画像を**貼り付け（Ctrl+V）またはドロップ**すると、選択中ノードに付く（未選択なら新しい画像ノードが生える）。保存先は `%% img id dataURL` ——コメントなので**本物の Mermaid でもそのまま描ける**。draw.io 出力にも image シェイプとして写る
 
 ### 手数が減る（ポトペタ・流し込み・リンク）
 
@@ -121,7 +127,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 37 tests
+node --test tests/*.test.js            # 44 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）
@@ -137,7 +143,8 @@ studio/
 │  ├─ parse.js                       Mermaid（gantt/flowchart/sequence/class）→ モデル（意味部＋%% @layout を分離）
 │  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
 │  ├─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
-│  └─ import.js                      流し込み：CSV/TSV → Mermaid（日英ヘッダ吸収・link 列対応）
+│  ├─ import.js                      流し込み：CSV/TSV → Mermaid（日英ヘッダ吸収・link 列対応）
+│  └─ drawio.js                      持ち出し：モデル＋レイアウト → draw.io（mxGraph XML・編集できる図形）
 ├─ render/draw.js                    モデル＋配置 → SVG 文字列（形状・状態色・矢印）
 ├─ build.js                          エディタ一式を畳んで 1 図 1 枚の単一 HTML に
 ├─ examples/*.mmd                    図のソース（Mermaid）

@@ -182,7 +182,10 @@ export function layoutFlow(model) {
       const s = sizeOf(id);
       const d = reverse ? (maxDepth - c) : c;
       const main = (layerPos[d] ?? layerPos[c]);
-      const base = { id, label: byId.get(id).label, shape: byId.get(id).shape, w: s.w, h: s.h };
+      const img = model.images?.[id];
+      const base = { id, label: byId.get(id).label, shape: byId.get(id).shape,
+        w: img ? Math.max(s.w, 120) : s.w, h: img ? 96 : s.h };
+      if (img) base.img = img;
       if (byId.get(id).link) base.link = byId.get(id).link;
       if (vertical) placed.set(id, { ...base, x: cross, y: main });
       else placed.set(id, { ...base, x: main, y: cross });
