@@ -52,6 +52,23 @@
   details{margin-top:10px} summary{cursor:pointer;color:var(--ink2);font-size:13px}
   .vnote li{font-size:13px;margin:6px 0} .vnote li b{color:var(--bandLo)}
   .vnote li.gap b{color:var(--warn)}
+  /* 自前 TeX レンダラ（js/ui/tex.js）の組版。数式は数学書の顔で。 */
+  .tx{font-family:"STIX Two Math","Cambria Math",Georgia,"Times New Roman",serif;font-size:15px;white-space:nowrap}
+  .tx i{font-style:italic;font-family:inherit}
+  .tx .rm{font-style:normal}
+  .tx .fn{font-style:normal;margin:0 1px}
+  .tx .sp{display:inline-block;width:.18em}
+  .tx .q{display:inline-block;width:1em} .tx .qq{display:inline-block;width:2em}
+  .tx sup,.tx sub{font-size:.68em}
+  .tx .fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-0.6em;margin:0 3px;line-height:1.15}
+  .tx .fr .nu{padding:0 4px}
+  .tx .fr .de{border-top:1px solid currentColor;padding:0 4px}
+  .tx .mop{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-0.55em;margin:0 2px;line-height:1.05}
+  .tx .mop .mo{font-style:normal}
+  .tx .mop .ml{font-size:.62em}
+  .tx .bx{border:1px solid var(--ink2);border-radius:3px;padding:1px 6px}
+  #math-table td:first-child{white-space:nowrap;padding-right:16px}
+  #math-table .ref{color:var(--ink2);font-size:11px;white-space:nowrap}
   .badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
   .badge.ok{background:rgba(25,158,112,.16);color:var(--bandLo)}
   .badge.warn{background:rgba(201,133,0,.16);color:var(--warn)}
@@ -181,6 +198,13 @@
     <h2>感度分析 — 宣言した仮定はどれだけ結論を動かすか（§9）</h2>
     <div class="scroll" id="sens"></div>
     <p class="note" id="mix-note"></p>
+  </div>
+
+  <div class="card">
+    <h2>数理 — 式で読む</h2>
+    <div class="scroll" id="math-table"></div>
+    <p class="note">数式の組版も自前（<code>js/ui/tex.js</code>・依存ゼロのまま。KaTeX を積むと §8「外部依存なし」が破れる）。
+    導出の全文は <a href="https://github.com/sm06224/na/blob/main/envelope/MATH.md">MATH.md</a>——GitHub 上で TeX レンダリングされる。</p>
   </div>
 
   <div class="card vnote">
