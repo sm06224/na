@@ -52,12 +52,15 @@ const SKETCH_FONT = `'Segoe Print','Bradley Hand','Klee One','Yuji Syuku','Comic
 
 function wrap(L, inner, opts = {}) {
   const T = themeOf(opts);
-  const bg = opts.bg ? `<rect x="0" y="0" width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" fill="${opts.bg}"/>` : '';
+  // 無限キャンバス：viewBox は内容の bbox（x0,y0 起点）。負座標へドラッグしても切れない。
+  const x0 = Math.floor(L.x0 || 0), y0 = Math.floor(L.y0 || 0);
+  const W = Math.ceil(L.width), H = Math.ceil(L.height);
+  const bg = opts.bg ? `<rect x="${x0}" y="${y0}" width="${W}" height="${H}" fill="${opts.bg}"/>` : '';
   const sketch = !!opts.sketch;
   const font = sketch ? SKETCH_FONT : 'ui-sans-serif,system-ui,sans-serif';
   const body = sketch ? SKETCH_FILTER + `<g filter="url(#sketch)">${inner}</g>` : inner;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.ceil(L.width)} ${Math.ceil(L.height)}" `
-    + `width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" font-family="${font}">`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x0} ${y0} ${W} ${H}" `
+    + `width="${W}" height="${H}" font-family="${font}">`
     + bg + defs(T) + body + '</svg>';
 }
 

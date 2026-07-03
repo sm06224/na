@@ -353,7 +353,7 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style|theme|bg)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -363,6 +363,7 @@ export function parse(text) {
         else if (a[0] === 'style' && a[1]) model.meta.style = a[1];   // 見た目（sketch など）。意味部は汚さない
         else if (a[0] === 'theme' && a[1]) model.meta.theme = a[1];    // light / dark
         else if (a[0] === 'bg' && a[1]) model.meta.bg = a[1];          // 書き出しにも焼く背景色
+        else if (a[0] === 'fold') model.layout.fold = d.replace(/^fold\s+/, '').split('|').filter(Boolean);   // 畳んだゾーン（名前に空白があるので | 区切り）
       }
       continue;                                            // ふつうのコメントは捨てる
     }

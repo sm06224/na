@@ -23,6 +23,15 @@
 
 > この作品は **依存ゼロ規則の対象外**。とはいえ「ドラッグ位置の保持」と「オフライン単一 HTML」を守るため、描画エンジンは自前（決定的・DOM 非依存）にしてあります。Mermaid 記法の認識・編集体験・出力に力を注いでいます。
 
+## 現場の構成図に耐える（v9）
+
+- **IT だけじゃない**：OT / 制御系の役割が一級市民——`:scada` `:plc` `:hmi` `:historian` `:ews` `:sensor` `:drive` `:robot` `:cnc` `:sis` `:rtu` `:dcs` `:gateway` `:diode`（データダイオード）。工場の Purdue モデル的な「情報LAN と制御LAN が FW とダイオード越しにつながる」図がそのまま書ける
+- **ラインに識別**：`a -- b :冗長, vlan 100, ラベル`——冗長/ha/lacp は**二重線**、予備/stby は**破線**、幹線は太線、一方向は矢印（ダイオード向け）、**vlan は所属ネットワークの色とチップ**に。同じ 2 点間の複数本は自動でずらして描く（**多重ネットワーク**が読める）
+- **保守分界フェンス**：`fence f1[保守分界（当社/ベンダー保守）] :v|h`——⚑ 付きの重い破線。ドラッグで境目に置く
+- **ゾーンの折りたたみ**：ゾーン見出しの **▾/▸ をタップ**すると「▸ ライン1 ・ 3 台」の札に畳まれ、中の機器への線は札に付け替わる。保存先は `%% fold`（コメント）なので意味部は汚れない。大きな図はドメイン単位で畳んで俯瞰する
+- **無限キャンバス**：viewBox が中身の bbox を常に追いかける。**どこへドラッグしても切れない**（上端の余白も確保）
+- **左ペインは畳める**：「◧ コード」で図に全画面を譲る。境界ドラッグ・既定幅復帰と併せて描画エリアが主役
+
 ## システム構成図を、行で書く（v8）
 
 studio の拡張図種 **`infra`**——Mermaid には無い、インフラ屋のための一枚。既存ツールは「箱を並べ、線を引き、属性を書く」を全部人間がやるが、ここでは**知っていることを行で書くだけ**：
@@ -164,7 +173,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 64 tests
+node --test tests/*.test.js            # 73 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）

@@ -74,37 +74,48 @@ export const SAMPLES = {
       w-->>u: エラー表示
     end
     Note over u,w: 3回失敗でロック`,
-  'インフラ — 社内ネットワーク': `infra
-    title 本社ネットワーク構成
-    zone 本社ビル {
-      zone 3F 営業部 {
-        sw3f[SW-3F] :access, IOS15.9, vlan 30
-        pc3f[営業PC x40] :pc, Win11
-        ap3f[AP-3F] :ap, vlan 90
-      }
-      zone サーバ室 {
-        core[CORE-SW] :core, NX-OS10
-        fw[FW-01] :firewall, FortiOS7
-        app1[業務APサーバ] :server, RHEL9, 10.0.10.21
-        db1[基幹DB] :db, Oracle19c, 10.0.10.31
-        nas[NAS] :storage, 10.0.10.41
-      }
+  'インフラ — 工場 IT/OT 統合': `infra
+    title 工場ネットワーク（IT/OT 統合）
+    zone 本社 IT {
+      core[CORE-SW] :core, NX-OS
+      erp[ERP] :server, RHEL9, 10.0.10.21
+      db1[基幹DB] :db, Oracle19c, 10.0.10.31
     }
-    zone DC（DR サイト） {
-      db2[待機DB] :db, Oracle19c, 172.16.10.31
+    zone DMZ {
+      fw1[FW-IT/OT] :firewall, FortiOS
+      diode[データダイオード] :diode
+      hist2[Historianミラー] :historian, Win2022
     }
-    inet[インターネット] :cloud
-    bus lan[基幹LAN] :h, vlan 10, 10.0.10.0/24
-    bus dmz[DMZ] :h, vlan 20, 192.168.1.0/24
-    core -- lan
-    app1 -- lan
-    db1 -- lan
-    nas -- lan
-    fw -- dmz
-    fw -- inet
-    sw3f -- core
-    ap3f -- sw3f
-    db1 -- db2`,
+    zone 工場 OT {
+      zone 中央監視室 {
+        scada[SCADA] :scada, Win2019, 192.168.100.10
+        hmi1[HMI-1] :hmi
+        ews[エンジニアリングWS] :ews, Win10
+      }
+      zone ライン1 {
+        plc1[PLC-L1] :plc, vlan 110
+        drv1[インバータ群] :drive
+        sen1[温度センサ群] :sensor
+      }
+      hist[Historian] :historian, 192.168.100.20
+    }
+    bus itlan[情報LAN] :h, vlan 10, 10.0.10.0/24
+    bus ctl[制御LAN] :h, vlan 100, 192.168.100.0/24
+    fence f1[保守分界（当社/ベンダー保守）] :v
+    core -- itlan :幹線
+    erp -- itlan
+    db1 -- itlan
+    fw1 -- itlan
+    fw1 -- diode
+    diode -- hist2 :一方向
+    scada -- ctl :冗長
+    hmi1 -- ctl
+    ews -- ctl
+    plc1 -- ctl :冗長, vlan 100
+    hist -- ctl
+    plc1 -- drv1
+    plc1 -- sen1
+    hist2 -- hist :ミラー`,
   'クラス — ドメインモデル': `classDiagram
     class Animal {
       +String name
@@ -210,7 +221,7 @@ export function boot() {
 
   function toWorld(cx, cy) {
     const r = stage.getBoundingClientRect();
-    return [(cx - r.left - view.tx) / view.s, (cy - r.top - view.ty) / view.s];
+    return [(cx - r.left - view.tx) / view.s + (L?.x0 || 0), (cy - r.top - view.ty) / view.s + (L?.y0 || 0)];
   }
   const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
   function redraw() {
@@ -244,6 +255,7 @@ export function boot() {
       capture(e); e.preventDefault(); return;
     }
     if (e.target.closest('[data-linkbtn]')) return;          // リンクは click に任せる（開くだけ）
+    if (e.target.closest('[data-fold]')) return;             // ▾/▸ も click に任せる（preventDefault すると click が死ぬ）
     const now = performance.now();
     const isDouble = now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24;
     lastTap = { t: now, x: e.clientX, y: e.clientY };
@@ -339,10 +351,19 @@ export function boot() {
   stage.addEventListener('pointerup', endPointer);
   stage.addEventListener('pointercancel', endPointer);
 
-  // ---- ハイパーリンク（↗ バッジ）----
+  // ---- ハイパーリンク（↗ バッジ）＋ゾーン折りたたみ（▾/▸）----
   canvas.addEventListener('click', (e) => {
     const lb = e.target.closest('[data-linkbtn]');
-    if (lb) { e.preventDefault(); window.open(lb.dataset.url, '_blank', 'noopener'); }
+    if (lb) { e.preventDefault(); window.open(lb.dataset.url, '_blank', 'noopener'); return; }
+    const fd = e.target.closest('[data-fold]');
+    if (fd) {
+      const name = fd.dataset.fold;
+      const fold = new Set(model.layout.fold || []);
+      fold.has(name) ? fold.delete(name) : fold.add(name);
+      model.layout.fold = [...fold];
+      commitModel();
+      toast(fold.has(name) ? `「${name}」を畳みました` : `「${name}」を開きました`);
+    }
   });
 
   // ---- ポトペタ：ダブルタップでリネーム／追加 ----
@@ -533,7 +554,7 @@ export function boot() {
         : model.kind === 'class'
           ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
           : model.kind === 'infra'
-            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋接続', '\n    {last} -- n{N}']]
+            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋フェンス', '\n    fence f{N}[保守分界] :v'], ['＋接続', '\n    {last} -- n{N}']]
             : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
   }
   function refreshIns() {
@@ -894,6 +915,7 @@ export function boot() {
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
   $('vToggle').onclick = () => document.body.classList.toggle('viewmax');
+  $('edToggle').onclick = () => document.body.classList.toggle('viewmax');
   // スマホでは、まず図に全画面を譲る（「コード ◧」で開ける）。
   if (window.matchMedia('(max-width: 820px)').matches) document.body.classList.add('viewmax');
   problems.addEventListener('click', (e) => { const p = e.target.closest('.p'); if (!p || !p.dataset.ln) return; const ln = +p.dataset.ln; const pos = src.value.split('\n').slice(0, ln - 1).join('\n').length + (ln > 1 ? 1 : 0); src.focus(); src.selectionStart = src.selectionEnd = pos; });

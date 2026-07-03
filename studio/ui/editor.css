@@ -179,3 +179,8 @@ body.light #toast { background: #ffffff; border-color: var(--line2); color: var(
 body.light .dlg textarea { background: #f7f9fc; color: var(--fg); border-color: var(--line); }
 body.light #inline { background: #ffffff; color: var(--fg); }
 body.light .palette { background: rgba(180, 190, 205, 0.4); }
+
+/* ---- v9: 左ペインを畳む（デスクトップでも） ------------------------------------ */
+.only-desktop { display: inline-block; }
+body.viewmax .editor, body.viewmax #splitter { display: none; }
+@media (max-width: 820px) { .only-desktop { display: none; } }
