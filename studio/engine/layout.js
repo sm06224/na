@@ -363,10 +363,25 @@ export function layoutClass(model) {
     width: width + CLASS.PAD, height: height + CLASS.PAD, errors: [] };
 }
 
+
+// 無限キャンバス：ドラッグでどこへ置かれても viewBox が中身を包むよう bbox を広げる。
+function expandBounds(L, margin = 36) {
+  const xs = [0], ys = [0];
+  for (const n of L.nodes || []) { xs.push(n.x, n.x + n.w); ys.push(n.y, n.y + n.h); }
+  for (const g of L.groups || []) { xs.push(g.x, g.x + g.w); ys.push(g.y, g.y + g.h); }
+  for (const e of L.edges || []) { xs.push(e.x1, e.x2); ys.push(e.y1, e.y2); }
+  const x0 = Math.min(...xs) - margin, y0 = Math.min(...ys) - margin;
+  L.x0 = x0; L.y0 = y0;
+  L.width = Math.max(L.width || 0, Math.max(...xs) + margin) - x0;
+  L.height = Math.max(L.height || 0, Math.max(...ys) + margin) - y0;
+  return L;
+}
+
 export function layout(model) {
   if (model.kind === 'infra') return layoutInfra(model);
-  if (model.kind === 'flowchart') return layoutFlow(model);
+  // flowchart / class は自由配置なので、描画前に bbox を広げて「切れない」ことを保証する。
+  if (model.kind === 'flowchart') return expandBounds(layoutFlow(model));
   if (model.kind === 'sequence') return layoutSeq(model);
-  if (model.kind === 'class') return layoutClass(model);
+  if (model.kind === 'class') return expandBounds(layoutClass(model));
   return layoutGantt(model);
 }
