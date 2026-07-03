@@ -26,15 +26,27 @@ const DEFS = `<defs>
   <marker id="diao" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
 </defs>`;
 
-function wrap(L, inner) {
+// 手描きモード（%% style sketch）：feTurbulence の変位で線を「揺らす」。
+// 乱流のシードは固定＝同じ図からは同じ揺れ（決定的）。フォントも手書き風に寄せる。
+// これは描画エンジンを自前で持つ専用ツールだからできる芸——Mermaid 本家にはない顔。
+const SKETCH_FILTER = `<filter id="sketch" x="-4%" y="-4%" width="108%" height="108%">
+  <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="7" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+</filter>`;
+const SKETCH_FONT = `'Segoe Print','Bradley Hand','Klee One','Yuji Syuku','Comic Sans MS',cursive`;
+
+function wrap(L, inner, opts = {}) {
+  const sketch = !!opts.sketch;
+  const font = sketch ? SKETCH_FONT : 'ui-sans-serif,system-ui,sans-serif';
+  const body = sketch ? SKETCH_FILTER + `<g filter="url(#sketch)">${inner}</g>` : inner;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.ceil(L.width)} ${Math.ceil(L.height)}" `
-    + `width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" font-family="ui-sans-serif,system-ui,sans-serif">`
-    + DEFS + inner + '</svg>';
+    + `width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" font-family="${font}">`
+    + DEFS + body + '</svg>';
 }
 
 // ---- ガント ---------------------------------------------------------------
 
-function drawGantt(model, L) {
+function drawGantt(model, L, opts = {}) {
   const secIndex = new Map(); let si = -1, last;
   for (const b of L.bars) { if (b.section !== last) { last = b.section; si++; } secIndex.set(b.id, b.section ? si : 0); }
   const parts = [];
@@ -79,7 +91,7 @@ function drawGantt(model, L) {
       parts.push(g + `</g>`);
     }
   }
-  return wrap(L, parts.join('\n'));
+  return wrap(L, parts.join('\n'), opts);
 }
 
 // ---- フローチャート --------------------------------------------------------
@@ -134,7 +146,7 @@ function drawFlow(model, L, opts = {}) {
     parts.push(g + `</g>`);
     if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
   });
-  return wrap(L, parts.join('\n'));
+  return wrap(L, parts.join('\n'), opts);
 }
 
 // 選択ノードから生える接続ハンドル（引っぱって別ノードへ落とすとエッジ）。
@@ -181,12 +193,12 @@ function drawClass(model, L, opts = {}) {
     parts.push(g + `</g>`);
     if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
   });
-  return wrap(L, parts.join('\n'));
+  return wrap(L, parts.join('\n'), opts);
 }
 
 // ---- シーケンス図 -----------------------------------------------------------
 
-function drawSeq(model, L) {
+function drawSeq(model, L, opts = {}) {
   const parts = [];
   // 枠（loop/alt…）：全幅の淡い矩形＋左肩のラベル札＋区切り（else）。
   for (const f of L.frames) {
@@ -227,12 +239,12 @@ function drawSeq(model, L) {
       + `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`
       + `<text x="${a.cx}" y="${a.y + a.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(a.label)}</text></g>`);
   });
-  return wrap(L, parts.join('\n'));
+  return wrap(L, parts.join('\n'), opts);
 }
 
 export function draw(model, L, opts = {}) {
   if (L.kind === 'flowchart') return drawFlow(model, L, opts);
-  if (L.kind === 'sequence') return drawSeq(model, L);
+  if (L.kind === 'sequence') return drawSeq(model, L, opts);
   if (L.kind === 'class') return drawClass(model, L, opts);
-  return drawGantt(model, L);
+  return drawGantt(model, L, opts);
 }

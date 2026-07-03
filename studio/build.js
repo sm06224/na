@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js',
-  'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'render/draw.js', 'ui/editor.js'];
+  'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
 
 const read = (p) => readFileSync(join(HERE, p), 'utf8');
 const strip = (s) => s.split('\n')
@@ -25,10 +25,12 @@ const strip = (s) => s.split('\n')
 export function html(source) {
   const page = read('index.html'), css = read('ui/editor.css');
   const bundle = MODULES.map((m) => strip(read(m))).join('\n');
+  // 置換は必ず「関数」で渡す：文字列で渡すと $` や $' が特殊パターンとして展開され、
+  // コード中の正規表現リテラル（例: parse.js の `?$`）がページ全体を呑み込む事故になる。
   return page
-    .replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${css}\n</style>`)
+    .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
     .replace(/<script type="module">[\s\S]*?<\/script>/,
-      `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n</script>`);
+      () => `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n</script>`);
 }
 
 const titleOf = (s) => { const m = /^\s*title\s+(.+)$/m.exec(s); return m ? m[1].trim() : null; };

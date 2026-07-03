@@ -26,8 +26,9 @@ const strip = (s) => s
 export function html() {
   const page = read('index.html');
   const bundle = MODULES.map((m) => strip(read(m))).join('\n');
+  // 置換は関数で渡す：文字列だと $` や $' が特殊パターン展開されてコードが壊れ得る。
   return page.replace(/<script type="module">[\s\S]*?<\/script>/,
-    `<script>\n${bundle}\nboot();\n</script>`);
+    () => `<script>\n${bundle}\nboot();\n</script>`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

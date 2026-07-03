@@ -136,6 +136,113 @@ function rowsToFlow(rows, H) {
   return ['flowchart TD', ...decls, ...edges, ...uc].join('\n') + '\n';
 }
 
+// ---- 万能ペースト：何を貼られたか当てて、図にする ----------------------------
+// 「貼れば図になる」を Mermaid・表以外にも広げる。判定は保守的に——
+// ただの文章を乗っ取らないよう、構造の証拠（矢印・字下げ・JSON・区切り）を要求する。
+
+const MERMAID_HEAD = /^(gantt|flowchart|graph|sequenceDiagram|classDiagram)\b/;
+const ARROW = /[-=]+>+|→|⇒/;   // -> / --> / => / ==> / →（>> まで丸ごと食べる）
+
+export function sniff(text) {
+  const t = String(text).trim();
+  if (!t) return 'unknown';
+  if (MERMAID_HEAD.test(t)) return 'mermaid';
+  if (t[0] === '{' || t[0] === '[') { try { const v = JSON.parse(t); if (v && typeof v === 'object') return 'json'; } catch (_) { /* JSON でなければ次へ */ } }
+  const lines = t.split('\n').filter((l) => l.trim());
+  const arrowLines = lines.filter((l) => ARROW.test(l)).length;
+  if (arrowLines >= 1 && arrowLines >= lines.length * 0.6) return 'arrows';   // 過半が矢印行
+  const head = t.split('\n', 1)[0];
+  if (lines.length >= 2 && (head.includes('\t') || head.includes(','))) return 'table';
+  const bullet = /^(\s*)([-*・•]|\d+[.)])\s+/;
+  const indented = lines.filter((l) => bullet.test(l) || /^\s+\S/.test(l)).length;
+  if (lines.length >= 2 && indented >= lines.length - 1) return 'outline';    // 先頭行以外が箇条書き/字下げ
+  return 'unknown';
+}
+
+// 矢印テキスト：`入口 -> 検査 -> 出荷` のような行の束。1 行に何段でも書ける。
+// `A -> B: ラベル` の末尾ラベルはエッジに付く。
+export function arrowsToFlow(text) {
+  const ids = new Map(); let k = 0;
+  const ensure = (label) => {
+    if (ids.has(label)) return ids.get(label);
+    let id = safeId(label);
+    if (!id || [...ids.values()].includes(id)) id = 'n' + (++k);
+    ids.set(label, id); return id;
+  };
+  const edges = [];
+  for (const raw of String(text).split('\n')) {
+    const line = raw.trim(); if (!line || !ARROW.test(line)) continue;
+    let label = '';
+    const li = line.lastIndexOf(':');
+    let body = line;
+    if (li > 0 && !ARROW.test(line.slice(li))) { label = line.slice(li + 1).trim(); body = line.slice(0, li); }
+    const hops = body.split(ARROW).map((s) => s.trim()).filter(Boolean);
+    for (let i = 0; i + 1 < hops.length; i++)
+      edges.push(`    ${ensure(hops[i])} -->${i === hops.length - 2 && label ? `|${label}|` : ''} ${ensure(hops[i + 1])}`);
+  }
+  const decls = [...ids.entries()].map(([label, id]) => `    ${id}[${label}]`);
+  return ['flowchart LR', ...decls, ...edges].join('\n') + '\n';
+}
+
+// 箇条書き（字下げ＝親子）→ ツリーのフローチャート。議事メモがそのまま構成図になる。
+export function outlineToFlow(text) {
+  const ids = new Map(); let k = 0;
+  const ensure = (label) => {
+    if (ids.has(label)) return ids.get(label);
+    let id = safeId(label);
+    if (!id || [...ids.values()].includes(id)) id = 'n' + (++k);
+    ids.set(label, id); return id;
+  };
+  const edges = [], stack = [];                              // stack: [{depth, id}]
+  for (const raw of String(text).replace(/\t/g, '  ').split('\n')) {
+    if (!raw.trim()) continue;
+    const m = /^(\s*)((?:[-*・•]|\d+[.)])\s+)?(.*)$/.exec(raw);
+    // ビュレットは 1 段下と数える：「親\n- 子」で子になる（見た目どおり）。
+    const depth = m[1].length + (m[2] ? 1 : 0), label = m[3].trim();
+    if (!label) continue;
+    const id = ensure(label);
+    while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+    if (stack.length) edges.push(`    ${stack[stack.length - 1].id} --> ${id}`);
+    stack.push({ depth, id });
+  }
+  const decls = [...ids.entries()].map(([label, id]) => `    ${id}[${label}]`);
+  return ['flowchart TD', ...decls, ...edges].join('\n') + '\n';
+}
+
+// JSON → 構造ツリー。キーがノード、入れ子が枝、末端は「キー: 値」。API の応答を貼って眺める用。
+export function jsonToFlow(text) {
+  const v = JSON.parse(String(text));
+  const decls = [], edges = []; let k = 0;
+  const CAP = 200;                                           // 巨大 JSON の暴走止め（正直に打ち切る）
+  const short = (x) => { const s = typeof x === 'string' ? x : JSON.stringify(x); return s.length > 24 ? s.slice(0, 21) + '…' : s; };
+  const node = (label) => { const id = 'j' + (++k); decls.push(`    ${id}[${String(label).replace(/[[\]{}|"]/g, ' ').replace(/\s+/g, ' ').trim() || '·'}]`); return id; };
+  const walk = (val, label, parent) => {
+    if (k >= CAP) return;
+    if (val && typeof val === 'object') {
+      const id = node(Array.isArray(val) ? `${label}（${val.length}）` : label);   // [] は Mermaid の形と衝突するので全角
+      if (parent) edges.push(`    ${parent} --> ${id}`);
+      const entries = Array.isArray(val) ? val.map((x, i) => [i, x]) : Object.entries(val);
+      for (const [key2, v2] of entries) walk(v2, String(key2), id);
+    } else {
+      const id = node(`${label}: ${short(val)}`);
+      if (parent) edges.push(`    ${parent} --> ${id}`);
+    }
+  };
+  walk(v, 'root', null);
+  return { text: ['flowchart TD', ...decls, ...edges].join('\n') + '\n', truncated: k >= CAP };
+}
+
+// 何でも入口：貼られたものを当てて Mermaid にする。判らなければ正直に unknown。
+export function universal(text) {
+  const kind = sniff(text);
+  if (kind === 'mermaid') return { kind, text: String(text) };
+  if (kind === 'table') { const r = csvToMermaid(text); return r.error ? { kind: 'unknown', error: r.error } : { kind: 'table', text: r.text, sub: r.kind }; }
+  if (kind === 'arrows') return { kind, text: arrowsToFlow(text) };
+  if (kind === 'outline') return { kind, text: outlineToFlow(text) };
+  if (kind === 'json') { try { const r = jsonToFlow(text); return { kind, text: r.text, truncated: r.truncated }; } catch (_) { return { kind: 'unknown' }; } }
+  return { kind: 'unknown' };
+}
+
 // ---- 入口 -------------------------------------------------------------------
 
 export function csvToMermaid(text) {

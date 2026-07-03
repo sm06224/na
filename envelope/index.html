@@ -60,10 +60,12 @@
   .tx .sp{display:inline-block;width:.18em}
   .tx .q{display:inline-block;width:1em} .tx .qq{display:inline-block;width:2em}
   .tx sup,.tx sub{font-size:.68em}
-  .tx .fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-0.6em;margin:0 3px;line-height:1.15}
+  /* 分数と大型演算子は「数学軸」（≒ x-height の中央）に箱の中心を合わせる。
+     baseline からの固定オフセットだと式ごとにズレる——middle が正解。 */
+  .tx .fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px;line-height:1.15;font-size:.92em}
   .tx .fr .nu{padding:0 4px}
   .tx .fr .de{border-top:1px solid currentColor;padding:0 4px}
-  .tx .mop{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-0.55em;margin:0 2px;line-height:1.05}
+  .tx .mop{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 2px;line-height:1.05}
   .tx .mop .mo{font-style:normal}
   .tx .mop .ml{font-size:.62em}
   .tx .bx{border:1px solid var(--ink2);border-radius:3px;padding:1px 6px}

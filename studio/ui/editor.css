@@ -118,3 +118,34 @@ main { flex: 1; display: flex; min-height: 0; }
   body.viewmax .editor { display: none; }
   body.viewmax .view { height: 100%; }
 }
+
+/* ---- v7: コマンドパレット --------------------------------------------------- */
+.palette { position: fixed; inset: 0; background: rgba(5, 7, 11, 0.55); z-index: 40;
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+.pbox { width: min(560px, 92vw); background: #121724; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; box-shadow: 0 18px 60px rgba(0,0,0,0.5); overflow: hidden; }
+.pbox input { width: 100%; box-sizing: border-box; background: #0d1119; color: #e7ebf4; border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08); padding: 13px 16px; font-size: 14px; outline: none; }
+#pList { max-height: 46vh; overflow-y: auto; padding: 6px; }
+#pList .opt { padding: 8px 12px; border-radius: 8px; font-size: 13px; color: #c7d0e0; cursor: pointer; }
+#pList .opt.sel, #pList .opt:hover { background: #1d2740; color: #eef2fa; }
+#pList .none { padding: 12px 14px; color: #6a7386; font-size: 13px; }
+
+/* ---- v7: タイムトラベル ------------------------------------------------------ */
+.ttbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 52px;
+  display: flex; align-items: center; gap: 10px; background: #121724ee; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px; padding: 7px 14px; z-index: 12; font-size: 12px; color: #aeb6c6; }
+.ttbar input[type=range] { width: min(320px, 44vw); accent-color: #6aa9ff; }
+.ttbar .ttl { min-width: 52px; text-align: center; color: #e7ebf4; font-variant-numeric: tabular-nums; }
+.ttbar button { background: none; border: 0; color: #8a93a6; cursor: pointer; font-size: 13px; }
+
+/* ---- v7: 差分バー ------------------------------------------------------------ */
+.diffbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 92%;
+  background: #121724ee; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  padding: 7px 12px; z-index: 12; font-size: 12px; color: #c7d0e0; }
+.diffbar .chip { padding: 2px 9px; border-radius: 999px; font-size: 11px; }
+.diffbar .chip.add { background: rgba(122,209,176,0.15); color: #7ad1b0; }
+.diffbar .chip.del { background: rgba(245,122,138,0.15); color: #f57a8a; text-decoration: line-through; }
+.diffbar .chip.chg { background: rgba(245,184,106,0.15); color: #f5b86a; }
+.diffbar button { background: #1d2740; border: 0; color: #c7d0e0; border-radius: 7px; padding: 3px 10px; cursor: pointer; }
