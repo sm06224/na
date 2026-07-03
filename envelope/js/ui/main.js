@@ -7,6 +7,7 @@ import { envelope, poolPlan, triggers, ruleOfThree, totalUnitYears,
   mixtureFlattening, sensitivity, etaFromAnchor, parseCohorts,
   poolTrajectory, reorderPoint, ltbPlan, poolReview, evalObservations } from '../core/model.js';
 import { cumChart, annChart, poolChart } from './charts.js';
+import { tex, FORMULAS } from './tex.js';
 
 const $ = (id) => document.getElementById(id);
 const num = (v, d = 1) => v == null ? '—' : (v >= 1000 ? Math.round(v).toLocaleString() : Number(v.toFixed(d)).toLocaleString());
@@ -221,11 +222,21 @@ function render() {
   yearTable(m);
 }
 
+// 数理カード：式（自前 TeX レンダラ）＋意味＋仕様の節。入力に依らないので boot で一度だけ。
+function mathTable() {
+  $('math-table').innerHTML =
+    `<table><thead><tr><th class="l">式</th><th class="l">意味</th><th></th></tr></thead><tbody>${
+      FORMULAS.map(([src, meaning, ref]) =>
+        `<tr><td class="l">${tex(src)}</td><td class="l">${meaning}</td><td class="ref">${ref}</td></tr>`).join('')
+    }</tbody></table>`;
+}
+
 export function boot() {
   let t = null;
   const onInput = () => { clearTimeout(t); t = setTimeout(render, 200); };  // 打鍵中は待つ
   for (const el of document.querySelectorAll('input,textarea')) el.addEventListener('input', onInput);
   bindTooltip($('chart-cum'));
   bindTooltip($('chart-ann'));
+  mathTable();
   render();
 }

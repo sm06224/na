@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const MODULES = ['js/core/model.js', 'js/ui/charts.js', 'js/ui/main.js'];
+const MODULES = ['js/core/model.js', 'js/ui/charts.js', 'js/ui/tex.js', 'js/ui/main.js'];
 
 const read = (p) => readFileSync(join(HERE, p), 'utf8');
 const strip = (s) => s
