@@ -1,3 +1,4 @@
+// infra は自己完結モジュールに委譲（parse/layout/draw/serialize が一冊で読める）
 /* ============================================================
    レイアウト計算 — モデル＋（あれば）@layout から座標を出す。純粋・決定的。
    ガント：日付を解決し、タイムライン上の棒に（done/active/crit/milestone）。
@@ -6,6 +7,7 @@
    DOM もキャンバスも知らない。返すのは数だけ。
    ============================================================ */
 import { diffDays, addDays, weekday } from './date.js';
+import { layoutInfra } from './infra.js';
 
 export const GANTT = { PAD: 16, LABEL_W: 176, AXIS_H: 44, ROW_H: 32, SEC_H: 26, DAY_W: 26, BAR_H: 18 };
 export const FLOW = { PAD: 28, NODE_H: 48, GAP_MAIN: 70, GAP_CROSS: 30, GROUP_PAD: 18, GROUP_HEAD: 24 };
@@ -362,6 +364,7 @@ export function layoutClass(model) {
 }
 
 export function layout(model) {
+  if (model.kind === 'infra') return layoutInfra(model);
   if (model.kind === 'flowchart') return layoutFlow(model);
   if (model.kind === 'sequence') return layoutSeq(model);
   if (model.kind === 'class') return layoutClass(model);

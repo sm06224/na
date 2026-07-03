@@ -74,6 +74,37 @@ export const SAMPLES = {
       w-->>u: エラー表示
     end
     Note over u,w: 3回失敗でロック`,
+  'インフラ — 社内ネットワーク': `infra
+    title 本社ネットワーク構成
+    zone 本社ビル {
+      zone 3F 営業部 {
+        sw3f[SW-3F] :access, IOS15.9, vlan 30
+        pc3f[営業PC x40] :pc, Win11
+        ap3f[AP-3F] :ap, vlan 90
+      }
+      zone サーバ室 {
+        core[CORE-SW] :core, NX-OS10
+        fw[FW-01] :firewall, FortiOS7
+        app1[業務APサーバ] :server, RHEL9, 10.0.10.21
+        db1[基幹DB] :db, Oracle19c, 10.0.10.31
+        nas[NAS] :storage, 10.0.10.41
+      }
+    }
+    zone DC（DR サイト） {
+      db2[待機DB] :db, Oracle19c, 172.16.10.31
+    }
+    inet[インターネット] :cloud
+    bus lan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+    bus dmz[DMZ] :h, vlan 20, 192.168.1.0/24
+    core -- lan
+    app1 -- lan
+    db1 -- lan
+    nas -- lan
+    fw -- dmz
+    fw -- inet
+    sw3f -- core
+    ap3f -- sw3f
+    db1 -- db2`,
   'クラス — ドメインモデル': `classDiagram
     class Animal {
       +String name
@@ -94,10 +125,10 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -126,12 +157,15 @@ export function boot() {
   }
   function syncScroll() { hl.parentElement.scrollTop = src.scrollTop; hl.parentElement.scrollLeft = src.scrollLeft; gutter.scrollTop = src.scrollTop; }
 
-  const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch' });
+  const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch',
+    theme: model.meta.theme || 'dark',
+    bg: model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : null) });
   function render() {
     model = parse(src.value);
     L = layout(model);
     for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
     canvas.innerHTML = draw(model, L, drawOpts());
+    document.body.classList.toggle('light', model.meta.theme === 'light');
     refreshDiff();
     syncAlignBar();
     applyView();
@@ -332,6 +366,13 @@ export function boot() {
       model.order.push(id);
       model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
       selected.clear(); selected.add(id); commitModel();
+    } else if (model.kind === 'infra') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      const id = 'n' + k;
+      model.items.push({ type: 'inode', id, label: '新しい機器', role: null, os: null, ip: null, vlan: null, zone: null });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected.clear(); selected.add(id); commitModel();
     } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
     else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
   }
@@ -378,7 +419,7 @@ export function boot() {
   // ---- 整列（2 個以上選ぶと出る）----
   function syncAlignBar() {
     const bar = $('alignbar'); if (!bar) return;
-    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class'));
+    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra'));
   }
   $('alignbar').addEventListener('click', (e) => {
     const a = e.target.dataset.a; if (!a) return;
@@ -431,7 +472,9 @@ export function boot() {
         ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
         : model.kind === 'class'
           ? ['classDiagram', 'class']
-          : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+          : model.kind === 'infra'
+            ? ['infra', 'zone', 'bus', 'vlan', 'core', 'access', 'switch', 'router', 'firewall', 'server', 'db', 'storage', 'pc', 'ap', 'cloud']
+            : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -489,7 +532,9 @@ export function boot() {
         ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
         : model.kind === 'class'
           ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
-          : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+          : model.kind === 'infra'
+            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋接続', '\n    {last} -- n{N}']]
+            : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
   }
   function refreshIns() {
     const ins = $('insbar');
@@ -571,7 +616,7 @@ export function boot() {
     img.onload = () => {
       const k = 2, c = document.createElement('canvas');
       c.width = Math.ceil(el.viewBox.baseVal.width * k); c.height = Math.ceil(el.viewBox.baseVal.height * k);
-      const g = c.getContext('2d'); g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      const g = c.getContext('2d'); g.fillStyle = pngBg(); g.fillRect(0, 0, c.width, c.height);
       g.scale(k, k); g.drawImage(img, 0, 0); URL.revokeObjectURL(url);
       c.toBlob(async (b) => {
         if (!b) { toast('PNG 化に失敗しました'); return; }
@@ -593,7 +638,7 @@ export function boot() {
       const k = 2, c = document.createElement('canvas');
       c.width = Math.ceil(s.viewBox.baseVal.width * k); c.height = Math.ceil(s.viewBox.baseVal.height * k);
       const g = c.getContext('2d');
-      g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = pngBg(); g.fillRect(0, 0, c.width, c.height);
       g.scale(k, k); g.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
       c.toBlob((b) => {
@@ -663,6 +708,37 @@ export function boot() {
     if (!text.trim()) return;
     // 構造の証拠があるものだけ拾う（ただの文章は乗っ取らない）。判別は engine/import.js。
     if (universal(text).kind !== 'unknown') { e.preventDefault(); runImport(text); }
+  });
+
+  // ---- テーマと背景（%% theme / %% bg — 見た目もコメントで往復する）----
+  const pngBg = () => model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : '#0b0e14');
+  function toggleTheme() {
+    model.meta.theme = model.meta.theme === 'light' ? null : 'light';   // 既定は dark なので dark は書かない
+    commitModel();
+    toast(model.meta.theme === 'light' ? 'ライトモード ☀' : 'ダークモード 🌙');
+  }
+  const bgPick = $('bgPick');
+  bgPick.addEventListener('input', () => { model.meta.bg = bgPick.value; commitModel(); toast('背景色 ' + bgPick.value + '（書き出しにも入ります）'); });
+  function pickBg() { bgPick.value = model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : '#0b0e14'); bgPick.click(); }
+  function clearBg() { model.meta.bg = null; commitModel(); toast('背景を透過に戻しました'); }
+
+  // ---- ペイン境界のドラッグ（左は 80〜100 字程度が既定。広い画面ほど図に譲る）----
+  const splitter = $('splitter');
+  const setEdw = (px) => document.documentElement.style.setProperty('--edw', Math.round(px) + 'px');
+  const savedW = +localStorage.getItem('studio.edw');
+  if (savedW > 200) setEdw(savedW);
+  let splitDrag = null;
+  splitter.addEventListener('pointerdown', (e) => {
+    splitDrag = true; splitter.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  splitter.addEventListener('pointermove', (e) => {
+    if (!splitDrag) return;
+    const w = Math.max(220, Math.min(window.innerWidth * 0.7, e.clientX));
+    setEdw(w); localStorage.setItem('studio.edw', w);
+  });
+  splitter.addEventListener('pointerup', () => { splitDrag = null; });
+  splitter.addEventListener('dblclick', () => {              // ダブルクリックで既定幅に戻す
+    document.documentElement.style.removeProperty('--edw'); localStorage.removeItem('studio.edw');
   });
 
   // ---- 手描きモード（%% style sketch — 見た目もコメントで往復する）----
@@ -747,17 +823,25 @@ export function boot() {
       model.items.push({ type: 'class', id: cid, attrs: [], methods: [] });
       model.order.push(cid); centerPos(cid);
       selected.clear(); selected.add(cid); commitModel();
+    } else if (model.kind === 'infra') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      model.items.push({ type: 'inode', id: 'n' + k, label, role: null, os: null, ip: null, vlan: null, zone: null });
+      model.order.push('n' + k); centerPos('n' + k);
+      selected.clear(); selected.add('n' + k); commitModel();
     } else if (model.kind === 'sequence') insert(`\n    participant p{N} as ${label}`);
     else insert(`\n      ${label} :t{N}, after {last}, 3d`);
     toast(`「${label}」を足しました`);
   }
   function paletteItems(q) {
     const cmds = [];
-    const noun = { gantt: 'タスク', flowchart: 'ノード', sequence: '参加者', class: 'クラス' }[model.kind] || 'ノード';
+    const noun = { gantt: 'タスク', flowchart: 'ノード', sequence: '参加者', class: 'クラス', infra: '機器' }[model.kind] || 'ノード';
     if (q.trim()) cmds.push({ t: `＋ ${noun}「${q.trim()}」を追加`, k: 'add create 追加', pin: true, run: () => addNamed(q.trim()) });
     for (const s of snipsFor()) cmds.push({ t: `挿入：${s[0]}`, k: 'insert snippet', run: () => insert(s[1]) });
     cmds.push(
       { t: '手描きモード切替 ✏', k: 'sketch rough hand 手書き てがき', run: toggleSketch },
+      { t: 'ライト / ダーク切替 ☀🌙', k: 'theme light dark てーま らいと', run: toggleTheme },
+      { t: '背景色を設定…（書き出しにも焼く）', k: 'background bg color はいけい', run: pickBg },
+      { t: '背景を透過に戻す', k: 'background transparent とうか', run: clearBg },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '取り込み（表・箇条書き・A→B・JSON）', k: 'import paste csv とりこみ', run: () => { dlg.hidden = false; $('csvIn').focus(); } },

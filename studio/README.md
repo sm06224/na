@@ -23,6 +23,33 @@
 
 > この作品は **依存ゼロ規則の対象外**。とはいえ「ドラッグ位置の保持」と「オフライン単一 HTML」を守るため、描画エンジンは自前（決定的・DOM 非依存）にしてあります。Mermaid 記法の認識・編集体験・出力に力を注いでいます。
 
+## システム構成図を、行で書く（v8）
+
+studio の拡張図種 **`infra`**——Mermaid には無い、インフラ屋のための一枚。既存ツールは「箱を並べ、線を引き、属性を書く」を全部人間がやるが、ここでは**知っていることを行で書くだけ**：
+
+```
+infra
+    title 本社ネットワーク構成
+    zone 本社ビル {
+      zone サーバ室 {
+        core[CORE-SW] :core, NX-OS10
+        app1[業務APサーバ] :server, RHEL9, 10.0.10.21
+      }
+      sw3f[SW-3F] :access, IOS15.9, vlan 30
+    }
+    bus lan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+    core -- lan
+    app1 -- lan
+    sw3f -- core
+```
+
+- **zone { … }** — 建屋・フロア・部署・ドメイン・DR サイト。**入れ子可**。枠は中身に合わせて膨らみ、ドラッグにも追従
+- **:役割, OS, IP, vlan N** — 役割（core/access/switch/router/firewall/server/db/storage/pc/ap/lb/cloud…の**ゆらぎを吸収**）は色と CORE/FW/SV タグに、OS・IP・VLAN はカードの中に。役割でも IP でも VLAN でもない言葉は OS/バージョン扱いで**捨てずに書く**
+- **bus :h|v, vlan, CIDR** — **水平/垂直の基幹バス**。VLAN・ネットワークアドレスのチップ付き。機器から `-- バス名` と書けば垂線が落ちる
+- 配置は自動（ゾーン内で折り返し）。ドラッグすれば `%% pos` に保存。接続先の打ち間違い・zone の閉じ忘れ・id 重複は**その場で指摘**
+
+さらに v8 では：**ペイン境界のドラッグ**（左は 80〜100 字相当が既定・ダブルクリックで戻る・記憶される）、**ライト/ダークテーマ**（`%% theme light` — アプリの顔ごと切り替わる）、**背景色**（`%% bg #fff` — SVG/PNG の書き出しにも焼かれるのでメール貼付に強い）、**SQL 取り込み**（CREATE TABLE を貼ると PK/FK 印字つきのクラス図＝簡易 ER に）。
+
 ## 鼻ほじりながら、なんでも（v7）
 
 **片手で・考えた瞬間に・怖がらずに**、を合言葉にした体験の層。
@@ -137,7 +164,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 55 tests
+node --test tests/*.test.js            # 64 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）
@@ -154,6 +181,7 @@ studio/
 │  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
 │  ├─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
 │  ├─ import.js                      流し込み：CSV/TSV・箇条書き・矢印テキスト・JSON → Mermaid（万能ペースト）
+│  ├─ infra.js                       システム構成図：zone/bus/役割/OS/IP/VLAN の parse・layout・draw・serialize 一式
 │  ├─ diff.js                        モデル diff：旧版 → 新版の「増えた・消えた・変わった」（並び替えは差にしない）
 │  └─ drawio.js                      持ち出し：モデル＋レイアウト → draw.io（mxGraph XML・編集できる図形）
 ├─ render/draw.js                    モデル＋配置 → SVG 文字列（形状・状態色・矢印）

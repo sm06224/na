@@ -1,3 +1,4 @@
+import { infraBody } from './infra.js';
 /* ============================================================
    モデル → Mermaid テキスト（往復の戻り）。
    意味部は Mermaid の正規記法で書き、ドラッグの結果（位置・並び・開始日）は
@@ -126,7 +127,9 @@ function classBody(model) {
 function trailer(model) {
   const L = model.layout, out = [];
   if (model.meta.style) out.push(`%% style ${model.meta.style}`);   // 手描きなどの見た目も往復する
-  if (model.kind === 'flowchart' || model.kind === 'class') {
+  if (model.meta.theme) out.push(`%% theme ${model.meta.theme}`);   // light / dark
+  if (model.meta.bg) out.push(`%% bg ${model.meta.bg}`);            // 背景色（書き出しにも焼く）
+  if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
     for (const id of Object.keys(model.images || {})) out.push(`%% img ${id} ${model.images[id]}`);
   } else if (model.kind === 'sequence') {
@@ -142,6 +145,7 @@ function trailer(model) {
 export function serialize(model) {
   const body = model.kind === 'flowchart' ? flowBody(model)
     : model.kind === 'sequence' ? seqBody(model)
-    : model.kind === 'class' ? classBody(model) : ganttBody(model);
+    : model.kind === 'class' ? classBody(model)
+    : model.kind === 'infra' ? infraBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }

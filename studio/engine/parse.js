@@ -38,6 +38,7 @@
      %% today 2026-07-16     gantt：基準日（決定的な例のため）
    ============================================================ */
 import { isDate, isDur, parseDur } from './date.js';
+import { parseInfra } from './infra.js';
 
 const TAGS = new Set(['done', 'active', 'crit', 'milestone']);
 
@@ -352,7 +353,7 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -360,19 +361,22 @@ export function parse(text) {
         else if (a[0] === 'today' && a[1]) model.meta.today = a[1];
         else if (a[0] === 'img' && a.length >= 3) model.images[a[1]] = a.slice(2).join(' ');
         else if (a[0] === 'style' && a[1]) model.meta.style = a[1];   // 見た目（sketch など）。意味部は汚さない
+        else if (a[0] === 'theme' && a[1]) model.meta.theme = a[1];    // light / dark
+        else if (a[0] === 'bg' && a[1]) model.meta.bg = a[1];          // 書き出しにも焼く背景色
       }
       continue;                                            // ふつうのコメントは捨てる
     }
     body.push({ raw, ln });
   }
 
-  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram で始めてください）'); return model; }
+  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram / classDiagram / infra で始めてください）'); return model; }
   const first = body[0].raw.trim();
   const headWord = first.split(/\s+/)[0];
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
   else if (headWord === 'sequenceDiagram') parseSeq(body, model);
   else if (headWord === 'classDiagram') parseClass(body, model);
-  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram ではありません「${headWord}」`);
+  else if (headWord === 'infra') parseInfra(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram / infra ではありません「${headWord}」`);
   return model;
 }

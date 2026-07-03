@@ -173,9 +173,40 @@ function seqToDoc(model, L, doc) {
 
 // ---- 入口 -------------------------------------------------------------------
 
+
+// ---- インフラ構成図 ----------------------------------------------------------
+// ゾーン＝枠、機器＝角丸カード（ラベル＋OS/IP/VLAN を改行で）、バス＝太線、接続＝エッジ。
+const INFRA_HUE = { core: '#C98A3A', dist: '#C98A3A', access: '#4C7DD0', switch: '#4C7DD0', router: '#A863A8',
+  firewall: '#C25668', server: '#3FA37E', db: '#3FA37E', storage: '#4C9DBF', pc: '#8A93A6', ap: '#7E6FC9',
+  lb: '#4C9DBF', cloud: '#4C9DBF', printer: '#8A93A6' };
+
+function infraToDoc(model, L, doc) {
+  for (const z of [...L.zones].sort((a, b) => a.depth - b.depth))
+    doc.vertex(z.name, `rounded=1;dashed=1;verticalAlign=top;align=left;spacingLeft=8;html=1;fillColor=none;strokeColor=${GRAY};fontColor=${GRAY};`, z.x, z.y, z.w, z.h);
+  const idOf = new Map();
+  for (const b of L.buses) {
+    const chip = [b.label, b.vlan != null ? 'VLAN ' + b.vlan : null, b.cidr].filter(Boolean).join(' / ');
+    const pts = b.orient === 'v' ? [[b.x, b.y1], [b.x, b.y2]] : [[b.x1, b.y], [b.x2, b.y]];
+    doc.edge(chip, `endArrow=none;strokeWidth=5;strokeColor=#4C9DBF;fontColor=${FONT};html=1;`, { points: pts });
+    // バスへの接続は座標で受ける（レイアウト済みの垂線をそのまま線に）。
+    idOf.set(b.id, null);
+  }
+  for (const n of L.nodes) {
+    const hue = INFRA_HUE[n.role] || GRAY;
+    const metas = [n.os, n.ip, n.vlan != null ? 'VLAN ' + n.vlan : null].filter(Boolean);
+    const label = n.label + (metas.length ? '\n' + metas.join('\n') : '');
+    idOf.set(n.id, doc.vertex(label,
+      `rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=2;fillColor=${FILL};strokeColor=${hue};fontColor=${FONT};`,
+      n.x, n.y, n.w, n.h));
+  }
+  for (const l of L.links)
+    doc.edge('', `endArrow=none;html=1;strokeColor=${GRAY};`, { points: [[l.x1, l.y1], [l.x2, l.y2]] });
+}
+
 export function toDrawio(model, L) {
   const doc = new Doc();
-  if (L.kind === 'flowchart') flowToDoc(model, L, doc);
+  if (L.kind === 'infra') infraToDoc(model, L, doc);
+  else if (L.kind === 'flowchart') flowToDoc(model, L, doc);
   else if (L.kind === 'class') classToDoc(model, L, doc);
   else if (L.kind === 'sequence') seqToDoc(model, L, doc);
   else ganttToDoc(model, L, doc);

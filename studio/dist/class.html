@@ -38,7 +38,7 @@ select:hover, button:hover { background: #20293a; border-color: #3a4660; }
 .dropdown button:hover { background: #20293a; }
 
 main { flex: 1; display: flex; min-height: 0; }
-.editor { width: 44%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0; }
+.editor { width: var(--edw, min(690px, 46vw)); min-width: 220px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0; }
 .codewrap { flex: 1; display: flex; min-height: 0; overflow: hidden; }
 .gutter { width: 42px; flex: none; overflow: hidden; text-align: right; padding: 12px 8px 12px 0; color: #4a5670;
   font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 20px; user-select: none; background: #0a0e16; }
@@ -159,6 +159,36 @@ main { flex: 1; display: flex; min-height: 0; }
 .diffbar .chip.chg { background: rgba(245,184,106,0.15); color: #f5b86a; }
 .diffbar button { background: #1d2740; border: 0; color: #c7d0e0; border-radius: 7px; padding: 3px 10px; cursor: pointer; }
 
+
+/* ---- v8: ペイン境界（ドラッグで調整・ダブルクリックで既定） ------------------- */
+#splitter { width: 7px; flex: none; cursor: col-resize; background: transparent; position: relative; z-index: 8; }
+#splitter::after { content: ""; position: absolute; inset: 0 2px; border-radius: 3px; transition: background .15s; }
+#splitter:hover::after, #splitter:active::after { background: var(--acc); opacity: .55; }
+@media (max-width: 820px) { #splitter { display: none; } .editor { width: 100%; } }
+
+/* ---- v8: ライトモード（%% theme light — 図と一緒にアプリの顔も変わる） --------- */
+body.light { color-scheme: light;
+  --bg: #eef1f6; --bg2: #ffffff; --line: #dbe2ec; --line2: #c3cddc;
+  --fg: #1d2534; --dim: #5d6b80; --acc: #2f6fd6;
+  --kw: #2f5fd0; --id: #0e8a63; --tag: #a86a00; --date: #9c4dab; --arrow: #5a6b7e; --str: #33415c; --com: #8a97ab; --bad: #c73a52; }
+body.light select, body.light button { background: #f2f5fa; border-color: var(--line2); color: var(--fg); }
+body.light select:hover, body.light button:hover { background: #e7ecf5; border-color: #a9b7cc; }
+body.light .gutter { background: #f4f6fa; color: #9aa7ba; }
+body.light .stage { background: radial-gradient(120% 100% at 30% 0%, #f7f9fc, #eef1f6);
+  background-image: radial-gradient(120% 100% at 30% 0%, #f7f9fc, #eef1f6),
+    linear-gradient(#00000008 1px, transparent 1px), linear-gradient(90deg, #00000008 1px, transparent 1px);
+  background-size: 100% 100%, 22px 22px, 22px 22px; }
+body.light .dropdown, body.light .ac, body.light .pbox, body.light .dlg .box { background: #ffffff; border-color: var(--line2); box-shadow: 0 14px 40px rgba(30,40,60,.18); }
+body.light .dropdown button:hover, body.light .ac .opt.sel { background: #e9eef6; }
+body.light .pbox input { background: #f4f6fa; color: var(--fg); border-bottom-color: var(--line); }
+body.light #pList .opt { color: #3a465a; }
+body.light #pList .opt.sel, body.light #pList .opt:hover { background: #e9eef6; color: #17202e; }
+body.light .zoombar, body.light .alignbar, body.light .ttbar, body.light .diffbar { background: #ffffffee; border-color: var(--line2); color: #3a465a; }
+body.light #toast { background: #ffffff; border-color: var(--line2); color: var(--fg); }
+body.light .dlg textarea { background: #f7f9fc; color: var(--fg); border-color: var(--line); }
+body.light #inline { background: #ffffff; color: var(--fg); }
+body.light .palette { background: rgba(180, 190, 205, 0.4); }
+
 </style>
 </head>
 <body>
@@ -201,6 +231,8 @@ main { flex: 1; display: flex; min-height: 0; }
     <div class="problems" id="problems"></div>
   </section>
 
+  <div id="splitter" title="ドラッグで幅を調整・ダブルクリックで既定に戻す"></div>
+
   <section class="view" id="view">
     <div class="stage" id="stage"><div id="canvas"></div></div>
     <div id="alignbar" class="alignbar" hidden>
@@ -231,6 +263,7 @@ main { flex: 1; display: flex; min-height: 0; }
 <div id="ac" class="ac" hidden></div>
 <div id="toast" hidden></div>
 <input id="inline" type="text" hidden>
+<input id="bgPick" type="color" style="position:fixed;left:-100px;top:-100px;opacity:0">
 
 <div id="importDlg" class="dlg" hidden>
   <div class="box">
@@ -677,7 +710,7 @@ function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -685,23 +718,27 @@ function parse(text) {
         else if (a[0] === 'today' && a[1]) model.meta.today = a[1];
         else if (a[0] === 'img' && a.length >= 3) model.images[a[1]] = a.slice(2).join(' ');
         else if (a[0] === 'style' && a[1]) model.meta.style = a[1];   // 見た目（sketch など）。意味部は汚さない
+        else if (a[0] === 'theme' && a[1]) model.meta.theme = a[1];    // light / dark
+        else if (a[0] === 'bg' && a[1]) model.meta.bg = a[1];          // 書き出しにも焼く背景色
       }
       continue;                                            // ふつうのコメントは捨てる
     }
     body.push({ raw, ln });
   }
 
-  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram で始めてください）'); return model; }
+  if (!body.length) { model.errors.push('図がありません（gantt / flowchart / sequenceDiagram / classDiagram / infra で始めてください）'); return model; }
   const first = body[0].raw.trim();
   const headWord = first.split(/\s+/)[0];
   if (headWord === 'gantt') parseGantt(body, model);
   else if (headWord === 'flowchart' || headWord === 'graph') parseFlow(body, model, first.split(/\s+/)[1]);
   else if (headWord === 'sequenceDiagram') parseSeq(body, model);
   else if (headWord === 'classDiagram') parseClass(body, model);
-  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram ではありません「${headWord}」`);
+  else if (headWord === 'infra') parseInfra(body, model);
+  else model.errors.push(`先頭が gantt / flowchart / sequenceDiagram / classDiagram / infra ではありません「${headWord}」`);
   return model;
 }
 
+// infra は自己完結モジュールに委譲（parse/layout/draw/serialize が一冊で読める）
 /* ============================================================
    レイアウト計算 — モデル＋（あれば）@layout から座標を出す。純粋・決定的。
    ガント：日付を解決し、タイムライン上の棒に（done/active/crit/milestone）。
@@ -1065,6 +1102,7 @@ function layoutClass(model) {
 }
 
 function layout(model) {
+  if (model.kind === 'infra') return layoutInfra(model);
   if (model.kind === 'flowchart') return layoutFlow(model);
   if (model.kind === 'sequence') return layoutSeq(model);
   if (model.kind === 'class') return layoutClass(model);
@@ -1199,7 +1237,9 @@ function classBody(model) {
 function trailer(model) {
   const L = model.layout, out = [];
   if (model.meta.style) out.push(`%% style ${model.meta.style}`);   // 手描きなどの見た目も往復する
-  if (model.kind === 'flowchart' || model.kind === 'class') {
+  if (model.meta.theme) out.push(`%% theme ${model.meta.theme}`);   // light / dark
+  if (model.meta.bg) out.push(`%% bg ${model.meta.bg}`);            // 背景色（書き出しにも焼く）
+  if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
     for (const id of Object.keys(model.images || {})) out.push(`%% img ${id} ${model.images[id]}`);
   } else if (model.kind === 'sequence') {
@@ -1215,7 +1255,8 @@ function trailer(model) {
 function serialize(model) {
   const body = model.kind === 'flowchart' ? flowBody(model)
     : model.kind === 'sequence' ? seqBody(model)
-    : model.kind === 'class' ? classBody(model) : ganttBody(model);
+    : model.kind === 'class' ? classBody(model)
+    : model.kind === 'infra' ? infraBody(model) : ganttBody(model);
   return [...body, ...trailer(model)].join('\n') + '\n';
 }
 
@@ -1368,6 +1409,7 @@ function sniff(text) {
   const t = String(text).trim();
   if (!t) return 'unknown';
   if (MERMAID_HEAD.test(t)) return 'mermaid';
+  if (/\bcreate\s+table\b/i.test(t)) return 'sql';
   if (t[0] === '{' || t[0] === '[') { try { const v = JSON.parse(t); if (v && typeof v === 'object') return 'json'; } catch (_) { /* JSON でなければ次へ */ } }
   const lines = t.split('\n').filter((l) => l.trim());
   const arrowLines = lines.filter((l) => ARROW.test(l)).length;
@@ -1453,10 +1495,70 @@ function jsonToFlow(text) {
   return { text: ['flowchart TD', ...decls, ...edges].join('\n') + '\n', truncated: k >= CAP };
 }
 
+// SQL DDL（CREATE TABLE）→ クラス図（＝簡易 ER 図）。
+// テーブルはクラス、列は属性（PK/FK を印字）、外部キーは参照先への矢印になる。
+// スキーマファイルを貼るだけで ER が出る——DBA の「とりあえず図に」を一発に。
+function sqlToClass(text) {
+  const src = String(text).replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');   // コメント除去
+  const tables = [], edges = [];
+  const TBL = /create\s+table\s+(?:if\s+not\s+exists\s+)?[`"[]?([\w.]+)[`"\]]?\s*\(([\s\S]*?)\)\s*(?:;|$)/gi;
+  let m;
+  while ((m = TBL.exec(src))) {
+    const name = m[1].split('.').pop();
+    const cols = [], pks = new Set();
+    // 括弧の深さで列定義を区切る（DECIMAL(10,2) の中のカンマで切らない）。
+    const parts = []; let depth = 0, cur = '';
+    for (const ch of m[2]) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch;
+    }
+    parts.push(cur);
+    for (const partRaw of parts) {
+      const part = partRaw.trim().replace(/\s+/g, ' ');
+      if (!part) continue;
+      let cm = /^primary\s+key\s*\(([^)]+)\)/i.exec(part);
+      if (cm) { for (const c of cm[1].split(',')) pks.add(c.trim().replace(/[`"[\]]/g, '')); continue; }
+      cm = /^(?:constraint\s+\S+\s+)?foreign\s+key\s*\(([^)]+)\)\s*references\s+[`"[]?([\w.]+)[`"\]]?/i.exec(part);
+      if (cm) { edges.push({ from: name, to: cm[2].split('.').pop(), label: cm[1].replace(/[`"[\]]/g, '').trim() }); continue; }
+      if (/^(unique|index|key|check|constraint)\b/i.test(part)) continue;
+      cm = /^[`"[]?(\w+)[`"\]]?\s+([\w()',\s]+?)(?:\s+(.*))?$/.exec(part);
+      if (!cm) continue;
+      // 型のカッコは畳む：クラス図の文法では () がメソッドの印なので DECIMAL(10,2) → DECIMAL。
+      const col = cm[1], type = cm[2].trim().replace(/\s.*$/, '').replace(/\(.*$/, '');
+      const tail = part.slice(cm[1].length);
+      if (/primary\s+key/i.test(tail)) pks.add(col);
+      const rm = /references\s+[`"[]?([\w.]+)[`"\]]?/i.exec(tail);
+      if (rm) edges.push({ from: name, to: rm[1].split('.').pop(), label: col });
+      cols.push({ col, type });
+    }
+    tables.push({ name, cols, pks });
+  }
+  if (!tables.length) return { error: 'CREATE TABLE が見つかりません' };
+  const fkCols = new Map(edges.map((e) => [`${e.from}.${e.label}`, e.to]));
+  const out = ['classDiagram'];
+  for (const t of tables) {
+    out.push(`    class ${t.name} {`);
+    for (const c of t.cols) {
+      const marks = [t.pks.has(c.col) ? 'PK' : null, fkCols.has(`${t.name}.${c.col}`) ? 'FK' : null].filter(Boolean);
+      out.push(`      +${c.type} ${c.col}${marks.length ? ' «' + marks.join(',') + '»' : ''}`);
+    }
+    out.push('    }');
+  }
+  const known = new Set(tables.map((t) => t.name));
+  const seen = new Set();                                    // 列内 REFERENCES と FOREIGN KEY の二重計上を畳む
+  for (const e of edges) {
+    const k = `${e.from}→${e.to}:${e.label}`;
+    if (known.has(e.to) && !seen.has(k)) { seen.add(k); out.push(`    ${e.from} --> ${e.to} : ${e.label}`); }
+  }
+  return { text: out.join('\n') + '\n' };
+}
+
 // 何でも入口：貼られたものを当てて Mermaid にする。判らなければ正直に unknown。
 function universal(text) {
   const kind = sniff(text);
   if (kind === 'mermaid') return { kind, text: String(text) };
+  if (kind === 'sql') { const r = sqlToClass(text); return r.error ? { kind: 'unknown', error: r.error } : { kind, text: r.text }; }
   if (kind === 'table') { const r = csvToMermaid(text); return r.error ? { kind: 'unknown', error: r.error } : { kind: 'table', text: r.text, sub: r.kind }; }
   if (kind === 'arrows') return { kind, text: arrowsToFlow(text) };
   if (kind === 'outline') return { kind, text: outlineToFlow(text) };
@@ -1474,6 +1576,307 @@ function csvToMermaid(text) {
   if (H.label != null || H.start != null || H.dur != null)
     return { kind: 'gantt', text: rowsToGantt(rows.slice(1), H) };
   return { error: '列が読めません（from/to か、名前(label)・開始(start)・期間(duration) を含めてください）' };
+}
+
+/* ============================================================
+   infra — システム構成図。studio の拡張図種（Mermaid には無い）。
+   ------------------------------------------------------------
+   ねらい：既存ツールの構成図は「箱を並べて線を引いて属性を書く」を
+   人間が全部やる。ここでは **知っていることを行で書くだけ** にする：
+     ・zone 〜 { … }   … 建屋・フロア・部署・ドメイン・セグメント（入れ子可）
+     ・id[ラベル] :役割, OS, IPアドレス, vlan N
+     ・bus id[ラベル] :h|v, vlan N, 10.0.0.0/24   … 水平/垂直の基幹バス
+     ・a -- b          … 接続（機器同士でも、機器とバスでも）
+   置き場所は自動（ゾーン内で折り返し配置）。ドラッグすれば %% pos に
+   保存され、ゾーンの枠は中身を追いかける。役割は色とタグ（CORE/FW/SV…）、
+   OS・IP・VLAN は機器カードの中に小さく書かれる。
+   例：
+     infra
+       title 本社ネットワーク
+       zone 本社 3F {
+         sw3[SW-3F] :access, ios15, vlan 30
+         pc[営業PC x40] :pc, win11
+       }
+       zone サーバ室 {
+         core[CORE] :core, nxos
+         fw[FW-1] :firewall
+         ap1[基幹AP] :server, rhel9, 10.0.10.5
+       }
+       bus lan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+       core -- lan
+       ap1 -- lan
+       sw3 -- core
+   ============================================================ */
+
+// 役割の正規化：書き方のゆらぎ（sw / switch / l2…）を吸収する。
+const ROLE_ALIAS = {
+  core: 'core', dist: 'dist', distribution: 'dist', access: 'access',
+  sw: 'switch', switch: 'switch', l2: 'switch', l3: 'switch',
+  rt: 'router', router: 'router', gw: 'router',
+  fw: 'firewall', firewall: 'firewall', utm: 'firewall',
+  sv: 'server', srv: 'server', server: 'server',
+  db: 'db', database: 'db',
+  st: 'storage', storage: 'storage', nas: 'storage',
+  pc: 'pc', client: 'pc', clients: 'pc',
+  ap: 'ap', wifi: 'ap', wlc: 'ap',
+  lb: 'lb', proxy: 'lb',
+  cloud: 'cloud', wan: 'cloud', net: 'cloud', internet: 'cloud',
+  prn: 'printer', printer: 'printer',
+};
+const ROLE_TAG = { core: 'CORE', dist: 'DIST', access: 'ACC', switch: 'SW', router: 'RT',
+  firewall: 'FW', server: 'SV', db: 'DB', storage: 'ST', pc: 'PC', ap: 'AP', lb: 'LB', cloud: 'NET', printer: 'PR' };
+const ROLE_HUE = { core: '#f5b86a', dist: '#f5b86a', access: '#6aa9ff', switch: '#6aa9ff', router: '#d68ad6',
+  firewall: '#f57a8a', server: '#7ad1b0', db: '#7ad1b0', storage: '#8ad1f5', pc: '#9aa3b5', ap: '#b8a6ff',
+  lb: '#8ad1f5', cloud: '#8ad1f5', printer: '#9aa3b5' };
+
+const IP_RE = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
+
+// :attr, attr, … を {role, os, ip, vlan, orient} に。役割でも IP でも VLAN でも
+// ない言葉は OS/バージョン扱い——「知らない言葉は捨てずに書いておく」が構成図の礼儀。
+function parseAttrs(spec) {
+  const out = { role: null, os: null, ip: null, vlan: null, orient: null };
+  for (const tokRaw of String(spec || '').split(',')) {
+    const tok = tokRaw.trim(); if (!tok) continue;
+    const low = tok.toLowerCase();
+    const mv = /^vlan\s*(\d+)$/i.exec(tok);
+    if (mv) { out.vlan = +mv[1]; continue; }
+    if (/^(h|horizontal|横)$/.test(low)) { out.orient = 'h'; continue; }
+    if (/^(v|vertical|縦)$/.test(low)) { out.orient = 'v'; continue; }
+    if (IP_RE.test(tok)) { out.ip = tok; continue; }
+    if (ROLE_ALIAS[low]) { out.role = ROLE_ALIAS[low]; continue; }
+    out.os = out.os ? out.os + ' ' + tok : tok;
+  }
+  return out;
+}
+
+const INF_ID = '[A-Za-z0-9_\\u00C0-\\uFFFF][A-Za-z0-9_.\\-\\u00C0-\\uFFFF]*';
+const NODE_RE = new RegExp(`^(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
+const BUS_RE = new RegExp(`^bus\\s+(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
+const LINK_RE = new RegExp(`^(${INF_ID})\\s*--\\s*(${INF_ID})$`);
+
+function parseInfra(lines, model) {
+  model.kind = 'infra';
+  const zstack = [];                                          // 入れ子の現在地
+  for (const { raw, ln } of lines) {
+    const line = raw.trim();
+    if (line === 'infra') continue;
+    if (line.startsWith('title ')) { model.meta.title = line.slice(6).trim(); continue; }
+    const zm = /^zone\s+(.+?)\s*\{$/.exec(line);
+    if (zm) {
+      let name = zm[1];
+      while (model.groups.some((g) => g.name === name)) name += '′';   // 同名ゾーンは正直に区別
+      model.groups.push({ name, parent: zstack.length ? zstack[zstack.length - 1] : null });
+      zstack.push(name);
+      continue;
+    }
+    if (line === '}') { if (zstack.length) zstack.pop(); else model.errors.push(`L${ln}: 閉じすぎの「}」`); continue; }
+    const bm = BUS_RE.exec(line);
+    if (bm) {
+      const a = parseAttrs(bm[3]);
+      model.items.push({ type: 'bus', id: bm[1], label: bm[2] || bm[1],
+        orient: a.orient || 'h', vlan: a.vlan, cidr: a.ip });
+      model.order.push(bm[1]);
+      continue;
+    }
+    const lm = LINK_RE.exec(line);
+    if (lm) { model.edges.push({ from: lm[1], to: lm[2] }); continue; }
+    const nm = NODE_RE.exec(line);
+    if (nm) {
+      if (model.items.some((x) => x.id === nm[1])) { model.errors.push(`L${ln}: id が重複「${nm[1]}」`); continue; }
+      const a = parseAttrs(nm[3]);
+      model.items.push({ type: 'inode', id: nm[1], label: nm[2] || nm[1],
+        role: a.role, os: a.os, ip: a.ip, vlan: a.vlan,
+        zone: zstack.length ? zstack[zstack.length - 1] : null });
+      model.order.push(nm[1]);
+      continue;
+    }
+    model.errors.push(`L${ln}: 読めない行「${line}」`);
+  }
+  if (zstack.length) model.errors.push(`閉じていない zone（} が ${zstack.length} 個足りない）`);
+  // 接続先の存在確認（打ち間違いに早く気づく）。
+  for (const e of model.edges)
+    for (const end of [e.from, e.to])
+      if (!model.items.some((x) => x.id === end)) model.errors.push(`接続の相手が見つからない「${end}」`);
+  return model;
+}
+
+// ---- レイアウト ---------------------------------------------------------------
+// ゾーンの中で折り返し配置 → ゾーンは中身に合わせて膨らむ →
+// ドラッグ（%% pos）があれば従い、ゾーン枠は中身の bbox を追いかける。
+// バスは本文の下（h）／右（v）に並び、接続は最短の垂線で落ちる。
+
+const metaLines = (n) => [n.os, n.ip, n.vlan != null ? 'VLAN ' + n.vlan : null].filter(Boolean);
+
+// 全角は半角の約 1.7 倍幅。ここをサボるとラベルが役割タグに刺さる。
+const textW = (s, px) => [...String(s)].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e7f ? px * 1.7 : px), 0);
+
+function inodeSize(n) {
+  const metas = metaLines(n);
+  const w = Math.max(118, textW(n.label, 7.6) + (n.role ? 58 : 26), ...metas.map((s) => textW(s, 6.3) + 30));
+  return { w: Math.ceil(w), h: 30 + metas.length * 13 + (metas.length ? 6 : 0) };
+}
+
+function layoutInfra(model) {
+  const nodes = model.items.filter((x) => x.type === 'inode')
+    .map((n) => ({ ...n, ...inodeSize(n), x: 0, y: 0 }));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const zones = model.groups.map((g) => ({ ...g, x: 0, y: 0, w: 0, h: 0, depth: 0 }));
+  const zoneOf = new Map(zones.map((z) => [z.name, z]));
+  for (const z of zones) { let p = z.parent, d = 0; while (p) { d++; p = zoneOf.get(p)?.parent; } z.depth = d; }
+
+  const PAD = 14, HEAD = 24, GAP = 12;
+  // ゾーンを内側から積む：子ブロック（子ゾーン＋直属ノード）を折り返しで敷き詰める。
+  function pack(zname) {
+    const kidZones = zones.filter((z) => z.parent === zname);
+    const blocks = [
+      ...kidZones.map((z) => ({ kind: 'zone', ref: z, w: (pack(z.name), z.w), h: z.h })),
+      ...nodes.filter((n) => n.zone === zname).map((n) => ({ kind: 'node', ref: n, w: n.w, h: n.h })),
+    ];
+    const limit = Math.max(560, ...blocks.map((b) => b.w + PAD * 2));
+    let x = PAD, y = (zname ? HEAD : 0) + PAD, rowH = 0, w = 0;
+    for (const b of blocks) {
+      if (x > PAD && x + b.w > limit) { x = PAD; y += rowH + GAP; rowH = 0; }
+      b.ref._dx = x; b.ref._dy = y;                          // 親からの相対位置（後で絶対化）
+      x += b.w + GAP; rowH = Math.max(rowH, b.h); w = Math.max(w, x - GAP + PAD);
+    }
+    const z = zoneOf.get(zname);
+    if (z) { z.w = Math.max(w, zname.length * 12 + 40); z.h = y + rowH + PAD; }
+    return { w, h: y + rowH + PAD };
+  }
+  const root = pack(null);
+  // 相対 → 絶対。
+  function place(zname, ox, oy) {
+    for (const z of zones.filter((zz) => zz.parent === zname)) { z.x = ox + z._dx; z.y = oy + z._dy; place(z.name, z.x, z.y); }
+    for (const n of nodes.filter((nn) => nn.zone === zname)) { n.x = ox + n._dx; n.y = oy + n._dy; }
+  }
+  place(null, 20, 20);
+  // ドラッグの上書き。
+  for (const n of nodes) if (model.layout.pos[n.id]) { n.x = model.layout.pos[n.id][0]; n.y = model.layout.pos[n.id][1]; }
+  // ゾーン枠は中身の bbox を追いかける（深い順に畳むと親が子を包む）。
+  for (const z of [...zones].sort((a, b) => b.depth - a.depth)) {
+    const inner = [
+      ...nodes.filter((n) => n.zone === z.name),
+      ...zones.filter((zz) => zz.parent === z.name),
+    ];
+    if (!inner.length) { z.w = Math.max(z.w, 120); z.h = Math.max(z.h, 60); continue; }
+    const x0 = Math.min(...inner.map((b) => b.x)) - PAD, y0 = Math.min(...inner.map((b) => b.y)) - PAD - (HEAD - 6);
+    const x1 = Math.max(...inner.map((b) => b.x + b.w)) + PAD, y1 = Math.max(...inner.map((b) => b.y + b.h)) + PAD;
+    z.x = x0; z.y = y0; z.w = x1 - x0; z.h = y1 - y0;
+  }
+  // 本文の bbox（バスの置き場所を決めるため）。
+  const bx1 = Math.max(120, ...nodes.map((n) => n.x + n.w), ...zones.map((z) => z.x + z.w));
+  const by1 = Math.max(80, ...nodes.map((n) => n.y + n.h), ...zones.map((z) => z.y + z.h));
+  // バス：h は下に順に、v は右に順に。ドラッグ（pos の y / x）で動かせる。
+  const buses = [];
+  let hy = by1 + 44, vx = bx1 + 56;
+  for (const b of model.items.filter((x) => x.type === 'bus')) {
+    if (b.orient === 'v') {
+      const x = model.layout.pos[b.id] ? model.layout.pos[b.id][0] : vx;
+      buses.push({ ...b, x, y1: 16, y2: by1 + 20 });
+      if (!model.layout.pos[b.id]) vx += 56;
+    } else {
+      const y = model.layout.pos[b.id] ? model.layout.pos[b.id][1] : hy;
+      buses.push({ ...b, y, x1: 16, x2: bx1 + 20 });
+      if (!model.layout.pos[b.id]) hy += 46;
+    }
+  }
+  const busOf = new Map(buses.map((b) => [b.id, b]));
+  // 接続線：機器⇔バスは垂線、機器⇔機器は中心同士。
+  const links = [];
+  for (const e of model.edges) {
+    const na = byId.get(e.from), nb = byId.get(e.to);
+    const ba = busOf.get(e.from), bb = busOf.get(e.to);
+    if (na && bb) links.push(stub(na, bb));
+    else if (nb && ba) links.push(stub(nb, ba));
+    else if (na && nb) links.push({ x1: na.x + na.w / 2, y1: na.y + na.h / 2, x2: nb.x + nb.w / 2, y2: nb.y + nb.h / 2 });
+  }
+  function stub(n, b) {
+    if (b.orient === 'v') { const y = n.y + n.h / 2; return { x1: n.x + n.w, y1: y, x2: b.x, y2: y, dot: true }; }
+    const x = n.x + n.w / 2; return { x1: x, y1: n.y + n.h, x2: x, y2: b.y, dot: true };
+  }
+  const width = Math.max(bx1, ...buses.map((b) => b.orient === 'v' ? b.x : b.x2)) + 40;
+  const height = Math.max(by1, ...buses.map((b) => b.orient === 'v' ? b.y2 : b.y)) + 40;
+  return { kind: 'infra', width, height, nodes, zones, buses, links, errors: [] };
+}
+
+// ---- 描画 ----------------------------------------------------------------------
+
+const iesc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function drawInfra(model, L, opts = {}) {
+  const T = themeOf(opts);
+  const parts = [];
+  for (const z of [...L.zones].sort((a, b) => a.depth - b.depth)) {  // 浅い枠から描く（親が下）
+    parts.push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="10" fill="${T.frameFill}" fill-opacity="${0.03 + z.depth * 0.02}" stroke="${T.dim}" stroke-dasharray="5 4" stroke-opacity="0.7"/>`);
+    parts.push(`<text x="${z.x + 12}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">${iesc(z.name)}</text>`);
+  }
+  for (const l of L.links) {
+    parts.push(`<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${T.line}" stroke-opacity="0.7" stroke-width="1.4"/>`);
+    if (l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3.4" fill="${T.line}"/>`);
+  }
+  for (const b of L.buses) {
+    const chip = [b.label, b.vlan != null ? 'VLAN ' + b.vlan : null, b.cidr].filter(Boolean).join(' ・ ');
+    if (b.orient === 'v') {
+      parts.push(`<g data-drag="node" data-id="${iesc(b.id)}" style="cursor:grab">`
+        + `<line x1="${b.x}" y1="${b.y1}" x2="${b.x}" y2="${b.y2}" stroke="#8ad1f5" stroke-width="5" stroke-linecap="round"/>`
+        + `<rect x="${b.x - 10}" y="${b.y1}" width="20" height="${b.y2 - b.y1}" fill="transparent"/>`
+        + `<text x="${b.x + 9}" y="${b.y1 + 14}" fill="#8ad1f5" font-size="11" writing-mode="tb">${iesc(chip)}</text></g>`);
+    } else {
+      parts.push(`<g data-drag="node" data-id="${iesc(b.id)}" style="cursor:grab">`
+        + `<line x1="${b.x1}" y1="${b.y}" x2="${b.x2}" y2="${b.y}" stroke="#8ad1f5" stroke-width="5" stroke-linecap="round"/>`
+        + `<rect x="${b.x1}" y="${b.y - 10}" width="${b.x2 - b.x1}" height="20" fill="transparent"/>`
+        + `<text x="${b.x1 + 4}" y="${b.y - 9}" fill="#8ad1f5" font-size="11" font-weight="600">${iesc(chip)}</text></g>`);
+    }
+  }
+  L.nodes.forEach((n) => {
+    const hue = ROLE_HUE[n.role] || '#9aa3b5';
+    const tag = ROLE_TAG[n.role];
+    const sel = !!opts.selected?.has?.(n.id);
+    const metas = metaLines(n);
+    let g = `<g data-drag="node" data-id="${iesc(n.id)}" style="cursor:grab">`;
+    if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="9" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="7" fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`
+      + `<rect x="${n.x}" y="${n.y}" width="4" height="${n.h}" rx="2" fill="${hue}"/>`;              // 役割の色帯
+    if (tag) g += `<rect x="${n.x + n.w - 34}" y="${n.y + 5}" width="28" height="14" rx="4" fill="${hue}" fill-opacity="0.18"/>`
+      + `<text x="${n.x + n.w - 20}" y="${n.y + 15.5}" fill="${hue}" font-size="9" font-weight="700" text-anchor="middle">${tag}</text>`;
+    g += `<text x="${n.x + 12}" y="${n.y + 19}" fill="${T.ink}" font-size="12.5" font-weight="600">${iesc(n.label)}</text>`;
+    metas.forEach((m2, i) => {
+      g += `<text x="${n.x + 12}" y="${n.y + 34 + i * 13}" fill="${T.dim}" font-size="10.5">${iesc(m2)}</text>`;
+    });
+    parts.push(g + `</g>`);
+    if (sel && opts.selected.size === 1)
+      parts.push(`<g data-connect="1" data-id="${iesc(n.id)}" style="cursor:crosshair">`
+        + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
+        + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="${T.paper}" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
+  });
+  return parts.join('\n');
+}
+
+// ---- 逆コンパイル（serialize から呼ぶ）------------------------------------------
+
+const attrsOf = (n) => [
+  n.role, n.os, n.ip, n.vlan != null ? 'vlan ' + n.vlan : null,
+].filter(Boolean).join(', ');
+
+function infraBody(model) {
+  const out = ['infra'];
+  if (model.meta.title) out.push(`    title ${model.meta.title}`);
+  const nodeLine = (n, ind) => `${ind}${n.id}[${n.label}]${attrsOf(n) ? ' :' + attrsOf(n) : ''}`;
+  const emitZone = (zname, ind) => {
+    for (const z of model.groups.filter((g) => g.parent === zname)) {
+      out.push(`${ind}zone ${z.name} {`);
+      emitZone(z.name, ind + '  ');
+      out.push(`${ind}}`);
+    }
+    for (const n of model.items.filter((x) => x.type === 'inode' && x.zone === zname)) out.push(nodeLine(n, ind));
+  };
+  emitZone(null, '    ');
+  for (const b of model.items.filter((x) => x.type === 'bus')) {
+    const attrs = [b.orient, b.vlan != null ? 'vlan ' + b.vlan : null, b.cidr].filter(Boolean).join(', ');
+    out.push(`    bus ${b.id}[${b.label}]${attrs ? ' :' + attrs : ''}`);
+  }
+  for (const e of model.edges) out.push(`    ${e.from} -- ${e.to}`);
+  return out;
 }
 
 /* ============================================================
@@ -1651,9 +2054,40 @@ function seqToDoc(model, L, doc) {
 
 // ---- 入口 -------------------------------------------------------------------
 
+
+// ---- インフラ構成図 ----------------------------------------------------------
+// ゾーン＝枠、機器＝角丸カード（ラベル＋OS/IP/VLAN を改行で）、バス＝太線、接続＝エッジ。
+const INFRA_HUE = { core: '#C98A3A', dist: '#C98A3A', access: '#4C7DD0', switch: '#4C7DD0', router: '#A863A8',
+  firewall: '#C25668', server: '#3FA37E', db: '#3FA37E', storage: '#4C9DBF', pc: '#8A93A6', ap: '#7E6FC9',
+  lb: '#4C9DBF', cloud: '#4C9DBF', printer: '#8A93A6' };
+
+function infraToDoc(model, L, doc) {
+  for (const z of [...L.zones].sort((a, b) => a.depth - b.depth))
+    doc.vertex(z.name, `rounded=1;dashed=1;verticalAlign=top;align=left;spacingLeft=8;html=1;fillColor=none;strokeColor=${GRAY};fontColor=${GRAY};`, z.x, z.y, z.w, z.h);
+  const idOf = new Map();
+  for (const b of L.buses) {
+    const chip = [b.label, b.vlan != null ? 'VLAN ' + b.vlan : null, b.cidr].filter(Boolean).join(' / ');
+    const pts = b.orient === 'v' ? [[b.x, b.y1], [b.x, b.y2]] : [[b.x1, b.y], [b.x2, b.y]];
+    doc.edge(chip, `endArrow=none;strokeWidth=5;strokeColor=#4C9DBF;fontColor=${FONT};html=1;`, { points: pts });
+    // バスへの接続は座標で受ける（レイアウト済みの垂線をそのまま線に）。
+    idOf.set(b.id, null);
+  }
+  for (const n of L.nodes) {
+    const hue = INFRA_HUE[n.role] || GRAY;
+    const metas = [n.os, n.ip, n.vlan != null ? 'VLAN ' + n.vlan : null].filter(Boolean);
+    const label = n.label + (metas.length ? '\n' + metas.join('\n') : '');
+    idOf.set(n.id, doc.vertex(label,
+      `rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=2;fillColor=${FILL};strokeColor=${hue};fontColor=${FONT};`,
+      n.x, n.y, n.w, n.h));
+  }
+  for (const l of L.links)
+    doc.edge('', `endArrow=none;html=1;strokeColor=${GRAY};`, { points: [[l.x1, l.y1], [l.x2, l.y2]] });
+}
+
 function toDrawio(model, L) {
   const doc = new Doc();
-  if (L.kind === 'flowchart') flowToDoc(model, L, doc);
+  if (L.kind === 'infra') infraToDoc(model, L, doc);
+  else if (L.kind === 'flowchart') flowToDoc(model, L, doc);
   else if (L.kind === 'class') classToDoc(model, L, doc);
   else if (L.kind === 'sequence') seqToDoc(model, L, doc);
   else ganttToDoc(model, L, doc);
@@ -1733,24 +2167,38 @@ function diffModels(oldM, newM) {
    ============================================================ */
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// ---- テーマ ----------------------------------------------------------------
+// dark は従来の配色そのもの。light は紙に刷れる配色（メール貼付・印刷向け）。
+// 図の色は全部ここを通る——テーマ切替は %% theme light / dark で往復する。
+const THEMES = {
+  dark: { ink: '#e7ebf4', sub: '#c7d0e0', head: '#aeb6c6', dim: '#8a93a6', line: '#9aa3b5',
+    faint: '#5a6b86', nodeFill: '#161b26', paper: '#0b0e14', chip: '#1c2436',
+    noteFill: '#2e2a1c', noteInk: '#e8dcb0', frameInk: '#ffffff' },
+  light: { ink: '#1d2534', sub: '#333f52', head: '#3d4a5e', dim: '#5d6b80', line: '#5a6b7e',
+    faint: '#8fa0b5', nodeFill: '#ffffff', paper: '#ffffff', chip: '#e8edf5',
+    noteFill: '#fff6dc', noteInk: '#6b5410', frameInk: '#000000' },
+};
+const themeOf = (opts) => THEMES[opts && opts.theme] || THEMES.dark;
+
 const HUES = ['#6aa9ff', '#7ad1b0', '#f5b86a', '#d68ad6', '#f57a8a', '#8ad1f5', '#b8a6ff', '#9ad17a'];
 const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
 
 // ハイパーリンクの ↗ バッジ（要素の右肩）。UI がクリックで開く。
-function linkBadge(url, cx, cy) {
+function linkBadge(url, cx, cy, T) {
   return `<g data-linkbtn="1" data-url="${esc(url)}" style="cursor:pointer">`
-    + `<circle cx="${cx}" cy="${cy}" r="8" fill="#18202e" stroke="#6aa9ff" stroke-width="1.2"/>`
+    + `<circle cx="${cx}" cy="${cy}" r="8" fill="${T.chip}" stroke="#6aa9ff" stroke-width="1.2"/>`
     + `<text x="${cx}" y="${cy + 3.5}" fill="#8fb6ff" font-size="9" text-anchor="middle">↗</text></g>`;
 }
 
-const DEFS = `<defs>
-  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/></marker>
+const defs = (T) => `<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${T.line}"/></marker>
   <marker id="cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M2,2 L8,8 M8,2 L2,8" stroke="#f57a8a" stroke-width="1.7" fill="none"/></marker>
-  <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#9aa3b5" stroke-width="1.4"/></marker>
-  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
-  <marker id="diaf" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#9aa3b5"/></marker>
-  <marker id="diao" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="#0b0e14" stroke="#9aa3b5" stroke-width="1.2"/></marker>
+  <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="${T.line}" stroke-width="1.4"/></marker>
+  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 z" fill="${T.paper}" stroke="${T.line}" stroke-width="1.2"/></marker>
+  <marker id="diaf" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="${T.line}"/></marker>
+  <marker id="diao" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto-start-reverse"><path d="M1,5 L7,1 L13,5 L7,9 z" fill="${T.paper}" stroke="${T.line}" stroke-width="1.2"/></marker>
 </defs>`;
+
 
 // 手描きモード（%% style sketch）：feTurbulence の変位で線を「揺らす」。
 // 乱流のシードは固定＝同じ図からは同じ揺れ（決定的）。フォントも手書き風に寄せる。
@@ -1762,26 +2210,29 @@ const SKETCH_FILTER = `<filter id="sketch" x="-4%" y="-4%" width="108%" height="
 const SKETCH_FONT = `'Segoe Print','Bradley Hand','Klee One','Yuji Syuku','Comic Sans MS',cursive`;
 
 function wrap(L, inner, opts = {}) {
+  const T = themeOf(opts);
+  const bg = opts.bg ? `<rect x="0" y="0" width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" fill="${opts.bg}"/>` : '';
   const sketch = !!opts.sketch;
   const font = sketch ? SKETCH_FONT : 'ui-sans-serif,system-ui,sans-serif';
   const body = sketch ? SKETCH_FILTER + `<g filter="url(#sketch)">${inner}</g>` : inner;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.ceil(L.width)} ${Math.ceil(L.height)}" `
     + `width="${Math.ceil(L.width)}" height="${Math.ceil(L.height)}" font-family="${font}">`
-    + DEFS + body + '</svg>';
+    + bg + defs(T) + body + '</svg>';
 }
 
 // ---- ガント ---------------------------------------------------------------
 
 function drawGantt(model, L, opts = {}) {
+  const T = themeOf(opts);
   const secIndex = new Map(); let si = -1, last;
   for (const b of L.bars) { if (b.section !== last) { last = b.section; si++; } secIndex.set(b.id, b.section ? si : 0); }
   const parts = [];
 
   for (const d of L.days) if (d.weekend)
-    parts.push(`<rect x="${d.x}" y="${L.axisH}" width="${L.dayW}" height="${L.height - L.axisH}" fill="#ffffff" opacity="0.03"/>`);
+    parts.push(`<rect x="${d.x}" y="${L.axisH}" width="${L.dayW}" height="${L.height - L.axisH}" fill="${T.frameInk}" opacity="0.03"/>`);
   for (const d of L.days) {
-    parts.push(`<line x1="${d.x}" y1="${L.axisH}" x2="${d.x}" y2="${L.height}" stroke="#ffffff" stroke-opacity="0.05"/>`);
-    if (d.d % 7 === 0) parts.push(`<text x="${d.x + 3}" y="${L.axisH - 14}" fill="#8a93a6" font-size="10">${esc(d.date.slice(5))}</text>`);
+    parts.push(`<line x1="${d.x}" y1="${L.axisH}" x2="${d.x}" y2="${L.height}" stroke="${T.frameInk}" stroke-opacity="0.05"/>`);
+    if (d.d % 7 === 0) parts.push(`<text x="${d.x + 3}" y="${L.axisH - 14}" fill="${T.dim}" font-size="10">${esc(d.date.slice(5))}</text>`);
   }
   if (L.today) parts.push(
     `<line x1="${L.today.x}" y1="${L.axisH - 6}" x2="${L.today.x}" y2="${L.height}" stroke="#f57a8a" stroke-width="1.5" stroke-dasharray="3 3"/>`,
@@ -1793,18 +2244,18 @@ function drawGantt(model, L, opts = {}) {
     for (const dep of (it?.after || [])) {
       const a = byId.get(dep); if (!a) continue;
       const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2;
-      parts.push(`<path d="M${x1},${y1} C${x1 + 12},${y1} ${x2 - 12},${y2} ${x2},${y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.4" marker-end="url(#arrow)"/>`);
+      parts.push(`<path d="M${x1},${y1} C${x1 + 12},${y1} ${x2 - 12},${y2} ${x2},${y2}" fill="none" stroke="${T.line}" stroke-opacity="0.4" marker-end="url(#arrow)"/>`);
     }
   }
   for (const s of L.sections)
-    parts.push(`<text x="8" y="${s.y + 14}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(s.name)}</text>`);
+    parts.push(`<text x="8" y="${s.y + 14}" fill="${T.head}" font-size="11" font-weight="600">${esc(s.name)}</text>`);
 
   for (const b of L.bars) {
     const hue = hueOf(secIndex.get(b.id));
-    parts.push(`<text x="8" y="${b.rowY + L.rowH / 2 + 4}" fill="#d7dbe6" font-size="12">${esc(b.label)}</text>`);
+    parts.push(`<text x="8" y="${b.rowY + L.rowH / 2 + 4}" fill="${T.ink}" font-size="12">${esc(b.label)}</text>`);
     if (b.type === 'milestone') {
       const cx = b.x, cy = b.y + b.h / 2, r = b.h / 2;
-      parts.push(`<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab"><path d="M${cx},${cy - r} L${cx + r},${cy} L${cx},${cy + r} L${cx - r},${cy} z" fill="${hue}" stroke="#0b0e14"/></g>`);
+      parts.push(`<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab"><path d="M${cx},${cy - r} L${cx + r},${cy} L${cx},${cy + r} L${cx - r},${cy} z" fill="${hue}" stroke="${T.paper}"/></g>`);
     } else {
       const crit = b.status === 'crit', active = b.status === 'active', done = b.status === 'done';
       const fillOp = done ? 0.95 : active ? 0.5 : 0.9;
@@ -1812,8 +2263,8 @@ function drawGantt(model, L, opts = {}) {
       let g = `<g data-drag="bar" data-id="${esc(b.id)}" style="cursor:grab">`
         + `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4" fill="${hue}" opacity="${fillOp}"`
         + (crit ? ` stroke="#f5667a" stroke-width="2"` : active ? ` stroke="${hue}" stroke-width="1.5" stroke-dasharray="4 3"` : '') + `/>`;
-      if (done) g += `<path d="M${b.x + 5},${b.y + b.h / 2} l3,4 l6,-7" fill="none" stroke="#0b0e14" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
-      if (it2?.link) g += linkBadge(it2.link, b.x + b.w + 11, b.y + b.h / 2);
+      if (done) g += `<path d="M${b.x + 5},${b.y + b.h / 2} l3,4 l6,-7" fill="none" stroke="${T.paper}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
+      if (it2?.link) g += linkBadge(it2.link, b.x + b.w + 11, b.y + b.h / 2, T);
       parts.push(g + `</g>`);
     }
   }
@@ -1837,49 +2288,50 @@ function shapePath(n) {
 }
 
 function drawFlow(model, L, opts = {}) {
+  const T = themeOf(opts);
   const parts = [];
   for (const g of L.groups) {
-    parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
-    parts.push(`<text x="${g.x + 12}" y="${g.y + 16}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(g.name)}</text>`);
+    parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="10" fill="${T.frameInk}" fill-opacity="0.03" stroke="${T.faint}" stroke-dasharray="4 4"/>`);
+    parts.push(`<text x="${g.x + 12}" y="${g.y + 16}" fill="${T.head}" font-size="11" font-weight="600">${esc(g.name)}</text>`);
   }
   L.edges.forEach((e, i) => {
     const dash = e.dotted ? ` stroke-dasharray="2 4"` : '';
     const wdt = e.thick ? 2.5 : 1.4;
-    parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="#9aa3b5" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
+    parts.push(`<path d="M${e.x1},${e.y1} C${e.c1x},${e.c1y} ${e.c2x},${e.c2y} ${e.x2},${e.y2}" fill="none" stroke="${T.line}" stroke-opacity="0.75" stroke-width="${wdt}"${dash}${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
       parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
-        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
-        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="${T.paper}" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="${T.sub}" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
     }
   });
   L.nodes.forEach((n, i) => {
     const hue = hueOf(i);
     const sel = !!opts.selected?.has?.(n.id);
     const inner = shapePath(n).replace(/<(rect|ellipse|polygon|path)([^>]*?)\/>/g,
-      `<$1$2 fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
+      `<$1$2 fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`)
       .replace(/<line([^>]*?)\/>/g, `<line$1 stroke="${hue}" stroke-width="1.3"/>`);
     let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
     if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="10" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
     if (n.img) {
-      g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`
+      g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`
         + `<image href="${esc(n.img)}" x="${n.x + 4}" y="${n.y + 4}" width="${n.w - 8}" height="${n.h - 26}" preserveAspectRatio="xMidYMid meet"/>`
-        + `<text x="${n.x + n.w / 2}" y="${n.y + n.h - 8}" fill="#e7ebf4" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`;
+        + `<text x="${n.x + n.w / 2}" y="${n.y + n.h - 8}" fill="${T.ink}" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`;
     } else {
-      g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
+      g += inner + `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" fill="${T.ink}" font-size="12.5" text-anchor="middle">${esc(n.label)}</text>`;
     }
-    if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2);
+    if (n.link) g += linkBadge(n.link, n.x + n.w - 2, n.y + 2, T);
     parts.push(g + `</g>`);
-    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n, T));
   });
   return wrap(L, parts.join('\n'), opts);
 }
 
 // 選択ノードから生える接続ハンドル（引っぱって別ノードへ落とすとエッジ）。
-function connectHandle(n) {
+function connectHandle(n, T) {
   return `<g data-connect="1" data-id="${esc(n.id)}" style="cursor:crosshair">`
     + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
-    + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="#0b0e14" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`;
+    + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="${T.paper}" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`;
 }
 
 // ---- クラス図 ----------------------------------------------------------------
@@ -1887,16 +2339,17 @@ function connectHandle(n) {
 const CLASS_MARKER = { inherit: 'tri', composition: 'diaf', aggregation: 'diao', assoc: 'arrow' };
 
 function drawClass(model, L, opts = {}) {
+  const T = themeOf(opts);
   const parts = [];
   L.edges.forEach((e, i) => {
     const marker = CLASS_MARKER[e.kind];
     const dash = e.dotted ? ` stroke-dasharray="4 4"` : '';
-    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#9aa3b5" stroke-opacity="0.8" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+    parts.push(`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="${T.line}" stroke-opacity="0.8" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
     if (e.label) {
       const tw = e.label.length * 7 + 10;
       parts.push(`<g data-edit="edge" data-i="${i}" style="cursor:text">`
-        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="#0b0e14" opacity="0.85"/>`
-        + `<text x="${e.mx}" y="${e.my + 4}" fill="#c7d0e0" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
+        + `<rect x="${e.mx - tw / 2}" y="${e.my - 9}" width="${tw}" height="18" rx="4" fill="${T.paper}" opacity="0.85"/>`
+        + `<text x="${e.mx}" y="${e.my + 4}" fill="${T.sub}" font-size="11" text-anchor="middle">${esc(e.label)}</text></g>`);
     }
   });
   L.nodes.forEach((n, i) => {
@@ -1904,20 +2357,20 @@ function drawClass(model, L, opts = {}) {
     const sel = !!opts.selected?.has?.(n.id);
     let g = `<g data-drag="node" data-id="${esc(n.id)}" style="cursor:grab">`;
     if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="8" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
-    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="#161b26" stroke="${hue}" stroke-width="${sel ? 2.4 : 1.5}"/>`;
-    g += `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e7ebf4" font-size="12.5" font-weight="700" text-anchor="middle">${esc(n.label)}</text>`;
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.4 : 1.5}"/>`;
+    g += `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="${T.ink}" font-size="12.5" font-weight="700" text-anchor="middle">${esc(n.label)}</text>`;
     let y = n.y + 26;
     if (n.attrs.length || n.methods.length) {
       g += `<line x1="${n.x}" y1="${y}" x2="${n.x + n.w}" y2="${y}" stroke="${hue}" stroke-opacity="0.5"/>`;
       y += 4;
-      for (const a of n.attrs) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#c7d0e0" font-size="11">${esc(a)}</text>`; y += 3; }
+      for (const a of n.attrs) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="${T.sub}" font-size="11">${esc(a)}</text>`; y += 3; }
       if (n.methods.length) {
         if (n.attrs.length) { g += `<line x1="${n.x}" y1="${y + 2}" x2="${n.x + n.w}" y2="${y + 2}" stroke="${hue}" stroke-opacity="0.35"/>`; y += 5; }
         for (const m of n.methods) { y += 13; g += `<text x="${n.x + 10}" y="${y}" fill="#aeb9d0" font-size="11" font-style="italic">${esc(m)}</text>`; y += 3; }
       }
     }
     parts.push(g + `</g>`);
-    if (sel && opts.selected.size === 1) parts.push(connectHandle(n));
+    if (sel && opts.selected.size === 1) parts.push(connectHandle(n, T));
   });
   return wrap(L, parts.join('\n'), opts);
 }
@@ -1925,21 +2378,22 @@ function drawClass(model, L, opts = {}) {
 // ---- シーケンス図 -----------------------------------------------------------
 
 function drawSeq(model, L, opts = {}) {
+  const T = themeOf(opts);
   const parts = [];
   // 枠（loop/alt…）：全幅の淡い矩形＋左肩のラベル札＋区切り（else）。
   for (const f of L.frames) {
-    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${f.w}" height="${f.y1 - f.y0}" rx="8" fill="#ffffff" fill-opacity="0.025" stroke="#5a6b86" stroke-dasharray="4 4"/>`);
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${f.w}" height="${f.y1 - f.y0}" rx="8" fill="${T.frameInk}" fill-opacity="0.025" stroke="${T.faint}" stroke-dasharray="4 4"/>`);
     const tag = f.kind + (f.label ? ' ' + f.label : '');
-    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${tag.length * 8 + 18}" height="20" rx="6" fill="#1c2436"/>`
-      + `<text x="${f.x + 9}" y="${f.y0 + 14}" fill="#aeb6c6" font-size="11" font-weight="600">${esc(tag)}</text>`);
+    parts.push(`<rect x="${f.x}" y="${f.y0}" width="${tag.length * 8 + 18}" height="20" rx="6" fill="${T.chip}"/>`
+      + `<text x="${f.x + 9}" y="${f.y0 + 14}" fill="${T.head}" font-size="11" font-weight="600">${esc(tag)}</text>`);
     for (const d of (f.divs || [])) {
-      parts.push(`<line x1="${f.x}" y1="${d.y + 10}" x2="${f.x + f.w}" y2="${d.y + 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.7"/>`
-        + `<text x="${f.x + 9}" y="${d.y + 6}" fill="#8a93a6" font-size="10.5" font-style="italic">[${esc(d.label || 'else')}]</text>`);
+      parts.push(`<line x1="${f.x}" y1="${d.y + 10}" x2="${f.x + f.w}" y2="${d.y + 10}" stroke="${T.faint}" stroke-dasharray="4 4" stroke-opacity="0.7"/>`
+        + `<text x="${f.x + 9}" y="${d.y + 6}" fill="${T.dim}" font-size="10.5" font-style="italic">[${esc(d.label || 'else')}]</text>`);
     }
   }
   // ライフライン（点線）。
   for (const a of L.actors)
-    parts.push(`<line x1="${a.cx}" y1="${L.lifeTop}" x2="${a.cx}" y2="${L.height - 10}" stroke="#5a6b86" stroke-dasharray="4 4" stroke-opacity="0.55"/>`);
+    parts.push(`<line x1="${a.cx}" y1="${L.lifeTop}" x2="${a.cx}" y2="${L.height - 10}" stroke="${T.faint}" stroke-dasharray="4 4" stroke-opacity="0.55"/>`);
   // メッセージ。
   for (const m of L.msgs) {
     const dash = m.dotted ? ` stroke-dasharray="3 4"` : '';
@@ -1947,28 +2401,29 @@ function drawSeq(model, L, opts = {}) {
     const tag = (L.autonumber ? `${m.n}. ` : '') + m.label;
     if (m.self) {
       const w = L.selfW;
-      parts.push(`<path d="M${m.x1},${m.y} h${w} v14 h${-w + 4}" fill="none" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
-      if (tag) parts.push(`<text x="${m.x1 + w + 8}" y="${m.y + 11}" fill="#c7d0e0" font-size="11.5">${esc(tag)}</text>`);
+      parts.push(`<path d="M${m.x1},${m.y} h${w} v14 h${-w + 4}" fill="none" stroke="${T.line}" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${m.x1 + w + 8}" y="${m.y + 11}" fill="${T.sub}" font-size="11.5">${esc(tag)}</text>`);
     } else {
-      parts.push(`<line x1="${m.x1}" y1="${m.y}" x2="${m.x2}" y2="${m.y}" stroke="#9aa3b5" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
-      if (tag) parts.push(`<text x="${(m.x1 + m.x2) / 2}" y="${m.y - 6}" fill="#c7d0e0" font-size="11.5" text-anchor="middle">${esc(tag)}</text>`);
+      parts.push(`<line x1="${m.x1}" y1="${m.y}" x2="${m.x2}" y2="${m.y}" stroke="${T.line}" stroke-width="1.4"${dash}${marker ? ` marker-end="url(#${marker})"` : ''}/>`);
+      if (tag) parts.push(`<text x="${(m.x1 + m.x2) / 2}" y="${m.y - 6}" fill="${T.sub}" font-size="11.5" text-anchor="middle">${esc(tag)}</text>`);
     }
   }
   // ノート（琥珀の付箋）。
   for (const n of L.notes)
-    parts.push(`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="4" fill="#2e2a1c" stroke="#f5b86a" stroke-opacity="0.55"/>`
-      + `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="#e8dcb0" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`);
+    parts.push(`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="4" fill="${T.noteFill}" stroke="#f5b86a" stroke-opacity="0.55"/>`
+      + `<text x="${n.x + n.w / 2}" y="${n.y + 17}" fill="${T.noteInk}" font-size="11.5" text-anchor="middle">${esc(n.label)}</text>`);
   // 参加者（上端の札。つかんで並び替えられる）。
   L.actors.forEach((a, i) => {
     const hue = hueOf(i);
     parts.push(`<g data-drag="actor" data-id="${esc(a.id)}" style="cursor:grab">`
-      + `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="8" fill="#161b26" stroke="${hue}" stroke-width="1.5"/>`
-      + `<text x="${a.cx}" y="${a.y + a.h / 2 + 4}" fill="#e7ebf4" font-size="12.5" text-anchor="middle">${esc(a.label)}</text></g>`);
+      + `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="8" fill="${T.nodeFill}" stroke="${hue}" stroke-width="1.5"/>`
+      + `<text x="${a.cx}" y="${a.y + a.h / 2 + 4}" fill="${T.ink}" font-size="12.5" text-anchor="middle">${esc(a.label)}</text></g>`);
   });
   return wrap(L, parts.join('\n'), opts);
 }
 
 function draw(model, L, opts = {}) {
+  if (L.kind === 'infra') return wrap(L, drawInfra(model, L, opts), opts);
   if (L.kind === 'flowchart') return drawFlow(model, L, opts);
   if (L.kind === 'sequence') return drawSeq(model, L, opts);
   if (L.kind === 'class') return drawClass(model, L, opts);
@@ -2043,6 +2498,37 @@ const SAMPLES = {
       w-->>u: エラー表示
     end
     Note over u,w: 3回失敗でロック`,
+  'インフラ — 社内ネットワーク': `infra
+    title 本社ネットワーク構成
+    zone 本社ビル {
+      zone 3F 営業部 {
+        sw3f[SW-3F] :access, IOS15.9, vlan 30
+        pc3f[営業PC x40] :pc, Win11
+        ap3f[AP-3F] :ap, vlan 90
+      }
+      zone サーバ室 {
+        core[CORE-SW] :core, NX-OS10
+        fw[FW-01] :firewall, FortiOS7
+        app1[業務APサーバ] :server, RHEL9, 10.0.10.21
+        db1[基幹DB] :db, Oracle19c, 10.0.10.31
+        nas[NAS] :storage, 10.0.10.41
+      }
+    }
+    zone DC（DR サイト） {
+      db2[待機DB] :db, Oracle19c, 172.16.10.31
+    }
+    inet[インターネット] :cloud
+    bus lan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+    bus dmz[DMZ] :h, vlan 20, 192.168.1.0/24
+    core -- lan
+    app1 -- lan
+    db1 -- lan
+    nas -- lan
+    fw -- dmz
+    fw -- inet
+    sw3f -- core
+    ap3f -- sw3f
+    db1 -- db2`,
   'クラス — ドメインモデル': `classDiagram
     class Animal {
       +String name
@@ -2063,10 +2549,10 @@ const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -2095,12 +2581,15 @@ function boot() {
   }
   function syncScroll() { hl.parentElement.scrollTop = src.scrollTop; hl.parentElement.scrollLeft = src.scrollLeft; gutter.scrollTop = src.scrollTop; }
 
-  const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch' });
+  const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch',
+    theme: model.meta.theme || 'dark',
+    bg: model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : null) });
   function render() {
     model = parse(src.value);
     L = layout(model);
     for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
     canvas.innerHTML = draw(model, L, drawOpts());
+    document.body.classList.toggle('light', model.meta.theme === 'light');
     refreshDiff();
     syncAlignBar();
     applyView();
@@ -2301,6 +2790,13 @@ function boot() {
       model.order.push(id);
       model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
       selected.clear(); selected.add(id); commitModel();
+    } else if (model.kind === 'infra') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      const id = 'n' + k;
+      model.items.push({ type: 'inode', id, label: '新しい機器', role: null, os: null, ip: null, vlan: null, zone: null });
+      model.order.push(id);
+      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+      selected.clear(); selected.add(id); commitModel();
     } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
     else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
   }
@@ -2347,7 +2843,7 @@ function boot() {
   // ---- 整列（2 個以上選ぶと出る）----
   function syncAlignBar() {
     const bar = $('alignbar'); if (!bar) return;
-    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class'));
+    bar.hidden = !(selected.size >= 2 && (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra'));
   }
   $('alignbar').addEventListener('click', (e) => {
     const a = e.target.dataset.a; if (!a) return;
@@ -2400,7 +2896,9 @@ function boot() {
         ? ['participant', 'autonumber', 'Note', 'loop', 'alt', 'opt', 'else', 'end', 'activate']
         : model.kind === 'class'
           ? ['classDiagram', 'class']
-          : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
+          : model.kind === 'infra'
+            ? ['infra', 'zone', 'bus', 'vlan', 'core', 'access', 'switch', 'router', 'firewall', 'server', 'db', 'storage', 'pc', 'ap', 'cloud']
+            : ['flowchart', 'graph', 'subgraph', 'end', 'direction'];
     const ids = model.items.map((n) => n.id);
     const pool = [];
     if (/after\s+[\w\s]*$/.test(ctx.line) && model.kind === 'gantt') for (const id of ids) pool.push({ k: id, d: 'task' });
@@ -2458,7 +2956,9 @@ function boot() {
         ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
         : model.kind === 'class'
           ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
-          : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+          : model.kind === 'infra'
+            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋接続', '\n    {last} -- n{N}']]
+            : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
   }
   function refreshIns() {
     const ins = $('insbar');
@@ -2540,7 +3040,7 @@ function boot() {
     img.onload = () => {
       const k = 2, c = document.createElement('canvas');
       c.width = Math.ceil(el.viewBox.baseVal.width * k); c.height = Math.ceil(el.viewBox.baseVal.height * k);
-      const g = c.getContext('2d'); g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      const g = c.getContext('2d'); g.fillStyle = pngBg(); g.fillRect(0, 0, c.width, c.height);
       g.scale(k, k); g.drawImage(img, 0, 0); URL.revokeObjectURL(url);
       c.toBlob(async (b) => {
         if (!b) { toast('PNG 化に失敗しました'); return; }
@@ -2562,7 +3062,7 @@ function boot() {
       const k = 2, c = document.createElement('canvas');
       c.width = Math.ceil(s.viewBox.baseVal.width * k); c.height = Math.ceil(s.viewBox.baseVal.height * k);
       const g = c.getContext('2d');
-      g.fillStyle = '#0b0e14'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = pngBg(); g.fillRect(0, 0, c.width, c.height);
       g.scale(k, k); g.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
       c.toBlob((b) => {
@@ -2632,6 +3132,37 @@ function boot() {
     if (!text.trim()) return;
     // 構造の証拠があるものだけ拾う（ただの文章は乗っ取らない）。判別は engine/import.js。
     if (universal(text).kind !== 'unknown') { e.preventDefault(); runImport(text); }
+  });
+
+  // ---- テーマと背景（%% theme / %% bg — 見た目もコメントで往復する）----
+  const pngBg = () => model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : '#0b0e14');
+  function toggleTheme() {
+    model.meta.theme = model.meta.theme === 'light' ? null : 'light';   // 既定は dark なので dark は書かない
+    commitModel();
+    toast(model.meta.theme === 'light' ? 'ライトモード ☀' : 'ダークモード 🌙');
+  }
+  const bgPick = $('bgPick');
+  bgPick.addEventListener('input', () => { model.meta.bg = bgPick.value; commitModel(); toast('背景色 ' + bgPick.value + '（書き出しにも入ります）'); });
+  function pickBg() { bgPick.value = model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : '#0b0e14'); bgPick.click(); }
+  function clearBg() { model.meta.bg = null; commitModel(); toast('背景を透過に戻しました'); }
+
+  // ---- ペイン境界のドラッグ（左は 80〜100 字程度が既定。広い画面ほど図に譲る）----
+  const splitter = $('splitter');
+  const setEdw = (px) => document.documentElement.style.setProperty('--edw', Math.round(px) + 'px');
+  const savedW = +localStorage.getItem('studio.edw');
+  if (savedW > 200) setEdw(savedW);
+  let splitDrag = null;
+  splitter.addEventListener('pointerdown', (e) => {
+    splitDrag = true; splitter.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  splitter.addEventListener('pointermove', (e) => {
+    if (!splitDrag) return;
+    const w = Math.max(220, Math.min(window.innerWidth * 0.7, e.clientX));
+    setEdw(w); localStorage.setItem('studio.edw', w);
+  });
+  splitter.addEventListener('pointerup', () => { splitDrag = null; });
+  splitter.addEventListener('dblclick', () => {              // ダブルクリックで既定幅に戻す
+    document.documentElement.style.removeProperty('--edw'); localStorage.removeItem('studio.edw');
   });
 
   // ---- 手描きモード（%% style sketch — 見た目もコメントで往復する）----
@@ -2716,17 +3247,25 @@ function boot() {
       model.items.push({ type: 'class', id: cid, attrs: [], methods: [] });
       model.order.push(cid); centerPos(cid);
       selected.clear(); selected.add(cid); commitModel();
+    } else if (model.kind === 'infra') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      model.items.push({ type: 'inode', id: 'n' + k, label, role: null, os: null, ip: null, vlan: null, zone: null });
+      model.order.push('n' + k); centerPos('n' + k);
+      selected.clear(); selected.add('n' + k); commitModel();
     } else if (model.kind === 'sequence') insert(`\n    participant p{N} as ${label}`);
     else insert(`\n      ${label} :t{N}, after {last}, 3d`);
     toast(`「${label}」を足しました`);
   }
   function paletteItems(q) {
     const cmds = [];
-    const noun = { gantt: 'タスク', flowchart: 'ノード', sequence: '参加者', class: 'クラス' }[model.kind] || 'ノード';
+    const noun = { gantt: 'タスク', flowchart: 'ノード', sequence: '参加者', class: 'クラス', infra: '機器' }[model.kind] || 'ノード';
     if (q.trim()) cmds.push({ t: `＋ ${noun}「${q.trim()}」を追加`, k: 'add create 追加', pin: true, run: () => addNamed(q.trim()) });
     for (const s of snipsFor()) cmds.push({ t: `挿入：${s[0]}`, k: 'insert snippet', run: () => insert(s[1]) });
     cmds.push(
       { t: '手描きモード切替 ✏', k: 'sketch rough hand 手書き てがき', run: toggleSketch },
+      { t: 'ライト / ダーク切替 ☀🌙', k: 'theme light dark てーま らいと', run: toggleTheme },
+      { t: '背景色を設定…（書き出しにも焼く）', k: 'background bg color はいけい', run: pickBg },
+      { t: '背景を透過に戻す', k: 'background transparent とうか', run: clearBg },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '取り込み（表・箇条書き・A→B・JSON）', k: 'import paste csv とりこみ', run: () => { dlg.hidden = false; $('csvIn').focus(); } },

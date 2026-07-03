@@ -147,6 +147,7 @@ export function sniff(text) {
   const t = String(text).trim();
   if (!t) return 'unknown';
   if (MERMAID_HEAD.test(t)) return 'mermaid';
+  if (/\bcreate\s+table\b/i.test(t)) return 'sql';
   if (t[0] === '{' || t[0] === '[') { try { const v = JSON.parse(t); if (v && typeof v === 'object') return 'json'; } catch (_) { /* JSON でなければ次へ */ } }
   const lines = t.split('\n').filter((l) => l.trim());
   const arrowLines = lines.filter((l) => ARROW.test(l)).length;
@@ -232,10 +233,70 @@ export function jsonToFlow(text) {
   return { text: ['flowchart TD', ...decls, ...edges].join('\n') + '\n', truncated: k >= CAP };
 }
 
+// SQL DDL（CREATE TABLE）→ クラス図（＝簡易 ER 図）。
+// テーブルはクラス、列は属性（PK/FK を印字）、外部キーは参照先への矢印になる。
+// スキーマファイルを貼るだけで ER が出る——DBA の「とりあえず図に」を一発に。
+export function sqlToClass(text) {
+  const src = String(text).replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');   // コメント除去
+  const tables = [], edges = [];
+  const TBL = /create\s+table\s+(?:if\s+not\s+exists\s+)?[`"[]?([\w.]+)[`"\]]?\s*\(([\s\S]*?)\)\s*(?:;|$)/gi;
+  let m;
+  while ((m = TBL.exec(src))) {
+    const name = m[1].split('.').pop();
+    const cols = [], pks = new Set();
+    // 括弧の深さで列定義を区切る（DECIMAL(10,2) の中のカンマで切らない）。
+    const parts = []; let depth = 0, cur = '';
+    for (const ch of m[2]) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch;
+    }
+    parts.push(cur);
+    for (const partRaw of parts) {
+      const part = partRaw.trim().replace(/\s+/g, ' ');
+      if (!part) continue;
+      let cm = /^primary\s+key\s*\(([^)]+)\)/i.exec(part);
+      if (cm) { for (const c of cm[1].split(',')) pks.add(c.trim().replace(/[`"[\]]/g, '')); continue; }
+      cm = /^(?:constraint\s+\S+\s+)?foreign\s+key\s*\(([^)]+)\)\s*references\s+[`"[]?([\w.]+)[`"\]]?/i.exec(part);
+      if (cm) { edges.push({ from: name, to: cm[2].split('.').pop(), label: cm[1].replace(/[`"[\]]/g, '').trim() }); continue; }
+      if (/^(unique|index|key|check|constraint)\b/i.test(part)) continue;
+      cm = /^[`"[]?(\w+)[`"\]]?\s+([\w()',\s]+?)(?:\s+(.*))?$/.exec(part);
+      if (!cm) continue;
+      // 型のカッコは畳む：クラス図の文法では () がメソッドの印なので DECIMAL(10,2) → DECIMAL。
+      const col = cm[1], type = cm[2].trim().replace(/\s.*$/, '').replace(/\(.*$/, '');
+      const tail = part.slice(cm[1].length);
+      if (/primary\s+key/i.test(tail)) pks.add(col);
+      const rm = /references\s+[`"[]?([\w.]+)[`"\]]?/i.exec(tail);
+      if (rm) edges.push({ from: name, to: rm[1].split('.').pop(), label: col });
+      cols.push({ col, type });
+    }
+    tables.push({ name, cols, pks });
+  }
+  if (!tables.length) return { error: 'CREATE TABLE が見つかりません' };
+  const fkCols = new Map(edges.map((e) => [`${e.from}.${e.label}`, e.to]));
+  const out = ['classDiagram'];
+  for (const t of tables) {
+    out.push(`    class ${t.name} {`);
+    for (const c of t.cols) {
+      const marks = [t.pks.has(c.col) ? 'PK' : null, fkCols.has(`${t.name}.${c.col}`) ? 'FK' : null].filter(Boolean);
+      out.push(`      +${c.type} ${c.col}${marks.length ? ' «' + marks.join(',') + '»' : ''}`);
+    }
+    out.push('    }');
+  }
+  const known = new Set(tables.map((t) => t.name));
+  const seen = new Set();                                    // 列内 REFERENCES と FOREIGN KEY の二重計上を畳む
+  for (const e of edges) {
+    const k = `${e.from}→${e.to}:${e.label}`;
+    if (known.has(e.to) && !seen.has(k)) { seen.add(k); out.push(`    ${e.from} --> ${e.to} : ${e.label}`); }
+  }
+  return { text: out.join('\n') + '\n' };
+}
+
 // 何でも入口：貼られたものを当てて Mermaid にする。判らなければ正直に unknown。
 export function universal(text) {
   const kind = sniff(text);
   if (kind === 'mermaid') return { kind, text: String(text) };
+  if (kind === 'sql') { const r = sqlToClass(text); return r.error ? { kind: 'unknown', error: r.error } : { kind, text: r.text }; }
   if (kind === 'table') { const r = csvToMermaid(text); return r.error ? { kind: 'unknown', error: r.error } : { kind: 'table', text: r.text, sub: r.kind }; }
   if (kind === 'arrows') return { kind, text: arrowsToFlow(text) };
   if (kind === 'outline') return { kind, text: outlineToFlow(text) };
