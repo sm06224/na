@@ -10,8 +10,8 @@
 
 const xesc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
-const HUES = ['#4C7DD0', '#3FA37E', '#C98A3A', '#A863A8', '#C25668', '#4C9DBF', '#7E6FC9', '#6FA84C'];
-const hueOf = (i) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
+const DIO_HUES = ['#4C7DD0', '#3FA37E', '#C98A3A', '#A863A8', '#C25668', '#4C9DBF', '#7E6FC9', '#6FA84C'];
+const dioHue = (i) => DIO_HUES[((i % DIO_HUES.length) + DIO_HUES.length) % DIO_HUES.length];
 const FILL = '#F7F9FC', FONT = '#22293A', GRAY = '#8A93A6';
 
 class Doc {
@@ -70,7 +70,7 @@ function flowToDoc(model, L, doc) {
     doc.vertex(g.name, `rounded=1;dashed=1;verticalAlign=top;align=left;spacingLeft=8;html=1;fillColor=none;strokeColor=${GRAY};fontColor=${GRAY};`, g.x, g.y, g.w, g.h);
   const idOf = new Map();
   L.nodes.forEach((n, i) => {
-    const hue = hueOf(i);
+    const hue = dioHue(i);
     let style, label = n.label;
     if (n.img) style = `image;html=1;imageAspect=1;verticalLabelPosition=bottom;verticalAlign=top;fontColor=${FONT};image=${styleImage(n.img)};`;
     else style = (SHAPE_STYLE[n.shape] || SHAPE_STYLE.rect) + `fillColor=${FILL};strokeColor=${hue};fontColor=${FONT};`;
@@ -90,7 +90,7 @@ function flowToDoc(model, L, doc) {
 function classToDoc(model, L, doc) {
   const idOf = new Map();
   L.nodes.forEach((n, i) => {
-    const hue = hueOf(i);
+    const hue = dioHue(i);
     const rows = n.attrs.length + n.methods.length + (n.attrs.length && n.methods.length ? 1 : 0);
     const h = 26 + rows * 22 + (rows ? 4 : 0);
     const pid = doc.vertex(n.label,
@@ -127,7 +127,7 @@ function ganttToDoc(model, L, doc) {
   for (const d of L.days) if (d.d % 7 === 0)
     doc.vertex(d.date.slice(5), `text;html=1;align=left;fontSize=10;fontColor=${GRAY};`, d.x, 8, 46, 16);
   for (const b of L.bars) {
-    const hue = hueOf(secIndex.get(b.id));
+    const hue = dioHue(secIndex.get(b.id));
     doc.vertex(b.label, `text;html=1;align=left;fontColor=${FONT};`, 4, b.rowY + 4, L.labelW - 8, 22);
     if (b.type === 'milestone')
       doc.vertex('', `rhombus;html=1;fillColor=${hue};strokeColor=${hue};`, b.x - b.h / 2, b.y, b.h, b.h);
@@ -152,7 +152,7 @@ function seqToDoc(model, L, doc) {
         { points: [[f.x, d.y + 10], [f.x + f.w, d.y + 10]] });
   }
   L.actors.forEach((a, i) => {
-    doc.vertex(a.label, `rounded=1;html=1;fillColor=${FILL};strokeColor=${hueOf(i)};fontColor=${FONT};`, a.x, a.y, a.w, a.h);
+    doc.vertex(a.label, `rounded=1;html=1;fillColor=${FILL};strokeColor=${dioHue(i)};fontColor=${FONT};`, a.x, a.y, a.w, a.h);
     doc.edge('', `endArrow=none;dashed=1;strokeColor=${GRAY};html=1;`,
       { points: [[a.cx, L.lifeTop], [a.cx, L.height - 10]] });
   });

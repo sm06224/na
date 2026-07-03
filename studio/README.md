@@ -23,6 +23,16 @@
 
 > この作品は **依存ゼロ規則の対象外**。とはいえ「ドラッグ位置の保持」と「オフライン単一 HTML」を守るため、描画エンジンは自前（決定的・DOM 非依存）にしてあります。Mermaid 記法の認識・編集体験・出力に力を注いでいます。
 
+## 鼻ほじりながら、なんでも（v7）
+
+**片手で・考えた瞬間に・怖がらずに**、を合言葉にした体験の層。
+
+- **⌘K コマンドパレット** — Ctrl+K / ⌘K（またはツールバーの ⌘K）で、**全部の操作がひとつの検索窓**から。挿入・エクスポート・サンプル・表示切替・手描き・差分・タイムトラベル…。そして打った言葉がコマンドに無ければ **「その名前のノードを追加」** に化ける——考えたらもう出来てる。白紙から打てば図ごと生える
+- **万能ペースト** — 貼れば図になる。Mermaid・CSV/TSV に加えて、**箇条書き**（字下げ＝親子のツリーに）、**矢印テキスト**（`受付 -> 審査 -> 承認` の束）、**JSON**（構造ツリーに）。判定は保守的で、ただの文章は乗っ取らない
+- **✏ 手描きモード** — ワンタップで図全体が**手描き風**（決定的な揺らぎ＋手書き系フォント）。保存先は `%% style sketch`——コメントなので本物の Mermaid でもそのまま描ける。描画エンジンを自前で持つ専用ツールだからできる顔
+- **⏪ タイムトラベル** — 履歴を**スライダでさかのぼる**。図を見ながら「この辺が良かった」まで滑って戻れる、目で見る undo
+- **差分ビュー** — 旧版の Mermaid を貼ると、**何が増え（緑）・消え（バーに一覧）・変わったか（琥珀）**を図の上に重ねる。テキスト diff でなく**モデル diff** なので並び替えや空白は差にならない。**AI が返してきた版のレビューが一目**——studio の存在理由そのもの
+
 ## リッチなエディタ
 
 `studio/index.html` を開くと、フル機能のエディタが立ち上がります。
@@ -127,7 +137,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 44 tests
+node --test tests/*.test.js            # 55 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）
@@ -143,7 +153,8 @@ studio/
 │  ├─ parse.js                       Mermaid（gantt/flowchart/sequence/class）→ モデル（意味部＋%% @layout を分離）
 │  ├─ layout.js                      ガントの日程解決／フローの段組み＋交差ほどき／シーケンスの積み上げ
 │  ├─ serialize.js                   モデル → Mermaid テキスト（往復の戻り。意味部を汚さない）
-│  ├─ import.js                      流し込み：CSV/TSV → Mermaid（日英ヘッダ吸収・link 列対応）
+│  ├─ import.js                      流し込み：CSV/TSV・箇条書き・矢印テキスト・JSON → Mermaid（万能ペースト）
+│  ├─ diff.js                        モデル diff：旧版 → 新版の「増えた・消えた・変わった」（並び替えは差にしない）
 │  └─ drawio.js                      持ち出し：モデル＋レイアウト → draw.io（mxGraph XML・編集できる図形）
 ├─ render/draw.js                    モデル＋配置 → SVG 文字列（形状・状態色・矢印）
 ├─ build.js                          エディタ一式を畳んで 1 図 1 枚の単一 HTML に

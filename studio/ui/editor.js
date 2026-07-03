@@ -9,8 +9,9 @@ import { layout } from '../engine/layout.js';
 import { serialize } from '../engine/serialize.js';
 import { draw } from '../render/draw.js';
 import { addDays } from '../engine/date.js';
-import { csvToMermaid } from '../engine/import.js';
+import { csvToMermaid, universal } from '../engine/import.js';
 import { toDrawio } from '../engine/drawio.js';
+import { diffModels } from '../engine/diff.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -93,7 +94,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -125,11 +126,13 @@ export function boot() {
   }
   function syncScroll() { hl.parentElement.scrollTop = src.scrollTop; hl.parentElement.scrollLeft = src.scrollLeft; gutter.scrollTop = src.scrollTop; }
 
+  const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch' });
   function render() {
     model = parse(src.value);
     L = layout(model);
     for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
-    canvas.innerHTML = draw(model, L, { selected });
+    canvas.innerHTML = draw(model, L, drawOpts());
+    refreshDiff();
     syncAlignBar();
     applyView();
     kindBadge.textContent = model.kind || '—';
@@ -178,7 +181,8 @@ export function boot() {
   const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
   function redraw() {
     const keep = { ...view };
-    canvas.innerHTML = draw(model, L = layout(model), { selected });
+    canvas.innerHTML = draw(model, L = layout(model), drawOpts());
+    refreshDiff();
     Object.assign(view, keep); applyView();
   }
   // ポトペタで意味部を書き換えたら、DSL に反映して履歴へ。
@@ -403,6 +407,7 @@ export function boot() {
     history.stack.push(v);
     if (history.stack.length > 200) history.stack.shift();
     history.idx = history.stack.length - 1;
+    if (typeof syncTT === 'function') syncTT();              // タイムトラベルのスライダも追随
   }
   function timeTravel(d) {
     const to = history.idx + d;
@@ -477,15 +482,18 @@ export function boot() {
   function drawAc() { for (const el of ac.children) el.classList.toggle('sel', +el.dataset.i === acSel); }
 
   // ---- 挿入（スニペット）----
-  function refreshIns() {
-    const ins = $('insbar');
-    const snips = model.kind === 'gantt'
+  function snipsFor() {
+    return model.kind === 'gantt'
       ? [['＋タスク', '\n      新しいタスク :t{N}, after {last}, 3d'], ['＋セクション', '\n    section 新しい区分'], ['＋マイルストン', '\n      節目 :milestone, m{N}, after {last}, 0d']]
       : model.kind === 'sequence'
         ? [['＋参加者', '\n    participant p{N} as 新しい人'], ['＋メッセージ', '\n    {last}->>p{N}: メッセージ'], ['＋ノート', '\n    Note over {last}: メモ'], ['＋ループ', '\n    loop 条件\n    end']]
         : model.kind === 'class'
           ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
           : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
+  }
+  function refreshIns() {
+    const ins = $('insbar');
+    const snips = snipsFor();
     ins.innerHTML = snips.map((s, i) => `<button data-i="${i}">${s[0]}</button>`).join('');
     for (const b of ins.children) b.onclick = () => insert(snips[+b.dataset.i][1]);
   }
@@ -517,12 +525,17 @@ export function boot() {
       ...MODULES.map((m) => fetch(new URL(m, base)).then((r) => r.text())),
     ]);
     const bundle = mods.map(strip).join('\n');
-    return page.replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${css}\n</style>`)
-      .replace(/<script type="module">[\s\S]*?<\/script>/, `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n<\/script>`);
+    // 置換は関数で（文字列だと $` などが特殊パターン展開されてコードが壊れる）。
+    return page.replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
+      .replace(/<script type="module">[\s\S]*?<\/script>/, () => `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n<\/script>`);
   }
   const slug = (s) => (s || 'diagram').toLowerCase().replace(/[^\w぀-ヿ一-龯]+/g, '-').replace(/^-|-$/g, '') || 'diagram';
-  menu.addEventListener('click', async (e) => {
+  menu.addEventListener('click', (e) => {
     const x = e.target.dataset.x; if (!x) return; menu.hidden = true;
+    doExport(x);
+  });
+  // パレットからも呼べるよう、エクスポートは一つの関数に。
+  async function doExport(x) {
     const name = slug(model.meta.title || model.kind);
     if (x === 'dsl') { try { await navigator.clipboard.writeText(serialize(model)); toast('DSL をコピーしました'); } catch (_) { toast('コピーできませんでした'); } }
     else if (x === 'mmd') download(name + '.mmd', serialize(model), 'text/plain');
@@ -533,7 +546,7 @@ export function boot() {
     else if (x === 'copysvg') copySvg();
     else if (x === 'copypng') copyPng();
     else if (x === 'html') { try { download(name + '.html', await standalone(serialize(model)), 'text/html'); toast('単一 HTML を保存しました'); } catch (_) { toast('HTML 化に失敗（オンラインのエディタでお試しを）'); } }
-  });
+  }
   // SVG をクリップボードへ：PowerPoint に貼って「図形に変換」すればオートシェイプになる。
   async function copySvg() {
     const el = canvas.querySelector('svg'); if (!el) return;
@@ -595,16 +608,15 @@ export function boot() {
 
   // ---- 取り込み（CSV / TSV を貼る・選ぶ・ドロップする）----
   const dlg = $('importDlg');
+  // 万能ペースト：Mermaid・表・矢印テキスト・箇条書き・JSON を判別して図にする。
+  const KIND_JA = { mermaid: 'Mermaid', table: '表', arrows: '矢印テキスト', outline: '箇条書き', json: 'JSON' };
   function runImport(text) {
     const t = String(text || '').trim();
     if (!t) return;
-    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)\b/.test(t)) {   // Mermaid ならそのまま
-      setText(t, true); dlg.hidden = true; toast('Mermaid を読み込みました'); return;
-    }
-    const r = csvToMermaid(t);
-    if (r.error) { toast('⚠ ' + r.error); return; }
+    const r = universal(t);
+    if (r.kind === 'unknown') { toast('⚠ ' + (r.error || '読める形がありません（表・箇条書き・A -> B・JSON・Mermaid）')); return; }
     setText(r.text, true); dlg.hidden = true;
-    toast(`表から ${r.kind === 'gantt' ? 'ガント' : 'フローチャート'}にしました`);
+    toast(`${KIND_JA[r.kind]}${r.kind === 'mermaid' ? 'を読み込みました' : 'から図にしました'}${r.truncated ? '（大きいので一部だけ）' : ''}`);
   }
   $('bImport').onclick = () => { dlg.hidden = false; $('csvIn').focus(); };
   $('csvCancel').onclick = () => { dlg.hidden = true; };
@@ -649,9 +661,150 @@ export function boot() {
     if (imgItem) { e.preventDefault(); embedImage(await fileToDataUrl(imgItem.getAsFile())); return; }
     const text = e.clipboardData?.getData('text/plain') || '';
     if (!text.trim()) return;
-    const head = text.trim().split(/\s/)[0];
-    const tableish = text.includes('\t') || (text.includes('\n') && text.split('\n')[0].includes(','));
-    if (/^(gantt|flowchart|graph|sequenceDiagram|classDiagram)$/.test(head) || tableish) { e.preventDefault(); runImport(text); }
+    // 構造の証拠があるものだけ拾う（ただの文章は乗っ取らない）。判別は engine/import.js。
+    if (universal(text).kind !== 'unknown') { e.preventDefault(); runImport(text); }
+  });
+
+  // ---- 手描きモード（%% style sketch — 見た目もコメントで往復する）----
+  function toggleSketch() {
+    model.meta.style = model.meta.style === 'sketch' ? null : 'sketch';
+    commitModel();
+    toast(model.meta.style ? '手描きモード ✏' : '手描きを解除');
+  }
+  $('zSketch').onclick = toggleSketch;
+
+  // ---- タイムトラベル：履歴をスライダでさかのぼる（見ながら戻れる undo）----
+  const ttbar = $('ttbar'), ttRange = $('ttRange'), ttLabel = $('ttLabel');
+  function syncTT() {
+    if (ttbar.hidden) return;
+    ttRange.max = Math.max(0, history.stack.length - 1);
+    ttRange.value = history.idx;
+    ttLabel.textContent = `${history.idx + 1} / ${history.stack.length}`;
+  }
+  function toggleTT() { ttbar.hidden = !ttbar.hidden; syncTT(); }
+  ttRange.addEventListener('input', () => {
+    const to = +ttRange.value;
+    if (to === history.idx || history.stack[to] == null) return;
+    history.idx = to; src.value = history.stack[to];
+    highlight(); render(); hideAc();
+    ttLabel.textContent = `${to + 1} / ${history.stack.length}`;
+  });
+  $('ttClose').onclick = toggleTT;
+
+  // ---- 差分ビュー：旧版の Mermaid を貼ると「何が増え・消え・変わったか」を図上に ----
+  // AI が返した版のレビューが目 grep でなく一目になる。比較はモデル diff（並び替えは差にしない）。
+  let diffOther = null;
+  function refreshDiff() {
+    const bar = $('diffbar');
+    if (!diffOther) { bar.hidden = true; return; }
+    const res = diffModels(diffOther, model);
+    if (res.kindChanged) { bar.hidden = true; diffOther = null; toast('図の種類が変わったので差分を終了'); return; }
+    const chip = (cls, txt) => `<span class="chip ${cls}">${escHtml(txt)}</span>`;
+    const cap = (arr) => arr.slice(0, 5);
+    bar.innerHTML = `<b>差分</b>`
+      + chip('add', `＋${res.added.length}`) + cap(res.added).map((x) => chip('add', x.label)).join('')
+      + chip('del', `−${res.removed.length}`) + cap(res.removed).map((x) => chip('del', x.label)).join('')
+      + chip('chg', `±${res.changed.length}`) + cap(res.changed).map((x) => chip('chg', x.label)).join('')
+      + `<button id="diffExit">終了</button>`;
+    bar.hidden = false;
+    $('diffExit').onclick = () => { diffOther = null; render(); };
+    for (const g of canvas.querySelectorAll('[data-drag]')) {         // 図上の色分け：追加=緑・変更=琥珀
+      const id = g.dataset.id;
+      const mark = res.addedIds.has(id) ? '#7ad1b0' : res.changedIds.has(id) ? '#f5b86a' : null;
+      if (!mark) continue;
+      for (const el of g.querySelectorAll('rect,ellipse,polygon,path'))
+        { el.setAttribute('stroke', mark); el.setAttribute('stroke-width', '2.8'); }
+    }
+  }
+  const diffDlg = $('diffDlg');
+  $('diffCancel').onclick = () => { diffDlg.hidden = true; };
+  diffDlg.addEventListener('click', (e) => { if (e.target === diffDlg) diffDlg.hidden = true; });
+  $('diffGo').onclick = () => {
+    const other = parse($('diffIn').value);
+    if (!$('diffIn').value.trim() || other.errors.length) { toast('⚠ 旧版の Mermaid が読めません'); return; }
+    diffOther = other; diffDlg.hidden = true; render();
+  };
+
+  // ---- コマンドパレット（Ctrl+K / ⌘K）：全部ここからできる ----
+  // 打った言葉がコマンドに無ければ「その名前のノードを追加」になる——考えたらもう出来てる、が理想。
+  const palette = $('palette'), pInput = $('pInput'), pList = $('pList');
+  let pItems = [], pSel = 0;
+  function centerPos(id) {
+    const r = stage.getBoundingClientRect();
+    const [wx, wy] = toWorld(r.left + r.width / 2, r.top + r.height / 2);
+    model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
+  }
+  function addNamed(label) {
+    if (!model.kind) { setText(`flowchart TD\n    n1[${label}]`, true); return; }   // 白紙からでも始まる
+    if (model.kind === 'flowchart') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      model.items.push({ type: 'node', id: 'n' + k, label, shape: 'rect' });
+      model.order.push('n' + k); centerPos('n' + k);
+      selected.clear(); selected.add('n' + k); commitModel();
+    } else if (model.kind === 'class') {
+      const cid = label.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_.-]/g, '') || 'C' + (model.items.length + 1);
+      if (model.items.some((x) => x.id === cid)) { toast('その名前はもうあります'); return; }
+      model.items.push({ type: 'class', id: cid, attrs: [], methods: [] });
+      model.order.push(cid); centerPos(cid);
+      selected.clear(); selected.add(cid); commitModel();
+    } else if (model.kind === 'sequence') insert(`\n    participant p{N} as ${label}`);
+    else insert(`\n      ${label} :t{N}, after {last}, 3d`);
+    toast(`「${label}」を足しました`);
+  }
+  function paletteItems(q) {
+    const cmds = [];
+    const noun = { gantt: 'タスク', flowchart: 'ノード', sequence: '参加者', class: 'クラス' }[model.kind] || 'ノード';
+    if (q.trim()) cmds.push({ t: `＋ ${noun}「${q.trim()}」を追加`, k: 'add create 追加', pin: true, run: () => addNamed(q.trim()) });
+    for (const s of snipsFor()) cmds.push({ t: `挿入：${s[0]}`, k: 'insert snippet', run: () => insert(s[1]) });
+    cmds.push(
+      { t: '手描きモード切替 ✏', k: 'sketch rough hand 手書き てがき', run: toggleSketch },
+      { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
+      { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
+      { t: '取り込み（表・箇条書き・A→B・JSON）', k: 'import paste csv とりこみ', run: () => { dlg.hidden = false; $('csvIn').focus(); } },
+      { t: '全体をフィット', k: 'fit zoom ふぃっと', run: fit },
+      { t: 'コード ⇄ 図 切替', k: 'view code toggle', run: () => document.body.classList.toggle('viewmax') },
+      { t: 'アンドゥ', k: 'undo', run: () => timeTravel(-1) },
+      { t: 'リドゥ', k: 'redo', run: () => timeTravel(1) },
+    );
+    for (const name of Object.keys(SAMPLES)) cmds.push({ t: `サンプル：${name}`, k: 'sample さんぷる', run: () => setText(SAMPLES[name], true) });
+    for (const [x, label] of [['dsl', 'DSL をコピー'], ['mmd', '.mmd を保存'], ['svg', 'SVG を保存'], ['png', 'PNG を保存'],
+      ['copysvg', 'SVG をコピー（PPT 図形化用）'], ['copypng', 'PNG をコピー'], ['drawio', '.drawio を保存'],
+      ['copydrawio', 'draw.io XML をコピー'], ['html', '単一 HTML を保存']])
+      cmds.push({ t: `エクスポート：${label}`, k: 'export save copy ' + x, run: () => doExport(x) });
+    const ql = q.trim().toLowerCase();
+    // 順位：コマンド名にそのまま含まれる(3) ＞「その名前で追加」ピン(2.5) ＞ 曖昧一致(2)。
+    // ピンを最上位にすると「タイムトラベル」と打った人がノードを生やしてしまう——コマンドの言葉はコマンドが勝つ。
+    const score = (c) => {
+      if (c.pin) return 2.5;
+      if (!ql) return 1;
+      const hay = (c.t + ' ' + c.k).toLowerCase();
+      if (hay.includes(ql)) return 3;
+      let i = 0; for (const ch of hay) { if (ch === ql[i]) i++; if (i === ql.length) return 2; }   // 部分列
+      return 0;
+    };
+    return cmds.map((c) => ({ c, s: score(c) })).filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s).map((x) => x.c).slice(0, 12);
+  }
+  function drawPalette() {
+    pList.innerHTML = pItems.map((c, i) => `<div class="opt${i === pSel ? ' sel' : ''}" data-i="${i}">${escHtml(c.t)}</div>`).join('')
+      || '<div class="none">見つかりません</div>';
+  }
+  function openPalette() { palette.hidden = false; pInput.value = ''; pItems = paletteItems(''); pSel = 0; drawPalette(); pInput.focus(); }
+  function closePalette() { palette.hidden = true; }
+  function runPalette() { const c = pItems[pSel]; if (!c) return; closePalette(); c.run(); }
+  $('bPalette').onclick = openPalette;
+  pInput.addEventListener('input', () => { pItems = paletteItems(pInput.value); pSel = 0; drawPalette(); });
+  pInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { pSel = (pSel + 1) % Math.max(1, pItems.length); drawPalette(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { pSel = (pSel - 1 + pItems.length) % Math.max(1, pItems.length); drawPalette(); e.preventDefault(); }
+    else if (e.key === 'Enter') { runPalette(); e.preventDefault(); }
+    else if (e.key === 'Escape') closePalette();
+    e.stopPropagation();
+  });
+  pList.addEventListener('pointerdown', (e) => { const o = e.target.closest('.opt'); if (o) { pSel = +o.dataset.i; runPalette(); e.preventDefault(); } });
+  palette.addEventListener('click', (e) => { if (e.target === palette) closePalette(); });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette.hidden ? openPalette() : closePalette(); }
   });
 
   // ---- トースト・モバイル ----

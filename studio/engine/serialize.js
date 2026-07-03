@@ -125,6 +125,7 @@ function classBody(model) {
 
 function trailer(model) {
   const L = model.layout, out = [];
+  if (model.meta.style) out.push(`%% style ${model.meta.style}`);   // 手描きなどの見た目も往復する
   if (model.kind === 'flowchart' || model.kind === 'class') {
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
     for (const id of Object.keys(model.images || {})) out.push(`%% img ${id} ${model.images[id]}`);

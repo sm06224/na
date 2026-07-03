@@ -18,6 +18,7 @@
   <span class="sp"></span>
   <div class="ins" id="insbar"></div>
   <span id="status" class="status"></span>
+  <button id="bPalette" title="コマンドパレット（Ctrl+K / ⌘K）— 全部ここからできる">⌘K</button>
   <button id="bImport">取り込み</button>
   <div class="menu">
     <button id="bExport">エクスポート ▾</button>
@@ -56,12 +57,20 @@
       <button data-a="hspread">↔ 等間隔</button>
       <button data-a="vspread">↕ 等間隔</button>
     </div>
+    <div id="diffbar" class="diffbar" hidden></div>
     <div class="zoombar">
       <button id="zOut">－</button>
       <span id="zLabel">100%</span>
       <button id="zIn">＋</button>
       <button id="zFit">フィット</button>
+      <button id="zSketch" title="手描きモード（%% style sketch として保存されます）">✏ 手描き</button>
       <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+    <div id="ttbar" class="ttbar" hidden>
+      <span>⏪ タイムトラベル</span>
+      <input id="ttRange" type="range" min="0" max="0" value="0">
+      <span id="ttLabel" class="ttl"></span>
+      <button id="ttClose">✕</button>
     </div>
   </section>
 </main>
@@ -82,6 +91,26 @@ API 実装,,10,基本設計,,実装"></textarea>
       <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
       <button id="csvCancel" class="ghost2">閉じる</button>
       <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
+
+<div id="palette" class="palette" hidden>
+  <div class="pbox">
+    <input id="pInput" placeholder="コマンドを検索… なければ、その名前のノードを追加（↑↓ で選び Enter）">
+    <div id="pList"></div>
+  </div>
+</div>
+
+<div id="diffDlg" class="dlg" hidden>
+  <div class="box">
+    <h3>差分を比べる — 旧版の Mermaid を貼る</h3>
+    <p class="hint">いま開いている図を<b>新版</b>として、貼った<b>旧版</b>とのモデル差分を出します。追加＝<span style="color:#7ad1b0">緑</span>・変更＝<span style="color:#f5b86a">琥珀</span>で図に色が付き、削除は上のバーに並びます。並び替えや空白は差になりません。AI が返してきた版のレビューにどうぞ。</p>
+    <textarea id="diffIn" spellcheck="false" placeholder="flowchart TD
+    a[旧] --> b[版]"></textarea>
+    <div class="row">
+      <button id="diffCancel" class="ghost2">閉じる</button>
+      <button id="diffGo">比べる</button>
     </div>
   </div>
 </div>

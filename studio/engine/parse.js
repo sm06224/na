@@ -352,13 +352,14 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
         else if (a[0] === 'at' && a.length >= 3) model.layout.at[a[1]] = a[2];
         else if (a[0] === 'today' && a[1]) model.meta.today = a[1];
         else if (a[0] === 'img' && a.length >= 3) model.images[a[1]] = a.slice(2).join(' ');
+        else if (a[0] === 'style' && a[1]) model.meta.style = a[1];   // 見た目（sketch など）。意味部は汚さない
       }
       continue;                                            // ふつうのコメントは捨てる
     }
