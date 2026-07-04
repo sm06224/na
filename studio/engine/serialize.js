@@ -131,6 +131,7 @@ function trailer(model) {
   if (model.meta.bg) out.push(`%% bg ${model.meta.bg}`);            // 背景色（書き出しにも焼く）
   if (model.meta.hops) out.push('%% hops');                         // 交差ジャンプ
   if (model.meta.dots) out.push('%% dots');                         // 接続点の丸点
+  if (model.meta.lod) out.push('%% lod');                           // セマンティックズーム
   if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     if (model.kind === 'infra' && L.fold && L.fold.length) out.push(`%% fold ${L.fold.join('|')}`);
     if (model.kind === 'infra') for (const zn of Object.keys(L.zpos || {})) out.push(`%% zpos ${zn}|${num(L.zpos[zn][0])}|${num(L.zpos[zn][1])}`);

@@ -68,12 +68,14 @@ const IP_RE = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
 
 // 機器・バスの :attrs。役割でも IP でも VLAN でもない言葉は OS/バージョン扱い。
 function parseAttrs(spec) {
-  const out = { role: null, os: null, ip: null, vlan: null, orient: null };
+  const out = { role: null, os: null, ip: null, vlan: null, orient: null, len: null };
   for (const tokRaw of String(spec || '').split(',')) {
     const tok = tokRaw.trim(); if (!tok) continue;
     const low = tok.toLowerCase();
     const mv = /^vlan\s*(\d+)$/i.exec(tok);
     if (mv) { out.vlan = +mv[1]; continue; }
+    const ml = /^len\s*(\d+)$/i.exec(tok);
+    if (ml) { out.len = +ml[1]; continue; }
     if (/^(h|horizontal|横)$/.test(low)) { out.orient = 'h'; continue; }
     if (/^(v|vertical|縦)$/.test(low)) { out.orient = 'v'; continue; }
     if (IP_RE.test(tok)) { out.ip = tok; continue; }
@@ -103,6 +105,7 @@ function parseLinkAttrs(spec) {
 const INF_ID = '[A-Za-z0-9_\\u00C0-\\uFFFF][A-Za-z0-9_.\\-\\u00C0-\\uFFFF]*';
 const NODE_RE = new RegExp(`^(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
 const BUS_RE = new RegExp(`^bus\\s+(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
+const HUB_RE = new RegExp(`^hub\\s+(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
 const FENCE_RE = new RegExp(`^fence\\s+(${INF_ID})(?:\\[([^\\]]*)\\])?\\s*(?::(.*))?$`);
 const LINK_RE = new RegExp(`^(${INF_ID})\\s*--\\s*(${INF_ID})\\s*(?::(.*))?$`);
 
@@ -125,8 +128,18 @@ export function parseInfra(lines, model) {
     const bm = BUS_RE.exec(line);
     if (bm) {
       const a = parseAttrs(bm[3]);
-      model.items.push({ type: 'bus', id: bm[1], label: bm[2] || bm[1], orient: a.orient || 'h', vlan: a.vlan, cidr: a.ip });
+      model.items.push({ type: 'bus', id: bm[1], label: bm[2] || bm[1], orient: a.orient || 'h', vlan: a.vlan, cidr: a.ip,
+        len: a.len, zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(bm[1]);
+      continue;
+    }
+    const hm = HUB_RE.exec(line);
+    if (hm) {
+      const a = parseAttrs(hm[3]);
+      model.items.push({ type: 'hub', id: hm[1], label: hm[2] || hm[1],
+        role: a.role, vlan: a.vlan, cidr: a.ip, len: a.len,
+        zone: zstack.length ? zstack[zstack.length - 1] : null });
+      model.order.push(hm[1]);
       continue;
     }
     const fm = FENCE_RE.exec(line);
@@ -187,7 +200,9 @@ export function layoutInfra(model) {
   }
   const zones = zonesAll.filter((z) => !z.hidden);
 
-  const nodesAll = model.items.filter((x) => x.type === 'inode').map((n) => ({ ...n, ...inodeSize(n), x: 0, y: 0 }));
+  const hubSize = (h) => { const r = Math.max(30, Math.ceil(textW(h.label, 7.2) / 2) + 12, (h.len || 0) / 2); return { w: r * 2, h: r * 2, r, hub: true }; };
+  const nodesAll = model.items.filter((x) => x.type === 'inode' || x.type === 'hub')
+    .map((n) => ({ ...n, ...(n.type === 'hub' ? hubSize(n) : inodeSize(n)), x: 0, y: 0 }));
   const hiddenIn = new Map();                                 // nodeId → 畳んだゾーン名
   for (const n of nodesAll) { const fa = n.zone ? foldedAncestor(n.zone) : null; if (fa) hiddenIn.set(n.id, fa); }
   const nodes = nodesAll.filter((n) => !hiddenIn.has(n.id));
@@ -228,9 +243,37 @@ export function layoutInfra(model) {
   }
   place(null, 20, 20);
   for (const n of nodes) if (model.layout.pos[n.id]) { n.x = model.layout.pos[n.id][0]; n.y = model.layout.pos[n.id][1]; }
+  // zpos はゾーンの自由配置。畳んだ札はそのまま、展開ゾーンは中身ごと平行移動する
+  // （明示 pos を持つ機器は絶対座標なので動かさない。枠は後段の bbox 追従が拾う）。
   const zpos = model.layout.zpos || {};
-  for (const z of zones) if (z.folded && zpos[z.name]) { z.x = zpos[z.name][0]; z.y = zpos[z.name][1]; }
+  for (const z of [...zones].sort((a, b) => a.depth - b.depth)) {
+    if (!zpos[z.name]) continue;
+    if (z.folded) { z.x = zpos[z.name][0]; z.y = zpos[z.name][1]; continue; }
+    const dx = zpos[z.name][0] - z.x, dy = zpos[z.name][1] - z.y;
+    if (!dx && !dy) continue;
+    const under = new Set([z.name]);
+    let grew = true;
+    while (grew) { grew = false; for (const zz of zones) if (zz.parent && under.has(zz.parent) && !under.has(zz.name)) { under.add(zz.name); grew = true; } }
+    for (const zz of zones) if (under.has(zz.name)) { zz.x += dx; zz.y += dy; }
+    for (const n of nodes) if (n.zone && under.has(n.zone) && !model.layout.pos[n.id]) { n.x += dx; n.y += dy; }
+  }
+  // ハブスポーク：ゾーンにも pos にも縛られていないスポーク（そのハブとしか繋がっていない機器）を
+  // ハブの周りに環状に置く。拠点が増えても書くだけで星型が育つ。
+  for (const hub of nodes.filter((n) => n.hub)) {
+    const spokes = nodes.filter((n) => !n.hub && !n.zone && !model.layout.pos[n.id]
+      && model.edges.some((e2) => (e2.from === n.id && e2.to === hub.id) || (e2.to === n.id && e2.from === hub.id))
+      && model.edges.every((e2) => (e2.from !== n.id && e2.to !== n.id) || e2.from === hub.id || e2.to === hub.id));
+    if (!spokes.length) continue;
+    const cx = hub.x + hub.r, cy = hub.y + hub.r;
+    const R = Math.max(hub.r + 96, (spokes.length * 150) / (2 * Math.PI));
+    spokes.forEach((n, i) => {
+      const a = -Math.PI / 2 + (2 * Math.PI * i) / spokes.length;
+      n.x = Math.round(cx + Math.cos(a) * R - n.w / 2);
+      n.y = Math.round(cy + Math.sin(a) * R - n.h / 2);
+    });
+  }
   // 展開ゾーンの枠は中身の bbox を追いかける（深い順）。
+  const busItems = model.items.filter((x) => x.type === 'bus');
   for (const z of [...zones].sort((a, b) => b.depth - a.depth)) {
     if (z.folded) continue;
     const inner = [...nodes.filter((n) => n.zone === z.name), ...zones.filter((zz) => zz.parent === z.name)];
@@ -238,24 +281,37 @@ export function layoutInfra(model) {
     const x0 = Math.min(...inner.map((b) => b.x)) - PAD, y0 = Math.min(...inner.map((b) => b.y)) - PAD - (HEAD - 6);
     const x1 = Math.max(...inner.map((b) => b.x + b.w)) + PAD, y1 = Math.max(...inner.map((b) => b.y + b.h)) + PAD;
     z.x = x0; z.y = y0; z.w = x1 - x0; z.h = y1 - y0;
+    z.h += busItems.filter((b) => b.zone === z.name).length * 30;   // ゾーン内バスの居場所ぶん伸ばす
   }
   const bx1 = Math.max(120, ...nodes.map((n) => n.x + n.w), ...zones.map((z) => z.x + z.w));
   const by1 = Math.max(80, ...nodes.map((n) => n.y + n.h), ...zones.map((z) => z.y + z.h));
   const bx0 = Math.min(20, ...nodes.map((n) => n.x), ...zones.map((z) => z.x));
 
   // バス：h は下に順に、v は右に順に。ドラッグ（pos）で自由に。
-  // バス：pos があれば [x,y] とも自由（長さは自動 span を保ったまま平行移動）。
+  // バス：pos があれば [x,y] とも自由（長さ = len 指定 > 自動 span）。
+  // ゾーン内で宣言されたバスはそのゾーンの幅で張られ、ゾーンごと動く。
   const buses = [];
+  const hiddenBus = new Map();                                 // busId → 畳んだゾーン名
   let hy = by1 + 44, vx = bx1 + 56;
+  const zoneBusIdx = new Map();
   for (const b of model.items.filter((x) => x.type === 'bus')) {
     const p = model.layout.pos[b.id];
+    const fa = b.zone ? foldedAncestor(b.zone) : null;
+    if (fa) { hiddenBus.set(b.id, fa); continue; }
+    if (b.zone && zoneOf.get(b.zone) && !p) {
+      const z = zoneOf.get(b.zone);
+      const idx = zoneBusIdx.get(b.zone) || 0; zoneBusIdx.set(b.zone, idx + 1);
+      const span = b.len || z.w - 20;
+      buses.push({ ...b, y: z.y + z.h - 16 - idx * 28, x1: z.x + 10, x2: z.x + 10 + span, orient: 'h' });
+      continue;
+    }
     if (b.orient === 'v') {
-      const span = by1 + 4;
+      const span = b.len || by1 + 4;
       const x = p ? p[0] : vx, y1 = p ? p[1] : 16;
       buses.push({ ...b, x, y1, y2: y1 + span });
       if (!p) vx += 56;
     } else {
-      const span = (bx1 + 20) - (bx0 - 4);
+      const span = b.len || (bx1 + 20) - (bx0 - 4);
       const x1 = p ? p[0] : bx0 - 4, y = p ? p[1] : hy;
       buses.push({ ...b, y, x1, x2: x1 + span });
       if (!p) hy += 46;
@@ -265,7 +321,9 @@ export function layoutInfra(model) {
 
   // 接続の端点解決：畳まれたゾーンの中の機器は、その札に付け替える（多重は一本に畳む）。
   const zBox = (zname) => { const z = zoneOf.get(zname); return { x: z.x, y: z.y, w: z.w, h: z.h, id: zname }; };
-  const endOf = (id) => byId.get(id) || (hiddenIn.has(id) ? zBox(hiddenIn.get(id)) : null);
+  const endOf = (id) => byId.get(id)
+    || (hiddenIn.has(id) ? zBox(hiddenIn.get(id)) : null)
+    || (hiddenBus.has(id) ? zBox(hiddenBus.get(id)) : null);
   const links = [];
   const seenFold = new Set();
   const pairIndex = new Map();                                // 同じ 2 点間の何本目か（多重ネットワーク）
@@ -273,8 +331,9 @@ export function layoutInfra(model) {
     const ea = endOf(e.from), eb = endOf(e.to);
     const ba = busOf.get(e.from), bb = busOf.get(e.to);
     const aId = ea?.id || e.from, bId = eb?.id || e.to;
-    if (hiddenIn.has(e.from) || hiddenIn.has(e.to)) {          // 畳み先が同じなら線ごと隠す
-      if (hiddenIn.get(e.from) && hiddenIn.get(e.from) === hiddenIn.get(e.to)) continue;
+    const hidF = hiddenIn.get(e.from) || hiddenBus.get(e.from), hidT = hiddenIn.get(e.to) || hiddenBus.get(e.to);
+    if (hidF || hidT) {                                        // 畳み先が同じなら線ごと隠す
+      if (hidF && hidF === hidT) continue;
       const k = `${aId}|${bId}|${e.vlan ?? ''}`;
       if (seenFold.has(k)) continue;
       seenFold.add(k);
@@ -283,7 +342,16 @@ export function layoutInfra(model) {
     const idx = pairIndex.get(key) || 0; pairIndex.set(key, idx + 1);
     if (ea && bb) links.push({ ...stub(ea, bb), e, idx });
     else if (eb && ba) links.push({ ...stub(eb, ba), e, idx });
-    else if (ea && eb) links.push({ x1: ea.x + ea.w / 2, y1: ea.y + ea.h / 2, x2: eb.x + eb.w / 2, y2: eb.y + eb.h / 2, e, idx });
+    else if (ea && eb) {
+      let x1 = ea.x + ea.w / 2, y1 = ea.y + ea.h / 2, x2 = eb.x + eb.w / 2, y2 = eb.y + eb.h / 2;
+      const trim = (cx, cy, r, tx, ty) => {                    // 円周まで縮める（ハブスポークの根元）
+        const dx = tx - cx, dy = ty - cy, len = Math.hypot(dx, dy) || 1;
+        return [cx + (dx / len) * r, cy + (dy / len) * r];
+      };
+      if (ea.hub) { const t = trim(x1, y1, ea.r, x2, y2); x1 = t[0]; y1 = t[1]; }
+      if (eb.hub) { const t = trim(x2, y2, eb.r, x1, y1); x2 = t[0]; y2 = t[1]; }
+      links.push({ x1, y1, x2, y2, e, idx, hubEnd: !!(ea.hub || eb.hub) });
+    }
   }
   // 同じ 2 点間の複数本を平行にずらす（多重ネットワークが読める）。
   const counts = new Map();
@@ -467,10 +535,28 @@ export function drawInfra(model, L, opts = {}) {
         + `<text x="${f.x + 8}" y="${f.y1 + 16}" fill="${c}" font-size="11" font-weight="600" writing-mode="tb">⚑ ${iesc(f.label)}</text></g>`);
     }
   }
+  const detail = opts.detail !== false;                      // セマンティックズーム：引いたらメタを省く
   L.nodes.forEach((n) => {
+    const sel = !!opts.selected?.has?.(n.id);
+    if (n.hub) {                                             // ハブ（二重円）：スポークの中心
+      const hue = n.vlan != null ? vlanHue(n.vlan) : '#8ad1f5';
+      const cx = n.x + n.r, cy = n.y + n.r;
+      let g = `<g data-drag="node" data-id="${iesc(n.id)}" style="cursor:grab">`;
+      if (sel) g += `<circle cx="${cx}" cy="${cy}" r="${n.r + 6}" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
+      g += `<circle cx="${cx}" cy="${cy}" r="${n.r}" fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.8 : 2}"/>`
+        + `<circle cx="${cx}" cy="${cy}" r="${n.r - 5}" fill="none" stroke="${hue}" stroke-opacity="0.45"/>`
+        + `<text x="${cx}" y="${cy + 4}" fill="${T.ink}" font-size="12" font-weight="700" text-anchor="middle">${iesc(n.label)}</text>`;
+      const chip = [n.vlan != null ? 'VLAN ' + n.vlan : null, n.cidr].filter(Boolean).join(' ・ ');
+      if (chip && detail) g += `<text x="${cx}" y="${cy + n.r + 14}" fill="${T.dim}" font-size="10" text-anchor="middle">${iesc(chip)}</text>`;
+      parts.push(g + `</g>`);
+      if (sel && opts.selected.size === 1)
+        parts.push(`<g data-connect="1" data-id="${iesc(n.id)}" style="cursor:crosshair">`
+          + `<circle cx="${cx + n.r + 14}" cy="${cy}" r="8" fill="#6aa9ff"/>`
+          + `<text x="${cx + n.r + 14}" y="${cy + 3.5}" fill="${T.paper}" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
+      return;
+    }
     const hue = ROLE_HUE[n.role] || '#9aa3b5';
     const tag = ROLE_TAG[n.role];
-    const sel = !!opts.selected?.has?.(n.id);
     const metas = metaLines(n);
     let g = `<g data-drag="node" data-id="${iesc(n.id)}" style="cursor:grab">`;
     if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="9" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
@@ -479,7 +565,7 @@ export function drawInfra(model, L, opts = {}) {
     if (tag) g += `<rect x="${n.x + n.w - 34}" y="${n.y + 5}" width="28" height="14" rx="4" fill="${hue}" fill-opacity="0.18"/>`
       + `<text x="${n.x + n.w - 20}" y="${n.y + 15.5}" fill="${hue}" font-size="9" font-weight="700" text-anchor="middle">${tag}</text>`;
     g += `<text x="${n.x + 12}" y="${n.y + 19}" fill="${T.ink}" font-size="12.5" font-weight="600">${iesc(n.label)}</text>`;
-    metas.forEach((m2, i) => { g += `<text x="${n.x + 12}" y="${n.y + 34 + i * 13}" fill="${T.dim}" font-size="10.5">${iesc(m2)}</text>`; });
+    if (detail) metas.forEach((m2, i) => { g += `<text x="${n.x + 12}" y="${n.y + 34 + i * 13}" fill="${T.dim}" font-size="10.5">${iesc(m2)}</text>`; });
     parts.push(g + `</g>`);
     if (sel && opts.selected.size === 1)
       parts.push(`<g data-connect="1" data-id="${iesc(n.id)}" style="cursor:crosshair">`
@@ -501,6 +587,16 @@ export function infraBody(model) {
   const out = ['infra'];
   if (model.meta.title) out.push(`    title ${model.meta.title}`);
   const nodeLine = (n, ind) => `${ind}${n.id}[${n.label}]${attrsOf(n) ? ' :' + attrsOf(n) : ''}`;
+  const busLine = (b, ind) => {
+    const attrs = [b.zone ? null : b.orient, b.vlan != null ? 'vlan ' + b.vlan : null, b.cidr,
+      b.len != null ? 'len ' + b.len : null].filter(Boolean).join(', ');
+    return `${ind}bus ${b.id}[${b.label}]${attrs ? ' :' + attrs : ''}`;
+  };
+  const hubLine = (h, ind) => {
+    const attrs = [h.role, h.vlan != null ? 'vlan ' + h.vlan : null, h.cidr,
+      h.len != null ? 'len ' + h.len : null].filter(Boolean).join(', ');
+    return `${ind}hub ${h.id}[${h.label}]${attrs ? ' :' + attrs : ''}`;
+  };
   const emitZone = (zname, ind) => {
     for (const z of model.groups.filter((g) => g.parent === zname)) {
       out.push(`${ind}zone ${z.name} {`);
@@ -508,12 +604,12 @@ export function infraBody(model) {
       out.push(`${ind}}`);
     }
     for (const n of model.items.filter((x) => x.type === 'inode' && x.zone === zname)) out.push(nodeLine(n, ind));
+    for (const h of model.items.filter((x) => x.type === 'hub' && x.zone === zname)) out.push(hubLine(h, ind));
+    if (zname) for (const b of model.items.filter((x) => x.type === 'bus' && x.zone === zname)) out.push(busLine(b, ind));
   };
   emitZone(null, '    ');
-  for (const b of model.items.filter((x) => x.type === 'bus')) {
-    const attrs = [b.orient, b.vlan != null ? 'vlan ' + b.vlan : null, b.cidr].filter(Boolean).join(', ');
-    out.push(`    bus ${b.id}[${b.label}]${attrs ? ' :' + attrs : ''}`);
-  }
+  for (const h of model.items.filter((x) => x.type === 'hub' && !x.zone)) out.push(hubLine(h, '    '));
+  for (const b of model.items.filter((x) => x.type === 'bus' && !x.zone)) out.push(busLine(b, '    '));
   for (const f of model.items.filter((x) => x.type === 'fence'))
     out.push(`    fence ${f.id}[${f.label}] :${f.orient}`);
   for (const e of model.edges) {
