@@ -207,7 +207,8 @@ export function layoutInfra(model) {
       blocks.push({ ref: z, w: z.w, h: z.h });
     }
     for (const n of nodes.filter((nn) => nn.zone === zname)) blocks.push({ ref: n, w: n.w, h: n.h });
-    const limit = Math.max(560, ...blocks.map((b) => b.w + PAD * 2));
+    // 折返し幅：ゾーン内は 640、最上位は 1400——世界は縦にも横にも広がる。
+    const limit = Math.max(zname ? 640 : 1400, ...blocks.map((b) => b.w + PAD * 2));
     let x = PAD, y = (zname ? HEAD : 0) + PAD, rowH = 0, w = 0;
     for (const b of blocks) {
       if (x > PAD && x + b.w > limit) { x = PAD; y += rowH + GAP; rowH = 0; }

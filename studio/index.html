@@ -65,9 +65,17 @@
       <span id="zLabel">100%</span>
       <button id="zIn">＋</button>
       <button id="zFit">フィット</button>
+      <button id="zToc" title="目次（TOC）— 巨大な図の道しるべ">☰ 目次</button>
       <button id="zSketch" title="手描きモード（%% style sketch として保存されます）">✏ 手描き</button>
       <button id="edToggle" class="only-desktop" title="コードペインをたたむ / 開く">◧ コード</button>
       <button id="vToggle" class="only-mobile">コード ◧</button>
+    </div>
+    <div id="toc" class="toc" hidden>
+      <div class="tochead">
+        <input id="tocQ" placeholder="検索（名前・IP・OS・VLAN・役割）">
+        <button id="tocClose">✕</button>
+      </div>
+      <div id="tocList"></div>
     </div>
     <div id="ttbar" class="ttbar" hidden>
       <span>⏪ タイムトラベル</span>
