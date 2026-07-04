@@ -228,6 +228,8 @@ export function layoutInfra(model) {
   }
   place(null, 20, 20);
   for (const n of nodes) if (model.layout.pos[n.id]) { n.x = model.layout.pos[n.id][0]; n.y = model.layout.pos[n.id][1]; }
+  const zpos = model.layout.zpos || {};
+  for (const z of zones) if (z.folded && zpos[z.name]) { z.x = zpos[z.name][0]; z.y = zpos[z.name][1]; }
   // 展開ゾーンの枠は中身の bbox を追いかける（深い順）。
   for (const z of [...zones].sort((a, b) => b.depth - a.depth)) {
     if (z.folded) continue;
@@ -242,17 +244,21 @@ export function layoutInfra(model) {
   const bx0 = Math.min(20, ...nodes.map((n) => n.x), ...zones.map((z) => z.x));
 
   // バス：h は下に順に、v は右に順に。ドラッグ（pos）で自由に。
+  // バス：pos があれば [x,y] とも自由（長さは自動 span を保ったまま平行移動）。
   const buses = [];
   let hy = by1 + 44, vx = bx1 + 56;
   for (const b of model.items.filter((x) => x.type === 'bus')) {
+    const p = model.layout.pos[b.id];
     if (b.orient === 'v') {
-      const x = model.layout.pos[b.id] ? model.layout.pos[b.id][0] : vx;
-      buses.push({ ...b, x, y1: 16, y2: by1 + 20 });
-      if (!model.layout.pos[b.id]) vx += 56;
+      const span = by1 + 4;
+      const x = p ? p[0] : vx, y1 = p ? p[1] : 16;
+      buses.push({ ...b, x, y1, y2: y1 + span });
+      if (!p) vx += 56;
     } else {
-      const y = model.layout.pos[b.id] ? model.layout.pos[b.id][1] : hy;
-      buses.push({ ...b, y, x1: bx0 - 4, x2: bx1 + 20 });
-      if (!model.layout.pos[b.id]) hy += 46;
+      const span = (bx1 + 20) - (bx0 - 4);
+      const x1 = p ? p[0] : bx0 - 4, y = p ? p[1] : hy;
+      buses.push({ ...b, y, x1, x2: x1 + span });
+      if (!p) hy += 46;
     }
   }
   const busOf = new Map(buses.map((b) => [b.id, b]));
@@ -293,9 +299,17 @@ export function layoutInfra(model) {
     }
   }
   function stub(n, b) {
-    if (b.orient === 'v') { const y = n.y + n.h / 2; return { x1: n.x + n.w, y1: y, x2: b.x, y2: y, dot: true }; }
-    const x = n.x + n.w / 2;
-    return b.y >= n.y ? { x1: x, y1: n.y + n.h, x2: x, y2: b.y, dot: true } : { x1: x, y1: n.y, x2: x, y2: b.y, dot: true };
+    // バスは自由配置なので、機器の正面から降りて、範囲外なら肘（elbow）でバス上へ寄る。
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    if (b.orient === 'v') {
+      const y = clamp(n.y + n.h / 2, b.y1 + 8, b.y2 - 8);
+      const sx = b.x >= n.x + n.w / 2 ? n.x + n.w : n.x;
+      return { x1: sx, y1: n.y + n.h / 2, mx: sx, my: y, x2: b.x, y2: y, dot: true, elbow: y !== n.y + n.h / 2 };
+    }
+    const cx = n.x + n.w / 2;
+    const x = clamp(cx, b.x1 + 8, b.x2 - 8);
+    const sy = b.y >= n.y ? n.y + n.h : n.y;
+    return { x1: cx, y1: sy, mx: cx, my: b.y, x2: x, y2: b.y, dot: true, elbow: x !== cx };
   }
 
   // フェンス（保守分界・責任分界）：既定はコンテンツの右寄り／下寄り。ドラッグで置き直す。
@@ -331,38 +345,93 @@ export function layoutInfra(model) {
 
 // ---- 描画 ----------------------------------------------------------------------
 
+// 線分同士の交点（端の 2% は跨がない——接続点まで跨ぐと嘘になる）。
+function segX(a, b) {
+  const d1x = a.x2 - a.x1, d1y = a.y2 - a.y1, d2x = b.x2 - b.x1, d2y = b.y2 - b.y1;
+  const den = d1x * d2y - d1y * d2x;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((b.x1 - a.x1) * d2y - (b.y1 - a.y1) * d2x) / den;
+  const u = ((b.x1 - a.x1) * d1y - (b.y1 - a.y1) * d1x) / den;
+  if (t <= 0.03 || t >= 0.97 || u <= 0.03 || u >= 0.97) return null;
+  return { x: a.x1 + t * d1x, y: a.y1 + t * d1y, t };
+}
+
+// ラインクロスのジャンプ（%% hops）：交差点ごとに小さな ⌒ で跨ぐ。回路図の作法。
+function hopPath(sg, obstacles, r = 6) {
+  const hits = [];
+  for (const o of obstacles) { const p = segX(sg, o); if (p) hits.push(p); }
+  if (!hits.length) return `M${sg.x1},${sg.y1} L${sg.x2},${sg.y2}`;
+  hits.sort((p, q) => p.t - q.t);
+  const dx = sg.x2 - sg.x1, dy = sg.y2 - sg.y1, len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  let d = `M${sg.x1},${sg.y1}`, last = -1;
+  for (const h of hits) {
+    if (h.t * len - last < r * 2) continue;                    // 近すぎる交差はまとめて跨ぐ
+    last = h.t * len;
+    d += ` L${(h.x - ux * r).toFixed(1)},${(h.y - uy * r).toFixed(1)}`
+      + ` A${r} ${r} 0 0 1 ${(h.x + ux * r).toFixed(1)},${(h.y + uy * r).toFixed(1)}`;
+  }
+  return d + ` L${sg.x2},${sg.y2}`;
+}
+
+const offSeg = (sg, o) => {
+  if (!o) return sg;
+  const dx = sg.x2 - sg.x1, dy = sg.y2 - sg.y1, len = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / len) * o, oy = (dx / len) * o;
+  return { x1: sg.x1 + ox, y1: sg.y1 + oy, x2: sg.x2 + ox, y2: sg.y2 + oy };
+};
+
 const iesc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function drawInfra(model, L, opts = {}) {
   const T = themeOf(opts);
   const parts = [];
   for (const z of [...L.zones].sort((a, b) => a.depth - b.depth)) {
-    if (z.folded) {                                            // 畳まれたゾーン＝札。▸ タップで開く
-      parts.push(`<g data-fold="${iesc(z.name)}" style="cursor:pointer">`
+    if (z.folded) {                                            // 畳まれたゾーン＝札。つかんで移動、▸ タップで開く
+      parts.push(`<g data-drag="zone" data-id="${iesc(z.name)}" data-folded="1" style="cursor:grab">`
         + `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="9" fill="${T.chip}" stroke="${T.dim}" stroke-dasharray="5 4"/>`
-        + `<text x="${z.x + 12}" y="${z.y + 25}" fill="${T.head}" font-size="12" font-weight="700">▸ ${iesc(z.name)}<tspan fill="${T.dim}" font-weight="400"> ・ ${z.count} 台</tspan></text></g>`);
+        + `<text x="${z.x + 30}" y="${z.y + 25}" fill="${T.head}" font-size="12" font-weight="700">${iesc(z.name)}<tspan fill="${T.dim}" font-weight="400"> ・ ${z.count} 台</tspan></text></g>`
+        + `<g data-fold="${iesc(z.name)}" style="cursor:pointer"><rect x="${z.x + 4}" y="${z.y + 10}" width="22" height="22" rx="5" fill="transparent"/><text x="${z.x + 12}" y="${z.y + 25}" fill="${T.head}" font-size="12" font-weight="700">▸</text></g>`);
       continue;
     }
     parts.push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="10" fill="${T.frameInk}" fill-opacity="${0.03 + z.depth * 0.02}" stroke="${T.dim}" stroke-dasharray="5 4" stroke-opacity="0.7"/>`);
-    parts.push(`<g data-fold="${iesc(z.name)}" style="cursor:pointer"><text x="${z.x + 12}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">▾ ${iesc(z.name)}</text></g>`);
+    // 見出し＝ゾーンのドラッグハンドル（中の機器ごと動く）。▾ キャレットだけが折りたたみ。
+    parts.push(`<g data-drag="zone" data-id="${iesc(z.name)}" style="cursor:grab">`
+      + `<rect x="${z.x + 22}" y="${z.y + 2}" width="${Math.max(24, Math.min(z.w - 24, textW(z.name, 11.5) + 20))}" height="18" rx="6" fill="transparent"/>`
+      + `<text x="${z.x + 26}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">${iesc(z.name)}</text></g>`
+      + `<g data-fold="${iesc(z.name)}" style="cursor:pointer"><rect x="${z.x + 4}" y="${z.y + 2}" width="18" height="18" rx="5" fill="transparent"/><text x="${z.x + 12}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">▾</text></g>`);
   }
   // 接続線：冗長=二重線・予備=破線・幹線=太線・一方向=矢印・VLAN=色とチップ。
+  // バスが自由配置なので肘（elbow）区間もあり、%% hops なら交差を ⌒ で跨ぐ。
+  const obstacles = L.buses.map((b) => b.orient === 'v'
+    ? { x1: b.x, y1: b.y1, x2: b.x, y2: b.y2 } : { x1: b.x1, y1: b.y, x2: b.x2, y2: b.y });
   for (const l of L.links) {
     const e = l.e || {};
     const hue = e.vlan != null ? vlanHue(e.vlan) : T.line;
     const wdt = e.thick ? 3 : 1.5;
     const dash = e.dashed ? ` stroke-dasharray="6 5"` : '';
     const arrow = e.arrow ? ' marker-end="url(#arrow)"' : '';
-    const line = (o) => {
-      const dx = l.x2 - l.x1, dy = l.y2 - l.y1, len = Math.hypot(dx, dy) || 1;
-      const ox = (-dy / len) * o, oy = (dx / len) * o;
-      return `<line x1="${l.x1 + ox}" y1="${l.y1 + oy}" x2="${l.x2 + ox}" y2="${l.y2 + oy}" stroke="${hue}" stroke-opacity="0.85" stroke-width="${wdt}"${dash}${arrow}/>`;
-    };
-    parts.push(e.redundant ? line(-2.4) + line(2.4) : line(0));
+    const segs = l.mx != null && l.elbow
+      ? [{ x1: l.x1, y1: l.y1, x2: l.mx, y2: l.my }, { x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }]
+      : [{ x1: l.x1, y1: l.y1, x2: l.mx != null ? l.mx : l.x2, y2: l.my != null ? l.my : l.y2 },
+        ...(l.mx != null ? [{ x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }] : [])].filter((sg) => sg.x1 !== sg.x2 || sg.y1 !== sg.y2);
+    const drawOnce = (o) => segs.map((sg, i) => {
+      const g = offSeg(sg, o);
+      const d = opts.hops ? hopPath(g, obstacles) : `M${g.x1},${g.y1} L${g.x2},${g.y2}`;
+      const mk = i === segs.length - 1 ? arrow : '';
+      return `<path d="${d}" fill="none" stroke="${hue}" stroke-opacity="0.85" stroke-width="${wdt}"${dash}${mk}/>`;
+    }).join('');
+    parts.push(e.redundant ? drawOnce(-2.4) + drawOnce(2.4) : drawOnce(0));
+    obstacles.push(...segs);                                   // 後から描く線がこの線を跨げるように
     if (l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3.4" fill="${hue}"/>`);
+    if (opts.dots) {                                           // %% dots：接続点を丸点に（回路図の作法）
+      parts.push(`<circle cx="${l.x1}" cy="${l.y1}" r="3" fill="${hue}"/>`);
+      if (!l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3" fill="${hue}"/>`);
+    }
     const chip = e.label || (e.vlan != null ? 'VLAN ' + e.vlan : null) || (e.redundant ? '冗長' : null);
     if (chip) {
-      const mx = (l.x1 + l.x2) / 2, my = (l.y1 + l.y2) / 2;
+      const s0 = segs[0];
+      const mx = (s0.x1 + s0.x2) / 2, my = (s0.y1 + s0.y2) / 2;
       const tw = textW(chip, 6.2) + 12;
       parts.push(`<rect x="${mx - tw / 2}" y="${my - 8}" width="${tw}" height="16" rx="8" fill="${T.paper}" stroke="${hue}" stroke-opacity="0.6" opacity="0.92"/>`
         + `<text x="${mx}" y="${my + 3.5}" fill="${hue}" font-size="9.5" text-anchor="middle">${iesc(chip)}</text>`);
