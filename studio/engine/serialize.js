@@ -129,8 +129,11 @@ function trailer(model) {
   if (model.meta.style) out.push(`%% style ${model.meta.style}`);   // 手描きなどの見た目も往復する
   if (model.meta.theme) out.push(`%% theme ${model.meta.theme}`);   // light / dark
   if (model.meta.bg) out.push(`%% bg ${model.meta.bg}`);            // 背景色（書き出しにも焼く）
+  if (model.meta.hops) out.push('%% hops');                         // 交差ジャンプ
+  if (model.meta.dots) out.push('%% dots');                         // 接続点の丸点
   if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     if (model.kind === 'infra' && L.fold && L.fold.length) out.push(`%% fold ${L.fold.join('|')}`);
+    if (model.kind === 'infra') for (const zn of Object.keys(L.zpos || {})) out.push(`%% zpos ${zn}|${num(L.zpos[zn][0])}|${num(L.zpos[zn][1])}`);
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
     for (const id of Object.keys(model.images || {})) out.push(`%% img ${id} ${model.images[id]}`);
   } else if (model.kind === 'sequence') {

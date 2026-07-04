@@ -23,6 +23,14 @@
 
 > この作品は **依存ゼロ規則の対象外**。とはいえ「ドラッグ位置の保持」と「オフライン単一 HTML」を守るため、描画エンジンは自前（決定的・DOM 非依存）にしてあります。Mermaid 記法の認識・編集体験・出力に力を注いでいます。
 
+## 自由配置と回路図の作法（v11）
+
+- **ゾーン（レギオン）ごとドラッグ** — ゾーンの**見出しをつかむと中の機器ごと**動く（▾ キャレットは折りたたみ専用）。畳んだ札も自由に置ける（`%% zpos`）
+- **バスの完全自由配置** — 水平/垂直バスを**両軸ドラッグ**（長さは自動のまま平行移動）。離れた機器からの接続は**肘（elbow）**でバスまで届き、範囲内にクランプ
+- **⌒ ラインジャンプ**（`%% hops`）— 交差する線を小さな円弧で跨ぐ、回路図の作法。近接する交差はまとめて跨ぐ
+- **● 接続点の丸点**（`%% dots`）— 接続の端点に丸点。どこに刺さっているかが一目
+- どちらも ⌘K からワンタップ切替、コメントで往復（本物の Mermaid を汚さない）
+
 ## 巨大な世界と、道しるべ（v10）
 
 - **全社グランドビュー・サンプル** — 東京本社（DC のコア/サーバファーム/DMZ・執務 2 フロア）・大阪 DR・クラウド・名古屋工場 OT（監視室＋2 ライン＋安全計装）・福岡支社を、広域 WAN と 4 本のバスで縦横に接続した **54 機器・16 ゾーン・44 接続**の一枚（`examples/enterprise.mmd` / ビルド済み [`dist/enterprise.html`](./dist/enterprise.html)）。このくらいの世界が **130 行のテキスト**で立つ
@@ -178,7 +186,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 77 tests
+node --test tests/*.test.js            # 83 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）

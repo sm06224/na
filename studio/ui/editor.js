@@ -302,6 +302,7 @@ export function boot() {
 
   const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch',
     theme: model.meta.theme || 'dark',
+    hops: !!model.meta.hops, dots: !!model.meta.dots,
     bg: model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : null) });
   function render() {
     model = parse(src.value);
@@ -357,6 +358,20 @@ export function boot() {
     return [(cx - r.left - view.tx) / view.s + (L?.x0 || 0), (cy - r.top - view.ty) / view.s + (L?.y0 || 0)];
   }
   const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
+  // ドラッグ対象の現在位置：機器だけでなくバス・フェンスも（v9 まではバスを掴むと落ちていた）。
+  function posOf(id) {
+    const n = (L.nodes || []).find((x) => x.id === id); if (n) return [n.x, n.y];
+    const b = (L.buses || []).find((x) => x.id === id); if (b) return b.orient === 'v' ? [b.x, b.y1] : [b.x1, b.y];
+    const f = (L.fences || []).find((x) => x.id === id); if (f) return f.orient === 'h' ? [f.x1, f.y] : [f.x, f.y1];
+    return null;
+  }
+  // ゾーン配下（子ゾーン含む）の見えている機器 id。ゾーンごとドラッグに使う。
+  function zoneMembers(name) {
+    const under = new Set([name]);
+    let grew = true;
+    while (grew) { grew = false; for (const g2 of model.groups) if (g2.parent && under.has(g2.parent) && !under.has(g2.name)) { under.add(g2.name); grew = true; } }
+    return (L.nodes || []).filter((n) => n.zone && under.has(n.zone)).map((n) => n.id);
+  }
   function redraw() {
     const keep = { ...view };
     canvas.innerHTML = draw(model, L = layout(model), drawOpts());
@@ -401,8 +416,19 @@ export function boot() {
       const id = g.dataset.id, kind = g.dataset.drag;
       if (kind === 'node') {
         const ids = (selected.has(id) && selected.size > 1) ? [...selected] : [id];
-        const starts = new Map(ids.map((i2) => { const n = L.nodes.find((x) => x.id === i2); return [i2, [n.x, n.y]]; }));
-        drag = { id, kind, ids, starts, px: e.clientX, py: e.clientY, moved: false, shift: e.shiftKey };
+        const starts = new Map(ids.map((i2) => [i2, posOf(i2)]).filter(([, p2]) => p2));
+        drag = { id, kind, ids: [...starts.keys()], starts, px: e.clientX, py: e.clientY, moved: false, shift: e.shiftKey };
+      }
+      else if (kind === 'zone') {
+        if (g.dataset.folded) {                                // 畳んだ札は zpos で自由配置
+          const z = L.zones.find((zz) => zz.name === id);
+          drag = { id, kind: 'zfold', start: [z.x, z.y], px: e.clientX, py: e.clientY, moved: false };
+        } else {                                               // 見出しをつかむと中の機器ごと動く
+          const ids = zoneMembers(id);
+          if (!ids.length) { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); capture(e); e.preventDefault(); return; }
+          const starts = new Map(ids.map((i2) => [i2, posOf(i2)]).filter(([, p2]) => p2));
+          drag = { id, kind: 'node', zone: true, ids: [...starts.keys()], starts, px: e.clientX, py: e.clientY, moved: false, shift: false };
+        }
       }
       else if (kind === 'actor') {
         const as = L.actors, spacing = as.length > 1 ? (as[as.length - 1].cx - as[0].cx) / (as.length - 1) : 100;
@@ -441,6 +467,10 @@ export function boot() {
         const o = drag.order.slice(), f = o.indexOf(drag.id);
         o.splice(Math.max(0, Math.min(o.length - 1, f + steps)), 0, o.splice(f, 1)[0]);
         model.layout.order = o;
+      } else if (drag.kind === 'zfold') {
+        const snap = (v) => Math.round(v / 8) * 8;
+        model.layout.zpos = model.layout.zpos || {};
+        model.layout.zpos[drag.id] = [snap(drag.start[0] + dx), snap(drag.start[1] + dy)];
       } else {
         model.layout.at[drag.id] = addDays(L.base, drag.day0 + Math.round(dx / L.dayW));
         const steps = Math.round(dy / L.rowH);
@@ -472,7 +502,7 @@ export function boot() {
     }
     if (drag) {
       if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
-      else if (drag.kind === 'node') {                                       // クリック＝選択（Shift で追加/除外）
+      else if (drag.kind === 'node' && !drag.zone) {                          // クリック＝選択（Shift で追加/除外）
         if (drag.shift) { selected.has(drag.id) ? selected.delete(drag.id) : selected.add(drag.id); }
         else if (selected.size === 1 && selected.has(drag.id)) selected.clear();
         else { selected.clear(); selected.add(drag.id); }
@@ -996,6 +1026,8 @@ export function boot() {
       { t: 'ライト / ダーク切替 ☀🌙', k: 'theme light dark てーま らいと', run: toggleTheme },
       { t: '背景色を設定…（書き出しにも焼く）', k: 'background bg color はいけい', run: pickBg },
       { t: '背景を透過に戻す', k: 'background transparent とうか', run: clearBg },
+      { t: 'ラインジャンプ切替 ⌒（交差を跨ぐ）', k: 'hops jump cross こうさ じゃんぷ', run: () => { model.meta.hops = !model.meta.hops || null; commitModel(); toast(model.meta.hops ? '交差をジャンプ ⌒' : 'ジャンプを解除'); } },
+      { t: '接続点の丸点切替 ●', k: 'dots junction terminal まるてん せつぞくてん', run: () => { model.meta.dots = !model.meta.dots || null; commitModel(); toast(model.meta.dots ? '接続点に丸点 ●' : '丸点を解除'); } },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },

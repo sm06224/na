@@ -86,7 +86,7 @@ test('ライン識別: 冗長は平行二重線、同じ 2 点間の多重はず
   assert.ok(pair[0].y1 !== pair[1].y1 || pair[0].x1 !== pair[1].x1, '多重線がオフセットされる');
   const svg = draw(m, L, {});
   // 冗長 1 本の DSL 記述 → line 2 本（scada--ctl の垂線が二重）
-  const stubs = (svg.match(/<line[^>]*x1="[\d.]+"[^>]*stroke-width="1.5"/g) || []).length;
+  const stubs = (svg.match(/<path[^>]*stroke-width="1.5"/g) || []).length;
   assert.ok(stubs >= 4, `二重線ぶん本数が増える: ${stubs}`);
 });
 
@@ -104,7 +104,7 @@ test('折りたたみ: %% fold で中身が隠れ、札になり、線は札へ�
   const busStubs = L.links.filter((l) => l.dot);
   assert.ok(busStubs.length >= 1, '札からバスへの線が残る');
   const svg = draw(m, L, {});
-  assert.ok(svg.includes('▸ OT') && svg.includes('4 台'), '札の表示');
+  assert.ok(svg.includes('>OT<tspan') && svg.includes('4 台') && svg.includes('>▸</text>'), '札の表示（名前・台数・開くキャレット）');
   assert.ok(svg.includes('data-fold="OT"'), 'タップで開ける');
   const out = serialize(m);
   assert.ok(out.includes('%% fold OT'), out);
