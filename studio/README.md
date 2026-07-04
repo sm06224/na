@@ -23,6 +23,11 @@
 
 > この作品は **依存ゼロ規則の対象外**。とはいえ「ドラッグ位置の保持」と「オフライン単一 HTML」を守るため、描画エンジンは自前（決定的・DOM 非依存）にしてあります。Mermaid 記法の認識・編集体験・出力に力を注いでいます。
 
+## 巨大な世界と、道しるべ（v10）
+
+- **全社グランドビュー・サンプル** — 東京本社（DC のコア/サーバファーム/DMZ・執務 2 フロア）・大阪 DR・クラウド・名古屋工場 OT（監視室＋2 ライン＋安全計装）・福岡支社を、広域 WAN と 4 本のバスで縦横に接続した **54 機器・16 ゾーン・44 接続**の一枚（`examples/enterprise.mmd` / ビルド済み [`dist/enterprise.html`](./dist/enterprise.html)）。このくらいの世界が **130 行のテキスト**で立つ
+- **☰ 目次（TOC）** — 巨大な図の道しるべ。ゾーンの**ツリー**（台数つき）＋機器（役割タグつき）＋バス・フェンス。**検索**（名前・IP・OS・VLAN・役割）で絞り、**クリックでそこへ飛んで選択**、エディタも該当行へスクロール。**▾/▸ で目次から折りたたみ**もできる
+
 ## 現場の構成図に耐える（v9）
 
 - **IT だけじゃない**：OT / 制御系の役割が一級市民——`:scada` `:plc` `:hmi` `:historian` `:ews` `:sensor` `:drive` `:robot` `:cnc` `:sis` `:rtu` `:dcs` `:gateway` `:diode`（データダイオード）。工場の Purdue モデル的な「情報LAN と制御LAN が FW とダイオード越しにつながる」図がそのまま書ける
@@ -173,7 +178,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 73 tests
+node --test tests/*.test.js            # 77 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）

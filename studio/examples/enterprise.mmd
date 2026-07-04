@@ -1,0 +1,132 @@
+infra
+    title 全社グランドビュー — IT / OT / クラウド / 拠点
+    zone 東京本社 {
+      zone DC-East {
+        zone コアネットワーク {
+          core1[CORE-SW1] :core, NX-OS
+          core2[CORE-SW2] :core, NX-OS
+          fwc1[FW-C1] :firewall, FortiOS
+          fwc2[FW-C2] :firewall, FortiOS
+          wanrt[WAN-RT] :router, IOS-XE
+        }
+        zone サーバファーム {
+          ad1[AD/DNS] :server, Win2022, 10.0.10.11
+          erp[ERP] :server, RHEL9, 10.0.10.21
+          crm[CRM] :server, RHEL9, 10.0.10.22
+          mail[メール] :server, 10.0.10.23
+          vmw[仮想基盤] :server, ESXi8
+          db1[基幹DB-1] :db, Oracle19c, 10.0.10.31
+          db2[基幹DB-2] :db, Oracle19c, 10.0.10.32
+          san[SAN] :storage, 10.0.10.41
+          bkp[バックアップ] :storage, 10.0.10.42
+        }
+        zone DMZ {
+          fwd[FW-DMZ] :firewall
+          px[プロキシ] :lb
+          web[公開Web] :server, 192.168.1.10
+          mx[メールGW] :server, 192.168.1.20
+        }
+      }
+      zone 執務エリア {
+        zone 7F 開発部 {
+          sw7[SW-7F] :access, vlan 70
+          pc7[開発PC x60] :pc, Win11
+          ap7[AP-7F] :ap, vlan 97
+        }
+        zone 8F 管理部 {
+          sw8[SW-8F] :access, vlan 80
+          pc8[管理PC x25] :pc, Win11
+          prn8[複合機] :printer
+        }
+      }
+    }
+    zone 大阪DR {
+      cored[CORE-DR] :core, NX-OS
+      dbdr[待機DB] :db, Oracle19c, 172.16.10.31
+      sandr[SAN-DR] :storage
+      vmdr[仮想基盤DR] :server, ESXi8
+    }
+    zone クラウド {
+      vpc[AWS VPC] :cloud
+      saas[SaaS 群] :cloud
+      idp[IDaaS] :cloud
+    }
+    zone 名古屋工場 {
+      otfw[FW-OT] :firewall, FortiOS
+      diode[データダイオード] :diode
+      zone 中央監視室 {
+        scada[SCADA] :scada, Win2019, 192.168.100.10
+        hmi1[HMI-1] :hmi
+        ews[エンジニアリングWS] :ews, Win10
+        hist[Historian] :historian, 192.168.100.20
+      }
+      zone ライン1 {
+        plc1[PLC-L1] :plc, vlan 110
+        drv1[インバータ群] :drive
+        sen1[温度センサ群] :sensor
+      }
+      zone ライン2 {
+        plc2[PLC-L2] :plc, vlan 120
+        rob2[溶接ロボット] :robot
+        cnc2[CNC 群] :cnc
+      }
+      zone 安全計装 {
+        sis1[SIS] :sis
+      }
+    }
+    zone 福岡支社 {
+      swf[SW-FUK] :access
+      pcf[支社PC x15] :pc, Win11
+      apf[AP-FUK] :ap
+    }
+    inet[インターネット] :cloud
+    bus wan[広域WAN] :h, 172.31.0.0/16
+    bus itlan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+    bus dmzn[DMZセグメント] :h, vlan 20, 192.168.1.0/24
+    bus ctl[制御LAN] :h, vlan 100, 192.168.100.0/24
+    fence fitot[保守分界（情シス/制御ベンダー）] :v
+    fence fcloud[責任分界（自社/クラウド事業者）] :v
+    core1 -- itlan :冗長, 幹線
+    core2 -- itlan :冗長, 幹線
+    core1 -- core2 :冗長, スタック
+    fwc1 -- wanrt
+    fwc2 -- wanrt :予備
+    wanrt -- wan :専用線
+    ad1 -- itlan
+    erp -- itlan
+    crm -- itlan
+    mail -- itlan
+    vmw -- itlan
+    db1 -- itlan
+    db2 -- itlan
+    db1 -- db2 :冗長, RAC
+    san -- bkp :バックアップ
+    fwd -- dmzn
+    px -- dmzn
+    web -- dmzn
+    mx -- dmzn
+    fwc1 -- fwd
+    fwd -- inet
+    sw7 -- core1
+    sw8 -- core1 :予備
+    ap7 -- sw7
+    cored -- wan :専用線
+    db1 -- dbdr :一方向, レプリケーション
+    san -- sandr :ミラー
+    wanrt -- vpc :IPsec-VPN
+    idp -- saas :SSO
+    swf -- wan :IP-VPN
+    otfw -- wan :IP-VPN
+    otfw -- diode
+    diode -- hist :一方向
+    scada -- ctl :冗長
+    hmi1 -- ctl
+    ews -- ctl
+    hist -- ctl
+    plc1 -- ctl :冗長, vlan 100
+    plc2 -- ctl :vlan 100
+    plc1 -- drv1
+    plc1 -- sen1
+    plc2 -- rob2
+    plc2 -- cnc2
+    sis1 -- plc1 :安全連動

@@ -116,6 +116,138 @@ export const SAMPLES = {
     plc1 -- drv1
     plc1 -- sen1
     hist2 -- hist :ミラー`,
+  '巨大 — 全社グランドビュー（IT/OT/クラウド/拠点）': `infra
+    title 全社グランドビュー — IT / OT / クラウド / 拠点
+    zone 東京本社 {
+      zone DC-East {
+        zone コアネットワーク {
+          core1[CORE-SW1] :core, NX-OS
+          core2[CORE-SW2] :core, NX-OS
+          fwc1[FW-C1] :firewall, FortiOS
+          fwc2[FW-C2] :firewall, FortiOS
+          wanrt[WAN-RT] :router, IOS-XE
+        }
+        zone サーバファーム {
+          ad1[AD/DNS] :server, Win2022, 10.0.10.11
+          erp[ERP] :server, RHEL9, 10.0.10.21
+          crm[CRM] :server, RHEL9, 10.0.10.22
+          mail[メール] :server, 10.0.10.23
+          vmw[仮想基盤] :server, ESXi8
+          db1[基幹DB-1] :db, Oracle19c, 10.0.10.31
+          db2[基幹DB-2] :db, Oracle19c, 10.0.10.32
+          san[SAN] :storage, 10.0.10.41
+          bkp[バックアップ] :storage, 10.0.10.42
+        }
+        zone DMZ {
+          fwd[FW-DMZ] :firewall
+          px[プロキシ] :lb
+          web[公開Web] :server, 192.168.1.10
+          mx[メールGW] :server, 192.168.1.20
+        }
+      }
+      zone 執務エリア {
+        zone 7F 開発部 {
+          sw7[SW-7F] :access, vlan 70
+          pc7[開発PC x60] :pc, Win11
+          ap7[AP-7F] :ap, vlan 97
+        }
+        zone 8F 管理部 {
+          sw8[SW-8F] :access, vlan 80
+          pc8[管理PC x25] :pc, Win11
+          prn8[複合機] :printer
+        }
+      }
+    }
+    zone 大阪DR {
+      cored[CORE-DR] :core, NX-OS
+      dbdr[待機DB] :db, Oracle19c, 172.16.10.31
+      sandr[SAN-DR] :storage
+      vmdr[仮想基盤DR] :server, ESXi8
+    }
+    zone クラウド {
+      vpc[AWS VPC] :cloud
+      saas[SaaS 群] :cloud
+      idp[IDaaS] :cloud
+    }
+    zone 名古屋工場 {
+      otfw[FW-OT] :firewall, FortiOS
+      diode[データダイオード] :diode
+      zone 中央監視室 {
+        scada[SCADA] :scada, Win2019, 192.168.100.10
+        hmi1[HMI-1] :hmi
+        ews[エンジニアリングWS] :ews, Win10
+        hist[Historian] :historian, 192.168.100.20
+      }
+      zone ライン1 {
+        plc1[PLC-L1] :plc, vlan 110
+        drv1[インバータ群] :drive
+        sen1[温度センサ群] :sensor
+      }
+      zone ライン2 {
+        plc2[PLC-L2] :plc, vlan 120
+        rob2[溶接ロボット] :robot
+        cnc2[CNC 群] :cnc
+      }
+      zone 安全計装 {
+        sis1[SIS] :sis
+      }
+    }
+    zone 福岡支社 {
+      swf[SW-FUK] :access
+      pcf[支社PC x15] :pc, Win11
+      apf[AP-FUK] :ap
+    }
+    inet[インターネット] :cloud
+    bus wan[広域WAN] :h, 172.31.0.0/16
+    bus itlan[基幹LAN] :h, vlan 10, 10.0.10.0/24
+    bus dmzn[DMZセグメント] :h, vlan 20, 192.168.1.0/24
+    bus ctl[制御LAN] :h, vlan 100, 192.168.100.0/24
+    fence fitot[保守分界（情シス/制御ベンダー）] :v
+    fence fcloud[責任分界（自社/クラウド事業者）] :v
+    core1 -- itlan :冗長, 幹線
+    core2 -- itlan :冗長, 幹線
+    core1 -- core2 :冗長, スタック
+    fwc1 -- wanrt
+    fwc2 -- wanrt :予備
+    wanrt -- wan :専用線
+    ad1 -- itlan
+    erp -- itlan
+    crm -- itlan
+    mail -- itlan
+    vmw -- itlan
+    db1 -- itlan
+    db2 -- itlan
+    db1 -- db2 :冗長, RAC
+    san -- bkp :バックアップ
+    fwd -- dmzn
+    px -- dmzn
+    web -- dmzn
+    mx -- dmzn
+    fwc1 -- fwd
+    fwd -- inet
+    sw7 -- core1
+    sw8 -- core1 :予備
+    ap7 -- sw7
+    cored -- wan :専用線
+    db1 -- dbdr :一方向, レプリケーション
+    san -- sandr :ミラー
+    wanrt -- vpc :IPsec-VPN
+    idp -- saas :SSO
+    swf -- wan :IP-VPN
+    otfw -- wan :IP-VPN
+    otfw -- diode
+    diode -- hist :一方向
+    scada -- ctl :冗長
+    hmi1 -- ctl
+    ews -- ctl
+    hist -- ctl
+    plc1 -- ctl :冗長, vlan 100
+    plc2 -- ctl :vlan 100
+    plc1 -- drv1
+    plc1 -- sen1
+    plc2 -- rob2
+    plc2 -- cnc2
+    sis1 -- plc1 :安全連動`,
   'クラス — ドメインモデル': `classDiagram
     class Animal {
       +String name
@@ -180,6 +312,7 @@ export function boot() {
     refreshDiff();
     syncAlignBar();
     applyView();
+    if (!$('toc').hidden) buildToc();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
     const badLines = new Set();
@@ -865,6 +998,7 @@ export function boot() {
       { t: '背景を透過に戻す', k: 'background transparent とうか', run: clearBg },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
+      { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },
       { t: '取り込み（表・箇条書き・A→B・JSON）', k: 'import paste csv とりこみ', run: () => { dlg.hidden = false; $('csvIn').focus(); } },
       { t: '全体をフィット', k: 'fit zoom ふぃっと', run: fit },
       { t: 'コード ⇄ 図 切替', k: 'view code toggle', run: () => document.body.classList.toggle('viewmax') },
@@ -911,6 +1045,118 @@ export function boot() {
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette.hidden ? openPalette() : closePalette(); }
   });
+
+
+  // ---- TOC（目次）：巨大な図の道しるべ ----------------------------------------
+  // ゾーンのツリー＋機器＋バス＋フェンス。検索で絞り、クリックでそこへ飛んで選択、
+  // ▸/▾ で目次から折りたたみ。エディタ側も該当行へスクロールする——迷子にならない。
+  const toc = $('toc'), tocList = $('tocList'), tocQ = $('tocQ');
+  function toggleToc() { toc.hidden = !toc.hidden; if (!toc.hidden) { buildToc(); tocQ.focus(); } }
+  $('zToc').onclick = toggleToc;
+  $('tocClose').onclick = toggleToc;
+  tocQ.addEventListener('input', buildToc);
+  const ROLE_TAG_UI = { core: 'CORE', dist: 'DIST', access: 'ACC', switch: 'SW', router: 'RT', firewall: 'FW',
+    server: 'SV', db: 'DB', storage: 'ST', pc: 'PC', ap: 'AP', lb: 'LB', cloud: 'NET', printer: 'PR',
+    plc: 'PLC', rtu: 'RTU', dcs: 'DCS', scada: 'SCD', hmi: 'HMI', historian: 'HIS', ews: 'EWS',
+    sensor: 'SEN', drive: 'DRV', robot: 'ROB', cnc: 'CNC', sis: 'SIS', gateway: 'GW', diode: 'DIO' };
+  function tocEntries() {
+    const q = tocQ.value.trim().toLowerCase();
+    const hit = (...ss) => !q || ss.some((x) => x != null && String(x).toLowerCase().includes(q));
+    const out = [];
+    if (model.kind === 'infra') {
+      const fold = new Set(model.layout.fold || []);
+      const rec = (zname, depth) => {
+        const rows = [];
+        for (const z of model.groups.filter((g) => g.parent === zname)) {
+          const members = model.items.filter((x) => x.type === 'inode' && x.zone === z.name);
+          const kids = members.filter((n) => hit(n.id, n.label, n.os, n.ip, n.role, n.vlan))
+            .map((n) => ({ t: 'node', id: n.id, label: n.label, role: n.role, depth: depth + 1 }));
+          const sub = rec(z.name, depth + 1);
+          if (hit(z.name) || kids.length || sub.length)
+            rows.push({ t: 'zone', name: z.name, depth, folded: fold.has(z.name), count: members.length }, ...kids, ...sub);
+        }
+        return rows;
+      };
+      out.push(...rec(null, 0));
+      const loose = model.items.filter((x) => x.type === 'inode' && !x.zone && hit(x.id, x.label, x.os, x.ip, x.role));
+      out.push(...loose.map((n) => ({ t: 'node', id: n.id, label: n.label, role: n.role, depth: 0 })));
+      const rest = model.items.filter((x) => (x.type === 'bus' || x.type === 'fence') && hit(x.id, x.label, x.vlan, x.cidr));
+      if (rest.length) out.push({ t: 'head', label: 'バス・フェンス' },
+        ...rest.map((b) => ({ t: 'node', id: b.id, label: (b.type === 'bus' ? '━ ' : '⚑ ') + b.label, depth: 0 })));
+    } else {
+      for (const it of model.items)
+        if (hit(it.id, it.label)) out.push({ t: 'node', id: it.id, label: it.label || it.id, depth: 0 });
+    }
+    return out;
+  }
+  function buildToc() {
+    if (toc.hidden) return;
+    const rows = tocEntries();
+    tocList.innerHTML = rows.map((r) => {
+      if (r.t === 'head') return `<div class="th">${escHtml(r.label)}</div>`;
+      if (r.t === 'zone')
+        return `<div class="tz" style="padding-left:${8 + r.depth * 14}px" data-goto-zone="${escHtml(r.name)}">`
+          + `<button class="tf" data-tfold="${escHtml(r.name)}">${r.folded ? '▸' : '▾'}</button>`
+          + `<span>${escHtml(r.name)}</span><span class="tc">${r.count}</span></div>`;
+      const tag = ROLE_TAG_UI[r.role];
+      return `<div class="tn" style="padding-left:${22 + r.depth * 14}px" data-goto="${escHtml(r.id)}">`
+        + `<span>${escHtml(r.label)}</span>${tag ? `<span class="tt">${tag}</span>` : ''}</div>`;
+    }).join('') || '<div class="th">見つかりません</div>';
+  }
+  // クリック：飛ぶ・選ぶ・エディタも該当行へ。▸/▾ は折りたたみ。
+  tocList.addEventListener('click', (e) => {
+    const tf = e.target.closest('[data-tfold]');
+    if (tf) {
+      const name = tf.dataset.tfold;
+      const fold = new Set(model.layout.fold || []);
+      fold.has(name) ? fold.delete(name) : fold.add(name);
+      model.layout.fold = [...fold];
+      commitModel(); buildToc();
+      return;
+    }
+    const gz = e.target.closest('[data-goto-zone]');
+    if (gz) { centerOn(null, gz.dataset.gotoZone); return; }
+    const gn = e.target.closest('[data-goto]');
+    if (gn) centerOn(gn.dataset.goto, null);
+  });
+  function centerOn(id, zoneName) {
+    if (!L) return;
+    let cx = null, cy = null;
+    if (zoneName) {
+      const z = (L.zones || []).find((zz) => zz.name === zoneName);
+      if (z) { cx = z.x + z.w / 2; cy = z.y + z.h / 2; }
+    } else {
+      const n = (L.nodes || []).find((x) => x.id === id);
+      const b = (L.buses || []).find((x) => x.id === id);
+      const f = (L.fences || []).find((x) => x.id === id);
+      const bar = (L.bars || []).find((x) => x.id === id);
+      const act = (L.actors || []).find((x) => x.id === id);
+      if (n) { cx = n.x + n.w / 2; cy = n.y + n.h / 2; }
+      else if (b) { cx = b.orient === 'v' ? b.x : (b.x1 + b.x2) / 2; cy = b.orient === 'v' ? (b.y1 + b.y2) / 2 : b.y; }
+      else if (f) { cx = f.orient === 'h' ? (f.x1 + f.x2) / 2 : f.x; cy = f.orient === 'h' ? f.y : (f.y1 + f.y2) / 2; }
+      else if (bar) { cx = bar.x + bar.w / 2; cy = bar.y + bar.h / 2; }
+      else if (act) { cx = act.cx; cy = act.y + act.h / 2; }
+    }
+    if (cx == null) return;
+    const r = stage.getBoundingClientRect();
+    view.s = Math.max(view.s, 0.75);                        // 遠すぎたら少し寄る
+    view.tx = r.width / 2 - (cx - (L.x0 || 0)) * view.s;
+    view.ty = r.height / 2 - (cy - (L.y0 || 0)) * view.s;
+    applyView();
+    if (id && model.items.some((x) => x.id === id && (x.type === 'inode' || x.type === 'node' || x.type === 'class'))) {
+      selected.clear(); selected.add(id); redraw(); syncAlignBar();
+    }
+    // エディタも該当行へ（最初に出てくる行）。
+    const token = id || zoneName;
+    const lines = src.value.split('\n');
+    const li = lines.findIndex((l) => l.includes(token));
+    if (li >= 0) {
+      const pos = lines.slice(0, li).join('\n').length + (li ? 1 : 0);
+      src.selectionStart = src.selectionEnd = pos;
+      src.scrollTop = Math.max(0, li * 20 - 80);
+      syncScroll();
+    }
+  }
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
