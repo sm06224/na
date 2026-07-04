@@ -353,7 +353,7 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -365,6 +365,7 @@ export function parse(text) {
         else if (a[0] === 'bg' && a[1]) model.meta.bg = a[1];          // 書き出しにも焼く背景色
         else if (a[0] === 'fold') model.layout.fold = d.replace(/^fold\s+/, '').split('|').filter(Boolean);   // 畳んだゾーン（名前に空白があるので | 区切り）
         else if (a[0] === 'hops') model.meta.hops = true;              // 交差をジャンプ（⌒）で跨ぐ
+        else if (a[0] === 'lod') model.meta.lod = true;                // セマンティックズーム（引くと要約）
         else if (a[0] === 'dots') model.meta.dots = true;              // 接続点を丸点に
         else if (a[0] === 'zpos') {                                    // 畳んだゾーンの位置（名前に空白可なので | 区切り）
           const zm = /^zpos\s+(.+)\|(-?[\d.]+)\|(-?[\d.]+)$/.exec(d);

@@ -116,6 +116,35 @@ export const SAMPLES = {
     plc1 -- drv1
     plc1 -- sen1
     hist2 -- hist :ミラー`,
+  '広域 — ハブ＆スポーク（🗺 地図モード）': `infra
+    title 広域網 — ハブ＆スポーク
+    zone 本社 {
+      core[CORE] :core
+      dc1[基幹サーバ群] :server
+    }
+    hub wan[広域WAN] :vlan 1, 172.31.0.0/16
+    sap[札幌支店] :access
+    sen[仙台支店] :access
+    nag[名古屋支店] :access
+    osa[大阪支社] :access
+    hir[広島支店] :access
+    fuk[福岡支店] :access
+    oki[沖縄支店] :access
+    kan[金沢支店] :access
+    sap -- wan :IP-VPN
+    sen -- wan :IP-VPN
+    nag -- wan :IP-VPN
+    osa -- wan :冗長, 専用線
+    hir -- wan :IP-VPN
+    fuk -- wan :冗長, 専用線
+    oki -- wan :IP-VPN
+    kan -- wan :IP-VPN
+    core -- wan :冗長, 幹線
+    dc1 -- core
+
+%% @layout
+%% lod
+%% zpos 本社|157|374`,
   '巨大 — 全社グランドビュー（IT/OT/クラウド/拠点）': `infra
     title 全社グランドビュー — IT / OT / クラウド / 拠点
     zone 東京本社 {
@@ -271,7 +300,7 @@ export const SAMPLES = {
 const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
-const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
+const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
 function hlLine(line) {
   if (line.trimStart().startsWith('%%')) return `<span class="tk-com">${escHtml(line)}</span>`;
   let out = '', last = 0, m; HL.lastIndex = 0;
@@ -300,13 +329,35 @@ export function boot() {
   }
   function syncScroll() { hl.parentElement.scrollTop = src.scrollTop; hl.parentElement.scrollLeft = src.scrollLeft; gutter.scrollTop = src.scrollTop; }
 
+  // セマンティックズーム（%% lod）：地図アプリのように、引くほど要約される。
+  //   ズーム < 0.55 … 全ゾーンが札に／ < 0.9 … 子ゾーンが札・機器のメタ省略／それ以上 … 全詳細
+  // 畳みは描画時だけの重ね掛け（%% fold は書き換えない——ズームは意味ではない）。
+  const bucketNow = () => (!model.meta.lod || model.kind !== 'infra') ? 2 : view.s < 0.55 ? 0 : view.s < 0.9 ? 1 : 2;
+  let lodBucket = 2;
+  function lodFolds() {
+    const b = bucketNow();
+    if (b === 2) return null;
+    const depth = (g) => { let d = 0, p = g.parent; while (p) { d++; p = model.groups.find((x) => x.name === p)?.parent; } return d; };
+    return model.groups.filter((g) => depth(g) >= b).map((g) => g.name);
+  }
+  function layoutEff() {
+    const lf = lodFolds();
+    if (!lf || !lf.length) return layout(model);
+    const saved = model.layout.fold;
+    model.layout.fold = [...new Set([...(saved || []), ...lf])];
+    const L2 = layout(model);
+    model.layout.fold = saved;
+    return L2;
+  }
   const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch',
     theme: model.meta.theme || 'dark',
     hops: !!model.meta.hops, dots: !!model.meta.dots,
+    detail: bucketNow() === 2,
     bg: model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : null) });
   function render() {
     model = parse(src.value);
-    L = layout(model);
+    L = layoutEff();
+    lodBucket = bucketNow();
     for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
     canvas.innerHTML = draw(model, L, drawOpts());
     document.body.classList.toggle('light', model.meta.theme === 'light');
@@ -335,11 +386,13 @@ export function boot() {
     view.s = Math.max(0.2, Math.min(2, Math.min((r.width - pad) / L.width, (r.height - pad) / L.height)));
     view.tx = (r.width - L.width * view.s) / 2; view.ty = Math.max(16, (r.height - L.height * view.s) / 2);
     applyView();
+    if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }
   }
   function zoomTo(cx, cy, ns) {
     const r = stage.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
     ns = Math.max(0.15, Math.min(4, ns));
     view.tx = x - (x - view.tx) * (ns / view.s); view.ty = y - (y - view.ty) * (ns / view.s); view.s = ns; applyView();
+    if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }   // 地図のように要約⇄詳細
   }
   const zoomAt = (cx, cy, factor) => zoomTo(cx, cy, view.s * factor);
   stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
@@ -374,7 +427,7 @@ export function boot() {
   }
   function redraw() {
     const keep = { ...view };
-    canvas.innerHTML = draw(model, L = layout(model), drawOpts());
+    canvas.innerHTML = draw(model, L = layoutEff(), drawOpts());
     refreshDiff();
     Object.assign(view, keep); applyView();
   }
@@ -717,7 +770,7 @@ export function boot() {
         : model.kind === 'class'
           ? [['＋クラス', '\n    class C{N} {\n      +field\n    }'], ['＋継承', '\n    {last} <|-- C{N}'], ['＋関連', '\n    {last} --> C{N}']]
           : model.kind === 'infra'
-            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋フェンス', '\n    fence f{N}[保守分界] :v'], ['＋接続', '\n    {last} -- n{N}']]
+            ? [['＋機器', '\n    n{N}[新しい機器] :server'], ['＋ゾーン', '\n    zone 新しいゾーン {\n    }'], ['＋バス', '\n    bus b{N}[新しいバス] :h, vlan 1'], ['＋ハブ', '\n    hub h{N}[集約ハブ]'], ['＋フェンス', '\n    fence f{N}[保守分界] :v'], ['＋接続', '\n    {last} -- n{N}']]
             : [['＋ノード', '\n    n{N}[新しいノード]'], ['＋エッジ', '\n    {last} --> n{N}'], ['＋グループ', '\n    subgraph 新グループ\n    end']];
   }
   function refreshIns() {
@@ -1028,6 +1081,7 @@ export function boot() {
       { t: '背景を透過に戻す', k: 'background transparent とうか', run: clearBg },
       { t: 'ラインジャンプ切替 ⌒（交差を跨ぐ）', k: 'hops jump cross こうさ じゃんぷ', run: () => { model.meta.hops = !model.meta.hops || null; commitModel(); toast(model.meta.hops ? '交差をジャンプ ⌒' : 'ジャンプを解除'); } },
       { t: '接続点の丸点切替 ●', k: 'dots junction terminal まるてん せつぞくてん', run: () => { model.meta.dots = !model.meta.dots || null; commitModel(); toast(model.meta.dots ? '接続点に丸点 ●' : '丸点を解除'); } },
+      { t: 'セマンティックズーム切替 🗺（引くと要約）', k: 'lod semantic zoom map ちず さまらいず', run: () => { model.meta.lod = !model.meta.lod || null; commitModel(); toast(model.meta.lod ? '🗺 地図モード：ズームで要約⇄詳細' : '地図モードを解除'); } },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },
@@ -1110,7 +1164,7 @@ export function boot() {
         return rows;
       };
       out.push(...rec(null, 0));
-      const loose = model.items.filter((x) => x.type === 'inode' && !x.zone && hit(x.id, x.label, x.os, x.ip, x.role));
+      const loose = model.items.filter((x) => (x.type === 'inode' || x.type === 'hub') && !x.zone && hit(x.id, x.label, x.os, x.ip, x.role));
       out.push(...loose.map((n) => ({ t: 'node', id: n.id, label: n.label, role: n.role, depth: 0 })));
       const rest = model.items.filter((x) => (x.type === 'bus' || x.type === 'fence') && hit(x.id, x.label, x.vlan, x.cidr));
       if (rest.length) out.push({ t: 'head', label: 'バス・フェンス' },
