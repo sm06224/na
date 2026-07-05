@@ -12,8 +12,10 @@ import { addDays } from '../engine/date.js';
 import { csvToMermaid, universal } from '../engine/import.js';
 import { toDrawio } from '../engine/drawio.js';
 import { diffModels } from '../engine/diff.js';
-import { GEO_LAYERS } from '../engine/geo.js';
+import { GEO_LAYERS, geoProject, geoUnproject } from '../engine/geo.js';
 import { MEGA_DSL } from '../engine/mega.js';
+import { ledgerDevices, ledgerIpam, ledgerCsv } from '../engine/ledger.js';
+import { splitInfra, mergeInfra, zipStore } from '../engine/fileset.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -147,6 +149,37 @@ export const SAMPLES = {
 %% @layout
 %% lod
 %% zpos 本社|157|374`,
+  '配線の意味 — 冗長種別・関係線・両端IP・レイヤ': `infra
+    title 配線の意味 — 冗長・関係・インタフェース
+    zone 東京 {
+      core1[CORE-1] :core, NX-OS
+      core2[CORE-2] :core, NX-OS
+      db1[DB-1] :db, RHEL9, 10.1.1.6, 10.99.0.6
+      mon[監視] :server, Zabbix, 10.1.1.6
+      bus lan1[基幹] :vlan 10, 10.1.1.0/24
+    }
+    zone 大阪 {
+      dbdr[DB-DR] :db, RHEL9, 10.2.1.6, 10.99.0.7
+      bus lan2[基幹DR] :vlan 20, 10.2.1.0/24
+    }
+    fw1[FW-1] :firewall, FortiOS, layer 待機系
+    core1 -- core2 :stack
+    core1 -- lan1
+    core2 -- lan1
+    db1 -- lan1
+    mon -- lan1
+    dbdr -- lan2
+    core1 -- fw1 :vrrp
+    core1 -- dbdr :lacp, 10.1.1.1 > 10.2.1.254, 拠点間L2延伸
+    db1 -- dbdr :rep, 10.99.0.6 > 10.99.0.7, 非同期
+
+%% @layout
+%% pos core1 48 72
+%% pos core2 320 72
+%% pos db1 48 248
+%% pos mon 320 248
+%% pos fw1 656 24
+%% pos dbdr 720 424`,
   '全国 — メガコーポ 1000 ノード（🗾 地理×BCP）': MEGA_DSL,
   '巨大 — 全社グランドビュー（IT/OT/クラウド/拠点）': `infra
     title 全社グランドビュー — IT / OT / クラウド / 拠点
@@ -300,7 +333,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -382,7 +415,65 @@ export function boot() {
   }
 
   // ---- ビュー（ズーム・パン・フィット） ----
-  function applyView() { canvas.style.transform = `translate(${view.tx}px,${view.ty}px) scale(${view.s})`; $('zLabel').textContent = Math.round(view.s * 100) + '%'; }
+  function applyView() {
+    canvas.style.transform = `translate(${view.tx}px,${view.ty}px) scale(${view.s})`;
+    $('zLabel').textContent = Math.round(view.s * 100) + '%';
+    syncTiles();
+  }
+
+  // ---- 実地図タイル（%% tiles）：Leaflet と同じスリッピーマップの心臓部だけを自前で。 ----
+  // 投影は %% geo と同じ Web メルカトルなので OSM タイルがぴったり重なる。オンライン時だけ効き、
+  // オフラインの単一 HTML では静かに何も出ない（自前ベースマップが残る）。書き出しには写らない。
+  const tilesDiv = document.createElement('div');
+  tilesDiv.id = 'tiles';
+  tilesDiv.style.cssText = 'position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;z-index:0';
+  stage.insertBefore(tilesDiv, canvas);
+  const osmCredit = document.createElement('div');
+  osmCredit.id = 'osmCredit';
+  osmCredit.textContent = '© OpenStreetMap contributors';
+  osmCredit.style.cssText = 'position:absolute;left:8px;bottom:8px;font-size:10px;color:#8a93a6;background:#0008;padding:1px 6px;border-radius:6px;z-index:5;display:none';
+  stage.appendChild(osmCredit);
+  const tileCache = new Map();                                 // "z/x/y" → img
+  function syncTiles() {
+    const on = !!(model && model.meta && model.meta.tiles && model.meta.map && model.kind === 'infra' && L);
+    osmCredit.style.display = on ? '' : 'none';
+    if (!on) { tilesDiv.innerHTML = ''; tileCache.clear(); return; }
+    tilesDiv.style.transform = canvas.style.transform;
+    tilesDiv.classList.toggle('darkmap', model.meta.theme !== 'light');
+    if (syncTiles._x0 !== (L.x0 || 0) || syncTiles._y0 !== (L.y0 || 0)) {   // 原点が動いたら貼り直し
+      tilesDiv.innerHTML = ''; tileCache.clear();
+      syncTiles._x0 = L.x0 || 0; syncTiles._y0 = L.y0 || 0;
+    }
+    const w360 = geoProject(0, 122 + 360)[0] - geoProject(0, 122)[0];        // 360° のワールド幅
+    const z = Math.max(3, Math.min(12, Math.round(Math.log2((view.s * w360) / 256))));
+    const n = 2 ** z;
+    const r = stage.getBoundingClientRect();
+    const [wx0, wy0] = toWorld(r.left, r.top), [wx1, wy1] = toWorld(r.right, r.bottom);
+    const t4 = (lat, lng) => [Math.floor(((lng + 180) / 360) * n),
+      Math.floor(((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * n)];
+    const [latNW, lngNW] = geoUnproject(wx0, wy0), [latSE, lngSE] = geoUnproject(wx1, wy1);
+    const [txA, tyA] = t4(latNW, lngNW), [txB, tyB] = t4(latSE, lngSE);
+    const want = new Set();
+    let count = 0;
+    for (let ty = Math.max(0, tyA); ty <= Math.min(n - 1, tyB) && count < 80; ty++)
+      for (let tx = Math.max(0, txA); tx <= Math.min(n - 1, txB) && count < 80; tx++, count++) {
+        const key = `${z}/${tx}/${ty}`;
+        want.add(key);
+        if (tileCache.has(key)) continue;
+        const latN = (Math.atan(Math.sinh(Math.PI * (1 - (2 * ty) / n))) * 180) / Math.PI;
+        const latS = (Math.atan(Math.sinh(Math.PI * (1 - (2 * (ty + 1)) / n))) * 180) / Math.PI;
+        const lngW = (tx / n) * 360 - 180, lngE = ((tx + 1) / n) * 360 - 180;
+        const [px0, py0] = geoProject(latN, lngW), [px1, py1] = geoProject(latS, lngE);
+        const img = document.createElement('img');
+        img.src = `https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`;
+        img.loading = 'lazy'; img.decoding = 'async'; img.alt = '';
+        img.style.cssText = `position:absolute;left:${px0 - (L.x0 || 0)}px;top:${py0 - (L.y0 || 0)}px;width:${px1 - px0 + 0.6}px;height:${py1 - py0 + 0.6}px;opacity:.85`;
+        img.onerror = () => img.remove();                     // オフラインなら静かに諦める
+        tilesDiv.appendChild(img);
+        tileCache.set(key, img);
+      }
+    for (const [key, img] of tileCache) if (!want.has(key)) { img.remove(); tileCache.delete(key); }
+  }
   function fit() {
     if (!L) return;
     const r = stage.getBoundingClientRect(), pad = 40;
@@ -563,8 +654,11 @@ export function boot() {
         else if (selected.size === 1 && selected.has(drag.id)) selected.clear();
         else { selected.clear(); selected.add(drag.id); }
         redraw(); syncAlignBar();
+        // シンボル → コード：単独選択でディテールをポップアップし、エディタも該当行へ。
+        if (!drag.shift && selected.size === 1 && selected.has(drag.id)) { showPop(drag.id); jumpToLine(drag.id); }
+        else hidePop();
       }
-    } else if (pan && !pan.moved && selected.size) { selected.clear(); redraw(); syncAlignBar(); }       // 空クリック＝選択解除
+    } else if (pan && !pan.moved && selected.size) { selected.clear(); redraw(); syncAlignBar(); hidePop(); }       // 空クリック＝選択解除
     drag = null; pan = null; connect = null; stage.classList.remove('panning');
   }
   stage.addEventListener('pointerup', endPointer);
@@ -831,6 +925,14 @@ export function boot() {
     else if (x === 'copysvg') copySvg();
     else if (x === 'copypng') copyPng();
     else if (x === 'html') { try { download(name + '.html', await standalone(serialize(model)), 'text/html'); toast('単一 HTML を保存しました'); } catch (_) { toast('HTML 化に失敗（オンラインのエディタでお試しを）'); } }
+    else if (x === 'fileset') {
+      const files = model.kind === 'infra' ? splitInfra(model) : null;
+      if (!files || files.length < 2) { toast('分割できるのは最上位ゾーンを持つ infra だけです'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([zipStore(files)], { type: 'application/zip' }));
+      a.download = name + '-fileset.zip'; a.click(); URL.revokeObjectURL(a.href);
+      toast(`ファイルセットを保存しました（${files.length} ファイル：拠点ごと＋ _shared）`);
+    }
   }
   // SVG をクリップボードへ：PowerPoint に貼って「図形に変換」すればオートシェイプになる。
   async function copySvg() {
@@ -909,6 +1011,18 @@ export function boot() {
   $('csvGo').onclick = () => runImport($('csvIn').value);
   $('csvPick').onclick = (e) => { e.preventDefault(); $('csvFile').click(); };
   $('csvFile').onchange = async (e) => { const f = e.target.files[0]; if (f) runImport(await f.text()); e.target.value = ''; };
+  // ファイルセット（.mmd 複数）→ 一枚に結合して開く。拠点ごとに分けて書き、ここで合わせる。
+  $('fsPick').onclick = (e) => { e.preventDefault(); $('fsFiles').click(); };
+  $('fsFiles').onchange = async (e) => {
+    const fs = [...(e.target.files || [])]; e.target.value = '';
+    if (!fs.length) return;
+    const texts = await Promise.all(fs.map((f) => f.text()));
+    const merged = mergeInfra(texts);
+    const p = parse(merged);
+    if (p.errors.length) { toast(`⚠ 結合しましたが ${p.errors.length} 件の指摘（未解決の接続など）`); }
+    setText(merged, true); dlg.hidden = true;
+    toast(`ファイルセット ${fs.length} 枚を結合しました`);
+  };
   // 画面のどこへでもファイルをドロップできる（.csv/.tsv/.mmd/.txt）。
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', async (e) => {
@@ -1099,6 +1213,14 @@ export function boot() {
         if (on && !model.meta.map) model.meta.map = true;
         commitModel(); toast(on ? '⚠ 全ハザードレイヤを表示' : 'ハザードを全消灯');
       } },
+      { t: '実地図タイル切替 🌍（OSM・オンライン時のみ）', k: 'tiles osm leaflet real map たいる ちず', run: () => {
+        model.meta.tiles = !model.meta.tiles || null;
+        if (model.meta.tiles && !model.meta.map) model.meta.map = true;
+        commitModel(); toast(model.meta.tiles ? '🌍 実地図タイル ON（© OpenStreetMap・オフラインでは出ません）' : '実地図タイルを OFF');
+      } },
+      { t: 'レイヤパネル ◫（通常線・関係線・バス・自由レイヤ）', k: 'layers layer れいや panel', run: () => $('zLayers').click() },
+      { t: '台帳 ▤（機器台帳・IP アドレス台帳）', k: 'ledger ipam daicho だいちょう 台帳 IP', run: () => $('zLedger').click() },
+      { t: 'ファイルセット (.zip) — 拠点ごとに分割して保存', k: 'fileset split zip ぶんかつ ふぁいる', run: () => doExport('fileset') },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },
@@ -1283,6 +1405,160 @@ export function boot() {
       src.scrollTop = Math.max(0, li * 20 - 80);
       syncScroll();
     }
+  }
+
+  // ---- レイヤ（v14）：通常線・関係線・バス・フェンス＋ :layer 名 の自由レイヤを見え隠れ ----
+  const layersPanel = $('layers'), layersList = $('layersList');
+  const BUILTIN_JA = { net: '通常線（ネットワーク）', rel: '関係線（rep・ミラー・同期）', bus: 'バス', fence: 'フェンス' };
+  function layerCatalog() {
+    const custom = new Map();
+    for (const x of model.items) if (x.layer) custom.set(x.layer, (custom.get(x.layer) || 0) + 1);
+    for (const e of model.edges) if (e.layer) custom.set(e.layer, (custom.get(e.layer) || 0) + 1);
+    return [
+      { key: 'net', count: model.edges.filter((e) => !e.rel).length },
+      { key: 'rel', count: model.edges.filter((e) => e.rel).length },
+      { key: 'bus', count: model.items.filter((x) => x.type === 'bus').length },
+      { key: 'fence', count: model.items.filter((x) => x.type === 'fence').length },
+      ...[...custom.keys()].sort().map((k) => ({ key: k, count: custom.get(k) })),
+    ].filter((l) => l.count > 0);
+  }
+  function buildLayers() {
+    const off = new Set(model.meta.layersOff || []);
+    layersList.innerHTML = layerCatalog().map((l) =>
+      `<label><input type="checkbox" data-layer="${escHtml(l.key)}" ${off.has(l.key) ? '' : 'checked'}> ${escHtml(BUILTIN_JA[l.key] || l.key)}<span class="lc">${l.count}</span></label>`).join('')
+      || '<label style="color:var(--dim)">レイヤに載るものがありません（infra 図種で）</label>';
+  }
+  $('zLayers').onclick = () => { layersPanel.hidden = !layersPanel.hidden; if (!layersPanel.hidden) buildLayers(); };
+  $('layersClose').onclick = () => { layersPanel.hidden = true; };
+  layersList.addEventListener('change', (e) => {
+    const k = e.target.dataset && e.target.dataset.layer; if (!k) return;
+    const off = new Set(model.meta.layersOff || []);
+    e.target.checked ? off.delete(k) : off.add(k);
+    model.meta.layersOff = off.size ? [...off] : null;
+    commitModel();
+  });
+
+  // ---- 台帳（v14）：機器台帳と IP アドレス台帳（IPAM・重複 ⚠・次の空き） ----
+  const ledger = $('ledger'), ledBody = $('ledBody'), ledQ = $('ledQ');
+  let ledTab = 'dev';
+  function buildLedger() {
+    if (ledger.hidden) return;
+    const q = ledQ.value.trim().toLowerCase();
+    const hit = (...ss) => !q || ss.some((s) => s != null && String(s).toLowerCase().includes(q));
+    if (model.kind !== 'infra') { ledBody.innerHTML = '<div class="nethead">台帳は infra 図種で使えます</div>'; return; }
+    if (ledTab === 'dev') {
+      const rows = ledgerDevices(model).filter((r) => hit(r.id, r.label, r.role, r.os, r.ips.join(' '), r.zone, r.layer));
+      ledBody.innerHTML = `<table><tr><th>ID</th><th>名前</th><th>役割</th><th>OS</th><th>IP</th><th>VLAN</th><th>ゾーン</th><th>接続</th><th>レイヤ</th></tr>`
+        + rows.map((r) => `<tr data-goto="${escHtml(r.id)}"><td>${escHtml(r.id)}</td><td>${escHtml(r.label)}</td><td>${escHtml(r.role)}</td><td>${escHtml(r.os)}</td><td>${escHtml([...new Set(r.ips)].join(' / '))}</td><td>${r.vlan}</td><td>${escHtml(r.zone)}</td><td>${r.links}</td><td>${escHtml(r.layer)}</td></tr>`).join('')
+        + `</table><div class="nethead" style="color:var(--dim);font-weight:400">${rows.length} 台</div>`;
+    } else {
+      const { nets, orphans } = ledgerIpam(model);
+      ledBody.innerHTML = nets.map((net) => {
+        const rows = net.rows.filter((r) => hit(r.ip, r.owner, net.label, net.cidr));
+        if (q && !rows.length) return '';
+        return `<div class="nethead">━ ${escHtml(net.label)}（${escHtml(net.cidr)}${net.vlan != null ? ' ・ VLAN ' + net.vlan : ''}）`
+          + ` — 使用 ${net.rows.length} ・ 利用率 ${net.util}%`
+          + (net.dups ? ` ・ <span class="dup">⚠ 重複 ${net.dups}</span>` : '')
+          + `・ 次の空き <span class="free">${net.free || 'なし'}</span></div>`
+          + `<table><tr><th>IP</th><th>割当先</th><th>向き先</th><th></th></tr>`
+          + rows.map((r) => `<tr data-goto="${escHtml(r.owner)}"><td>${escHtml(r.ip)}</td><td>${escHtml(r.owner)}</td><td>${escHtml(r.via)}</td><td>${r.dup ? '<span class="dup">⚠ 重複</span>' : ''}</td></tr>`).join('') + '</table>';
+      }).join('')
+        + (orphans.length ? `<div class="nethead">未収容（どのネットワーク cidr にも入らない IP）</div><table>`
+          + orphans.filter((o) => hit(o.ip, o.owner)).map((o) => `<tr data-goto="${escHtml(o.owner)}"><td>${escHtml(o.ip)}</td><td>${escHtml(o.owner)}</td><td>${escHtml(o.via)}</td><td></td></tr>`).join('') + '</table>' : '');
+    }
+  }
+  $('zLedger').onclick = () => { ledger.hidden = !ledger.hidden; buildLedger(); };
+  $('ledClose').onclick = () => { ledger.hidden = true; };
+  ledQ.addEventListener('input', buildLedger);
+  for (const b of ledger.querySelectorAll('.ltab')) b.onclick = () => {
+    for (const x of ledger.querySelectorAll('.ltab')) x.classList.toggle('on', x === b);
+    ledTab = b.dataset.lt; buildLedger();
+  };
+  ledBody.addEventListener('click', (e) => {
+    const tr = e.target.closest('[data-goto]'); if (!tr) return;
+    ledger.hidden = true; centerOn(tr.dataset.goto, null);
+  });
+  $('ledCsv').onclick = () => {
+    if (model.kind !== 'infra') return;
+    if (ledTab === 'dev') {
+      const rows = ledgerDevices(model);
+      download('devices.csv', ledgerCsv(['id', 'label', 'role', 'os', 'ip', 'vlan', 'zone', 'links', 'layer'],
+        rows.map((r) => [r.id, r.label, r.role, r.os, [...new Set(r.ips)].join(' / '), r.vlan, r.zone, r.links, r.layer])), 'text/csv');
+    } else {
+      const { nets, orphans } = ledgerIpam(model);
+      const rows = [];
+      for (const net of nets) {
+        for (const r of net.rows) rows.push([net.label, net.cidr, net.vlan ?? '', r.ip, r.owner, r.via, r.dup ? 'DUP' : '']);
+        rows.push([net.label, net.cidr, net.vlan ?? '', net.free || '', '(次の空き)', '', 'FREE']);
+      }
+      for (const o of orphans) rows.push(['(未収容)', '', '', o.ip, o.owner, o.via, '']);
+      download('ipam.csv', ledgerCsv(['network', 'cidr', 'vlan', 'ip', 'owner', 'via', 'flag'], rows), 'text/csv');
+    }
+    toast('CSV を保存しました（Excel でそのまま開けます）');
+  };
+
+  // ---- ディテール・ポップアップ（v14）：本体は薄く、詳細はここで ----
+  const pop = $('pop');
+  function hidePop() { pop.hidden = true; }
+  function showPop(id) {
+    const n = model.items.find((x) => x.id === id);
+    if (!n || (n.type !== 'inode' && n.type !== 'hub')) { hidePop(); return; }
+    const conns = model.edges.filter((e) => e.from === id || e.to === id).map((e) => {
+      const peerId = e.from === id ? e.to : e.from;
+      const pn = model.items.find((x) => x.id === peerId);
+      const myIp = e.from === id ? e.ipFrom : e.ipTo;
+      const kind = e.rel ? '⟳ ' + (e.label || e.rel) : (e.vlan != null ? 'VLAN ' + e.vlan : (e.label || ''));
+      return `${escHtml(pn ? pn.label : peerId)}${kind ? `（${escHtml(kind)}）` : ''}${myIp ? ` — <b>${escHtml(myIp)}</b>` : ''}`;
+    });
+    const ips = (n.ips && n.ips.length ? n.ips : (n.ip ? [n.ip] : []));
+    pop.innerHTML = `<h4>${escHtml(n.label)}<span class="ptag">${escHtml(n.id)}</span>${n.role ? `<span class="ptag">${escHtml(n.role)}</span>` : ''}</h4>`
+      + (n.os ? `<div class="pr"><span class="pk">OS</span><span class="pv">${escHtml(n.os)}</span></div>` : '')
+      + (ips.length ? `<div class="pr"><span class="pk">IP</span><span class="pv">${ips.map(escHtml).join('<br>')}</span></div>` : '')
+      + (n.vlan != null ? `<div class="pr"><span class="pk">VLAN</span><span class="pv">${n.vlan}</span></div>` : '')
+      + (n.cidr ? `<div class="pr"><span class="pk">CIDR</span><span class="pv">${escHtml(n.cidr)}</span></div>` : '')
+      + (n.zone ? `<div class="pr"><span class="pk">ゾーン</span><span class="pv">${escHtml(n.zone)}</span></div>` : '')
+      + (n.layer ? `<div class="pr"><span class="pk">レイヤ</span><span class="pv">${escHtml(n.layer)}</span></div>` : '')
+      + (conns.length ? `<div class="pr"><span class="pk">接続</span><span class="pv">${conns.join('<br>')}</span></div>` : '');
+    pop.hidden = false;
+    const el = canvas.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    const r = el ? el.getBoundingClientRect() : stage.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let x = r.right + 10, y = r.top;
+    if (x + pw > innerWidth - 8) x = Math.max(8, r.left - pw - 10);
+    if (y + ph > innerHeight - 8) y = Math.max(8, innerHeight - ph - 8);
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePop(); });
+  stage.addEventListener('pointerdown', () => hidePop(), true);
+
+  // ---- コード ⇄ シンボル（v14）：カーソル行のシンボルがネオンでまたたく ----
+  let neonPrev = null;
+  function cursorSync() {
+    if (model.kind !== 'infra') return;
+    const line = src.value.slice(0, src.selectionStart).split('\n').length - 1;
+    const t = (src.value.split('\n')[line] || '').trim();
+    let ids = [], mm;
+    if ((mm = /^(?:bus|hub|fence)\s+([^\s\[:]+)/.exec(t))) ids = [mm[1]];
+    else if ((mm = /^([^\s\[:%{}]+)\s*--\s*([^\s:]+)/.exec(t))) ids = [mm[1], mm[2]];
+    else if ((mm = /^([^\s\[:%{}]+)\[/.exec(t))) ids = [mm[1]];
+    const key = ids.join('|');
+    if (key === neonPrev) return;
+    neonPrev = key;
+    for (const el of canvas.querySelectorAll('.neon')) el.classList.remove('neon');
+    for (const id of ids)
+      for (const el of canvas.querySelectorAll(`[data-id="${CSS.escape(id)}"]`)) el.classList.add('neon');
+  }
+  src.addEventListener('keyup', cursorSync);
+  src.addEventListener('click', cursorSync);
+  // シンボル → コード：該当行へスクロール（クリック選択時に呼ばれる）。
+  function jumpToLine(id) {
+    const lines = src.value.split('\n');
+    const li = lines.findIndex((l) => l.trim().startsWith(id) || l.includes(`${id}[`) || new RegExp(`(?:bus|hub|fence)\\s+${id}\\b`).test(l));
+    if (li < 0) return;
+    const pos = lines.slice(0, li).join('\n').length + (li ? 1 : 0);
+    src.selectionStart = src.selectionEnd = pos;
+    src.scrollTop = Math.max(0, li * 20 - 80);
+    syncScroll();
   }
 
   // ---- トースト・モバイル ----

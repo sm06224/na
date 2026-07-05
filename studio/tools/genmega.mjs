@@ -100,7 +100,7 @@ function dcSite(s, i) {
   }
   put('    }');
   for (let k = 1; k <= 2; k++) E.push(`    ${p}_core${k} -- ${p}_corebus`);
-  E.push(`    ${p}_core1 -- ${p}_core2 :冗長, スタック`);
+  E.push(`    ${p}_core1 -- ${p}_core2 :stack`);
   for (let k = 1; k <= 2; k++) E.push(`    ${p}_fw${k} -- ${p}_corebus`);
   E.push(`    ${p}_wanrt -- ${p}_corebus`);
   for (let k = 1; k <= s.servers; k++) E.push(`    ${p}_sv${k} -- ${p}_svbus`);
@@ -243,7 +243,7 @@ G.push('%% geo inet|30.5|141.8');
 for (const h of HUBS) E.push(`    ${h.id} -- wan :冗長, 幹線`);
 E.push('    hq_fw1 -- inet :冗長', '    dr_fw1 -- inet :予備');
 E.push('    aws_vpc -- wan :IPsec-VPN', '    az_gw -- wan :IPsec-VPN', '    saas -- inet :SSO');
-E.push('    hq_core1 -- dr_core1 :一方向, DRレプリケーション');
+E.push('    hq_sv6 -- dr_sv6 :rep, 一方向, DRレプリケーション', '    hq_sv5 -- dr_sv5 :mirror, ストレージミラー');
 
 const dsl = [...B, '', ...E, '', '%% @layout', '%% lod', '%% map', '%% hazard quake|tsunami|volcano|typhoon|snow|geopol', ...G].join('\n') + '\n';
 
