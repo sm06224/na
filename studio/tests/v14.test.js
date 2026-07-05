@@ -112,6 +112,15 @@ test('v14: %% tiles（実地図タイル）と geoUnproject の往復', async ()
   assert.ok(Math.abs(lat - 35.68) < 0.01 && Math.abs(lng - 139.76) < 0.01, `逆投影 ${lat},${lng}`);
 });
 
+test('v15: %% basemap / %% hazardtiles の往復', () => {
+  const m = parse('infra\n  a[A]\n\n%% @layout\n%% map\n%% basemap gsi\n%% hazardtiles flood|tsunami');
+  assert.equal(m.meta.basemap, 'gsi');
+  assert.deepEqual(m.meta.hazardTiles, ['flood', 'tsunami']);
+  const s = serialize(m);
+  assert.ok(s.includes('%% basemap gsi') && s.includes('%% hazardtiles flood|tsunami'));
+  assert.equal(serialize(parse(s)), s, '不動点');
+});
+
 test('回帰: ミラー系の旧記法（hist2 -- hist :ミラー）は関係線として読める', () => {
   const m = parse('infra\n  a[A]\n  b[B]\n  a -- b :ミラー');
   assert.equal(m.edges[0].rel, 'mirror');

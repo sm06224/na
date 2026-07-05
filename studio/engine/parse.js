@@ -353,7 +353,7 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod|geo|map|hazard|layers|tiles)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod|geo|map|hazard|layers|tiles|basemap|hazardtiles)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -378,7 +378,9 @@ export function parse(text) {
         else if (a[0] === 'map') model.meta.map = true;                // 地理マップ（自前ベースマップに geo で配置）
         else if (a[0] === 'hazard') model.meta.hazard = d.replace(/^hazard\s*/, '').split('|').filter(Boolean);  // ハザードレイヤ
         else if (a[0] === 'layers') model.meta.layersOff = d.replace(/^layers\s+off\s*/, '').split('|').filter(Boolean);  // 消灯レイヤ
-        else if (a[0] === 'tiles') model.meta.tiles = true;            // 実地図タイル（OSM・オンライン時のみ）
+        else if (a[0] === 'tiles') model.meta.tiles = true;            // 旧記法：実地図タイル（= basemap osm）
+        else if (a[0] === 'basemap' && a[1]) model.meta.basemap = a[1];   // ベースマップ（osm/gsi/photo/none）
+        else if (a[0] === 'hazardtiles') model.meta.hazardTiles = d.replace(/^hazardtiles\s*/, '').split('|').filter(Boolean);  // 本物のハザードマップタイル
       }
       continue;                                            // ふつうのコメントは捨てる
     }
