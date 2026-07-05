@@ -17,6 +17,13 @@ export const geoProject = (lat, lng) => [
   Math.round((lng - 122) * GEO_S),
   Math.round((gmerc(46.8) - gmerc(lat)) * GEO_S),
 ];
+// 逆投影（ワールド座標 → 緯度経度）。実地図タイル（OSM）を同じメルカトルに重ねるのに使う。
+export const geoUnproject = (x, y) => {
+  const lng = x / GEO_S + 122;
+  const gd = gmerc(46.8) - y / GEO_S;
+  const lat = (Math.atan(Math.exp((gd * Math.PI) / 180)) * 2 - Math.PI / 2) * (180 / Math.PI);
+  return [lat, lng];
+};
 
 // 低ポリ日本列島（[lat,lng] の閉路）。見取り図としての形を優先した手打ちの概形。
 export const GEO_OUTLINE = [

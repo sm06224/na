@@ -32,6 +32,7 @@
       <button data-x="drawio">.drawio を保存</button>
       <button data-x="copydrawio">draw.io XML をコピー</button>
       <button data-x="html">単一 HTML を保存</button>
+      <button data-x="fileset">ファイルセット (.zip) — 拠点ごとに分割</button>
     </div>
   </div>
 </header>
@@ -66,6 +67,8 @@
       <button id="zIn">＋</button>
       <button id="zFit">フィット</button>
       <button id="zToc" title="目次（TOC）— 巨大な図の道しるべ">☰ 目次</button>
+      <button id="zLayers" title="レイヤ — 通常線・関係線・バス・フェンス・自由レイヤの見え隠れ">◫ レイヤ</button>
+      <button id="zLedger" title="台帳 — 機器台帳と IP アドレス台帳（IPAM）">▤ 台帳</button>
       <button id="zSketch" title="手描きモード（%% style sketch として保存されます）">✏ 手描き</button>
       <button id="edToggle" class="only-desktop" title="コードペインをたたむ / 開く">◧ コード</button>
       <button id="vToggle" class="only-mobile">コード ◧</button>
@@ -77,6 +80,24 @@
       </div>
       <div id="tocList"></div>
     </div>
+    <div id="layers" class="toc layers" hidden>
+      <div class="tochead">
+        <b class="lttl">◫ レイヤ</b>
+        <button id="layersClose">✕</button>
+      </div>
+      <div id="layersList"></div>
+    </div>
+    <div id="ledger" class="ledger" hidden>
+      <div class="ledhead">
+        <button class="ltab on" data-lt="dev">機器台帳</button>
+        <button class="ltab" data-lt="ipam">IP アドレス台帳</button>
+        <input id="ledQ" placeholder="絞り込み（名前・IP・OS・役割・ゾーン）">
+        <button id="ledCsv">⬇ CSV</button>
+        <button id="ledClose">✕</button>
+      </div>
+      <div id="ledBody"></div>
+    </div>
+    <div id="pop" class="pop" hidden></div>
     <div id="ttbar" class="ttbar" hidden>
       <span>⏪ タイムトラベル</span>
       <input id="ttRange" type="range" min="0" max="0" value="0">
@@ -100,7 +121,8 @@
 基本設計,,7,要件定義,進行中,設計
 API 実装,,10,基本設計,,実装"></textarea>
     <div class="row">
-      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>（画面へのドロップでも可）</span>
+      <span class="hint" style="margin-right:auto"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,.mmd" hidden><a href="#" id="csvPick">ファイルを選ぶ…</a>
+        ／ <input type="file" id="fsFiles" accept=".mmd" multiple hidden><a href="#" id="fsPick">ファイルセットを結合…</a>（.mmd 複数選択）（画面へのドロップでも可）</span>
       <button id="csvCancel" class="ghost2">閉じる</button>
       <button id="csvGo">図にする</button>
     </div>

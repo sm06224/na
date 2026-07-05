@@ -1359,7 +1359,7 @@ infra
     cl_sv8 -- az_gw
     hq_core1 -- hq_corebus
     hq_core2 -- hq_corebus
-    hq_core1 -- hq_core2 :冗長, スタック
+    hq_core1 -- hq_core2 :stack
     hq_fw1 -- hq_corebus
     hq_fw2 -- hq_corebus
     hq_wanrt -- hq_corebus
@@ -1443,7 +1443,7 @@ infra
     hq_wanrt -- h_kanto :冗長, 幹線
     dr_core1 -- dr_corebus
     dr_core2 -- dr_corebus
-    dr_core1 -- dr_core2 :冗長, スタック
+    dr_core1 -- dr_core2 :stack
     dr_fw1 -- dr_corebus
     dr_fw2 -- dr_corebus
     dr_wanrt -- dr_corebus
@@ -2463,7 +2463,8 @@ infra
     aws_vpc -- wan :IPsec-VPN
     az_gw -- wan :IPsec-VPN
     saas -- inet :SSO
-    hq_core1 -- dr_core1 :一方向, DRレプリケーション
+    hq_sv6 -- dr_sv6 :rep, 一方向, DRレプリケーション
+    hq_sv5 -- dr_sv5 :mirror, ストレージミラー
 
 %% @layout
 %% lod

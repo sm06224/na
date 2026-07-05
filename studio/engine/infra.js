@@ -68,8 +68,9 @@ const vlanHue = (v) => NET_HUES[((v % NET_HUES.length) + NET_HUES.length) % NET_
 const IP_RE = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
 
 // 機器・バスの :attrs。役割でも IP でも VLAN でもない言葉は OS/バージョン扱い。
+// IP は複数書ける（機器の足は一本とは限らない）——ips に全部、ip には先頭を残す。
 function parseAttrs(spec) {
-  const out = { role: null, os: null, ip: null, vlan: null, orient: null, len: null };
+  const out = { role: null, os: null, ip: null, ips: [], vlan: null, orient: null, len: null, layer: null };
   for (const tokRaw of String(spec || '').split(',')) {
     const tok = tokRaw.trim(); if (!tok) continue;
     const low = tok.toLowerCase();
@@ -77,9 +78,11 @@ function parseAttrs(spec) {
     if (mv) { out.vlan = +mv[1]; continue; }
     const ml = /^len\s*(\d+)$/i.exec(tok);
     if (ml) { out.len = +ml[1]; continue; }
+    const my = /^layer\s+(.+)$/i.exec(tok);
+    if (my) { out.layer = my[1].trim(); continue; }
     if (/^(h|horizontal|横)$/.test(low)) { out.orient = 'h'; continue; }
     if (/^(v|vertical|縦)$/.test(low)) { out.orient = 'v'; continue; }
-    if (IP_RE.test(tok)) { out.ip = tok; continue; }
+    if (IP_RE.test(tok)) { out.ips.push(tok); out.ip = out.ips[0]; continue; }
     if (ROLE_ALIAS[low] || ROLE_ALIAS[tok]) { out.role = ROLE_ALIAS[low] || ROLE_ALIAS[tok]; continue; }
     out.os = out.os ? out.os + ' ' + tok : tok;
   }
@@ -87,14 +90,30 @@ function parseAttrs(spec) {
 }
 
 // 接続の :attrs。線そのものに意味を持たせる（冗長・予備・幹線・一方向・所属ネットワーク・自由ラベル）。
+// さらに v14：
+//   ・冗長の種別 …… ha / lacp / stack / vrrp（見た目が変わる。裸の「冗長」は ha 扱い）
+//   ・関係線 …… rep / ミラー / 同期 / バックアップ など。ネットワーク線と混同しないよう
+//     曲線・別色・⟳ で描かれ、レイヤ「関係線」ごと消せる
+//   ・両端の実 IP …… `10.0.0.1 > 10.0.0.2`（from > to）。線の根元にホスト部だけ出す
+//   ・layer 名前 …… 自由レイヤ。%% layers off で見え隠れ
+const RED_TYPE = { '冗長': 'ha', redundant: 'ha', ha: 'ha', lacp: 'lacp', teaming: 'lacp', 'チーミング': 'lacp',
+  stack: 'stack', 'スタック': 'stack', vrrp: 'vrrp', hsrp: 'vrrp' };
+const REL_KIND = { rep: 'rep', replication: 'rep', 'レプリケーション': 'rep', mirror: 'mirror', 'ミラー': 'mirror',
+  sync: 'sync', '同期': 'sync', dr: 'rep' };
 function parseLinkAttrs(spec) {
-  const out = { vlan: null, redundant: false, dashed: false, thick: false, arrow: false, label: null };
+  const out = { vlan: null, redundant: false, redType: null, rel: null, dashed: false, thick: false, arrow: false,
+    label: null, ipFrom: null, ipTo: null, layer: null };
   for (const tokRaw of String(spec || '').split(',')) {
     const tok = tokRaw.trim(); if (!tok) continue;
     const low = tok.toLowerCase();
     const mv = /^vlan\s*(\d+)$/i.exec(tok);
     if (mv) { out.vlan = +mv[1]; continue; }
-    if (/^(冗長|redundant|ha|lacp|teaming)$/i.test(low) || tok === '冗長') { out.redundant = true; continue; }
+    const my = /^layer\s+(.+)$/i.exec(tok);
+    if (my) { out.layer = my[1].trim(); continue; }
+    const mp = /^(\S+)\s*>\s*(\S+)$/.exec(tok);                    // 両端の実アドレス（from > to）
+    if (mp && IP_RE.test(mp[1]) && IP_RE.test(mp[2])) { out.ipFrom = mp[1]; out.ipTo = mp[2]; continue; }
+    if (RED_TYPE[low] || RED_TYPE[tok]) { out.redundant = true; out.redType = RED_TYPE[low] || RED_TYPE[tok]; continue; }
+    if (REL_KIND[low] || REL_KIND[tok]) { out.rel = REL_KIND[low] || REL_KIND[tok]; continue; }
     if (/^(予備|backup|stby|standby)$/i.test(low) || tok === '予備') { out.dashed = true; continue; }
     if (/^(trunk|幹線)$/i.test(low) || tok === '幹線') { out.thick = true; continue; }
     if (/^(一方向|oneway|unidirectional)$/i.test(low) || tok === '一方向') { out.arrow = true; continue; }
@@ -130,7 +149,7 @@ export function parseInfra(lines, model) {
     if (bm) {
       const a = parseAttrs(bm[3]);
       model.items.push({ type: 'bus', id: bm[1], label: bm[2] || bm[1], orient: a.orient || 'h', vlan: a.vlan, cidr: a.ip,
-        len: a.len, zone: zstack.length ? zstack[zstack.length - 1] : null });
+        len: a.len, layer: a.layer, zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(bm[1]);
       continue;
     }
@@ -158,7 +177,7 @@ export function parseInfra(lines, model) {
       if (model.items.some((x) => x.id === nm[1])) { model.errors.push(`L${ln}: id が重複「${nm[1]}」`); continue; }
       const a = parseAttrs(nm[3]);
       model.items.push({ type: 'inode', id: nm[1], label: nm[2] || nm[1],
-        role: a.role, os: a.os, ip: a.ip, vlan: a.vlan,
+        role: a.role, os: a.os, ip: a.ip, ips: a.ips, vlan: a.vlan, layer: a.layer,
         zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(nm[1]);
       continue;
@@ -174,7 +193,9 @@ export function parseInfra(lines, model) {
 
 // ---- レイアウト ---------------------------------------------------------------
 
-const metaLines = (n) => [n.os, n.ip, n.vlan != null ? 'VLAN ' + n.vlan : null].filter(Boolean);
+const metaLines = (n) => [n.os,
+  n.ip ? n.ip + (n.ips && n.ips.length > 1 ? ` +${n.ips.length - 1}` : '') : null,
+  n.vlan != null ? 'VLAN ' + n.vlan : null].filter(Boolean);
 // 全角は半角の約 1.7 倍幅。ここをサボるとラベルが役割タグに刺さる。
 const textW = (s, px) => [...String(s)].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e7f ? px * 1.7 : px), 0);
 
@@ -574,43 +595,16 @@ export function drawInfra(model, L, opts = {}) {
       + `<text x="${z.x + 26}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">${iesc(z.name)}</text></g>`
       + `<g data-fold="${iesc(z.name)}" style="cursor:pointer"><rect x="${z.x + 4}" y="${z.y + 2}" width="18" height="18" rx="5" fill="transparent"/><text x="${z.x + 12}" y="${z.y + 16}" fill="${T.head}" font-size="11.5" font-weight="700">▾</text></g>`);
   }
-  // 接続線：冗長=二重線・予備=破線・幹線=太線・一方向=矢印・VLAN=色とチップ。
-  // バスが自由配置なので肘（elbow）区間もあり、%% hops なら交差を ⌒ で跨ぐ。
-  const obstacles = L.buses.map((b) => b.orient === 'v'
-    ? { x1: b.x, y1: b.y1, x2: b.x, y2: b.y2 } : { x1: b.x1, y1: b.y, x2: b.x2, y2: b.y });
-  for (const l of L.links) {
-    const e = l.e || {};
-    const hue = e.vlan != null ? vlanHue(e.vlan) : T.line;
-    const wdt = e.thick ? 3 : 1.5;
-    const dash = e.dashed ? ` stroke-dasharray="6 5"` : '';
-    const arrow = e.arrow ? ' marker-end="url(#arrow)"' : '';
-    const segs = l.mx != null && l.elbow
-      ? [{ x1: l.x1, y1: l.y1, x2: l.mx, y2: l.my }, { x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }]
-      : [{ x1: l.x1, y1: l.y1, x2: l.mx != null ? l.mx : l.x2, y2: l.my != null ? l.my : l.y2 },
-        ...(l.mx != null ? [{ x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }] : [])].filter((sg) => sg.x1 !== sg.x2 || sg.y1 !== sg.y2);
-    const drawOnce = (o) => segs.map((sg, i) => {
-      const g = offSeg(sg, o);
-      const d = opts.hops ? hopPath(g, obstacles) : `M${g.x1},${g.y1} L${g.x2},${g.y2}`;
-      const mk = i === segs.length - 1 ? arrow : '';
-      return `<path d="${d}" fill="none" stroke="${hue}" stroke-opacity="0.85" stroke-width="${wdt}"${dash}${mk}/>`;
-    }).join('');
-    parts.push(e.redundant ? drawOnce(-2.4) + drawOnce(2.4) : drawOnce(0));
-    obstacles.push(...segs);                                   // 後から描く線がこの線を跨げるように
-    if (l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3.4" fill="${hue}"/>`);
-    if (opts.dots) {                                           // %% dots：接続点を丸点に（回路図の作法）
-      parts.push(`<circle cx="${l.x1}" cy="${l.y1}" r="3" fill="${hue}"/>`);
-      if (!l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3" fill="${hue}"/>`);
-    }
-    const chip = e.label || (e.vlan != null ? 'VLAN ' + e.vlan : null) || (e.redundant ? '冗長' : null);
-    if (chip) {
-      const s0 = segs[0];
-      const mx = (s0.x1 + s0.x2) / 2, my = (s0.y1 + s0.y2) / 2;
-      const tw = textW(chip, 6.2) + 12;
-      parts.push(`<rect x="${mx - tw / 2}" y="${my - 8}" width="${tw}" height="16" rx="8" fill="${T.paper}" stroke="${hue}" stroke-opacity="0.6" opacity="0.92"/>`
-        + `<text x="${mx}" y="${my + 3.5}" fill="${hue}" font-size="9.5" text-anchor="middle">${iesc(chip)}</text>`);
-    }
-  }
-  for (const b of L.buses) {
+  // レイヤ（%% layers off …）：組み込みは net（通常線）/ rel（関係線）/ bus / fence。
+  // 機器やリンクの :layer 名 も同じ仕組みで消える。消灯は「描かないだけ」——意味部は無傷。
+  const layersOff = new Set(model.meta.layersOff || []);
+  const detail = opts.detail !== false;                      // セマンティックズーム：引いたらメタを省く
+  const nodeLayerOf = new Map(model.items.filter((x) => x.layer).map((x) => [x.id, x.layer]));
+  const hiddenEnd = (id) => layersOff.has(nodeLayerOf.get(id));
+  const busIds = new Map(L.buses.map((b) => [b.id, b]));
+  // バスは接続線より**下**に敷く：ライン・交差ジャンプ・接続点はバスの上に見える（回路図の作法）。
+  if (!layersOff.has('bus')) for (const b of L.buses) {
+    if (layersOff.has(b.layer)) continue;
     const chip = [b.label, b.vlan != null ? 'VLAN ' + b.vlan : null, b.cidr].filter(Boolean).join(' ・ ');
     const hue = b.vlan != null ? vlanHue(b.vlan) : '#8ad1f5';
     if (b.orient === 'v') {
@@ -625,8 +619,108 @@ export function drawInfra(model, L, opts = {}) {
         + `<text x="${b.x1 + 4}" y="${b.y - 9}" fill="${hue}" font-size="11" font-weight="600">${iesc(chip)}</text></g>`);
     }
   }
+  // 機器の IP を「線の根元」に出す準備：バス収容で cidr が分かるものはホスト部だけ（.11 など）。
+  // 本体には書かない——アドレスは向いている先（ネットワーク）ごとの顔だから。
+  const hostPart = (ip, cidr) => {
+    if (!ip || !cidr) return ip;
+    const [net, plen] = cidr.split('/'); const p = +plen || 0;
+    const a = ip.split('.'), nn = net.split('.');
+    if (p >= 24 && a.slice(0, 3).join('.') === nn.slice(0, 3).join('.')) return '.' + a[3];
+    if (p >= 16 && a.slice(0, 2).join('.') === nn.slice(0, 2).join('.')) return '.' + a.slice(2).join('.');
+    return ip;
+  };
+  const extIP = new Set();                                     // 線側に出せた機器（本体では省く）
+  const ipChip = (x, y, txt, hue, full) => {
+    const tw = textW(txt, 5.6) + 8;
+    return `<g${full ? ` data-ipfull="${iesc(full)}"` : ''}><rect x="${x - tw / 2}" y="${y - 7}" width="${tw}" height="13" rx="6" fill="${T.paper}" stroke="${hue}" stroke-opacity="0.45" opacity="0.92"/>`
+      + `<text x="${x}" y="${y + 3}" fill="${hue}" font-size="8.5" text-anchor="middle">${iesc(txt)}${full ? `<title>${iesc(full)}</title>` : ''}</text></g>`;
+  };
+  // 接続線：冗長=二重線（ha/lacp/stack/vrrp で顔が変わる）・予備=破線・幹線=太線・一方向=矢印・VLAN=色とチップ。
+  // バスが自由配置なので肘（elbow）区間もあり、%% hops なら交差を ⌒ で跨ぐ。関係線（rep/mirror/sync）は
+  // 曲線・別色・⟳——ネットワーク線と見間違えない。
+  const obstacles = L.buses.map((b) => b.orient === 'v'
+    ? { x1: b.x, y1: b.y1, x2: b.x, y2: b.y2 } : { x1: b.x1, y1: b.y, x2: b.x2, y2: b.y });
+  const relParts = [];                                         // 関係線は通常線の上に重ねる
+  const RELC = '#e07ad1';
+  const REL_WORD = { rep: 'レプリケーション', mirror: 'ミラー', sync: '同期' };
+  for (const l of L.links) {
+    const e = l.e || {};
+    if (layersOff.has(e.layer) || hiddenEnd(e.from) || hiddenEnd(e.to)) continue;
+    if (e.rel) {                                               // 関係線：ふくらむ曲線＋ ⟳ チップ
+      if (layersOff.has('rel')) continue;
+      const dx = l.x2 - l.x1, dy = l.y2 - l.y1, len = Math.hypot(dx, dy) || 1;
+      const bow = Math.min(220, Math.max(26, len * 0.16));
+      const mx = (l.x1 + l.x2) / 2 - (dy / len) * bow, my = (l.y1 + l.y2) / 2 + (dx / len) * bow;
+      relParts.push(`<path d="M${l.x1},${l.y1} Q${mx},${my} ${l.x2},${l.y2}" fill="none" stroke="${RELC}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="2 7" stroke-linecap="round"${e.arrow ? ' marker-end="url(#arrow)"' : ''}/>`);
+      const chip = `⟳ ${e.label || REL_WORD[e.rel] || e.rel}`;
+      const tw = textW(chip, 6.2) + 12;
+      const ax = (l.x1 + l.x2) / 2 - (dy / len) * bow * 0.5, ay = (l.y1 + l.y2) / 2 + (dx / len) * bow * 0.5;
+      relParts.push(`<rect x="${ax - tw / 2}" y="${ay - 8}" width="${tw}" height="16" rx="8" fill="${T.paper}" stroke="${RELC}" stroke-opacity="0.6" opacity="0.92"/>`
+        + `<text x="${ax}" y="${ay + 3.5}" fill="${RELC}" font-size="9.5" text-anchor="middle">${iesc(chip)}</text>`);
+      if (detail) {                                            // 関係線にも向き先ごとの実アドレス
+        if (e.ipFrom) relParts.push(ipChip(l.x1 + dx * 0.16, l.y1 + dy * 0.16 - 9, e.ipFrom, RELC, e.ipFrom));
+        if (e.ipTo) relParts.push(ipChip(l.x2 - dx * 0.16, l.y2 - dy * 0.16 - 9, e.ipTo, RELC, e.ipTo));
+      }
+      continue;
+    }
+    if (layersOff.has('net')) continue;
+    const hue = e.vlan != null ? vlanHue(e.vlan) : T.line;
+    const wdt = e.thick ? 3 : 1.5;
+    const dash = e.dashed ? ` stroke-dasharray="6 5"` : '';
+    const arrow = e.arrow ? ' marker-end="url(#arrow)"' : '';
+    const segs = l.mx != null && l.elbow
+      ? [{ x1: l.x1, y1: l.y1, x2: l.mx, y2: l.my }, { x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }]
+      : [{ x1: l.x1, y1: l.y1, x2: l.mx != null ? l.mx : l.x2, y2: l.my != null ? l.my : l.y2 },
+        ...(l.mx != null ? [{ x1: l.mx, y1: l.my, x2: l.x2, y2: l.y2 }] : [])].filter((sg) => sg.x1 !== sg.x2 || sg.y1 !== sg.y2);
+    const drawOnce = (o, extraDash) => segs.map((sg, i) => {
+      const g = offSeg(sg, o);
+      const d = opts.hops ? hopPath(g, obstacles) : `M${g.x1},${g.y1} L${g.x2},${g.y2}`;
+      const mk = i === segs.length - 1 ? arrow : '';
+      return `<path d="${d}" fill="none" stroke="${hue}" stroke-opacity="0.85" stroke-width="${wdt}"${extraDash != null ? (extraDash ? ` stroke-dasharray="${extraDash}"` : '') : dash}${mk}/>`;
+    }).join('');
+    if (!e.redundant) parts.push(drawOnce(0));
+    else if (e.redType === 'lacp') parts.push(drawOnce(-1.6) + drawOnce(1.6));           // 束ねの密な二重線
+    else if (e.redType === 'vrrp') parts.push(drawOnce(-2.6) + drawOnce(2.6, '5 4'));    // 実線＋待機の破線
+    else if (e.redType === 'stack') parts.push(drawOnce(-3.4) + drawOnce(3.4) + drawOnce(0, '2 9'));  // はしご
+    else parts.push(drawOnce(-2.4) + drawOnce(2.4));                                     // ha（従来の冗長）
+    obstacles.push(...segs);                                   // 後から描く線がこの線を跨げるように
+    if (l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3.4" fill="${hue}"/>`);
+    if (opts.dots) {                                           // %% dots：接続点を丸点に（回路図の作法）
+      parts.push(`<circle cx="${l.x1}" cy="${l.y1}" r="3" fill="${hue}"/>`);
+      if (!l.dot) parts.push(`<circle cx="${l.x2}" cy="${l.y2}" r="3" fill="${hue}"/>`);
+    }
+    const REDCHIP = { ha: '冗長', lacp: 'LACP', stack: 'STACK', vrrp: 'VRRP' };
+    const chip = [e.label || (e.vlan != null ? 'VLAN ' + e.vlan : null),
+      e.redundant ? REDCHIP[e.redType || 'ha'] : null].filter(Boolean).join(' ・ ');
+    if (chip) {
+      const s0 = segs[0];
+      const mx = (s0.x1 + s0.x2) / 2, my = (s0.y1 + s0.y2) / 2;
+      const tw = textW(chip, 6.2) + 12;
+      parts.push(`<rect x="${mx - tw / 2}" y="${my - 8}" width="${tw}" height="16" rx="8" fill="${T.paper}" stroke="${hue}" stroke-opacity="0.6" opacity="0.92"/>`
+        + `<text x="${mx}" y="${my + 3.5}" fill="${hue}" font-size="9.5" text-anchor="middle">${iesc(chip)}</text>`);
+    }
+    if (detail) {
+      // 両端の実アドレス（from > to）：線の根元 22% 地点にホスト部だけ（フルは <title>）。
+      const s0 = segs[0], sl = segs[segs.length - 1];
+      const cidrCtx = busIds.get(e.from)?.cidr || busIds.get(e.to)?.cidr || null;
+      if (e.ipFrom) parts.push(ipChip(s0.x1 + (s0.x2 - s0.x1) * 0.22, s0.y1 + (s0.y2 - s0.y1) * 0.22 - 8, hostPart(e.ipFrom, cidrCtx), hue, e.ipFrom));
+      if (e.ipTo) parts.push(ipChip(sl.x2 - (sl.x2 - sl.x1) * 0.22, sl.y2 - (sl.y2 - sl.y1) * 0.22 - 8, hostPart(e.ipTo, cidrCtx), hue, e.ipTo));
+      // バス収容の機器：機器の単一 IP がバスの cidr に収まるなら、線の根元にホスト部を出して本体からは省く。
+      if (l.dot && !e.ipFrom) {
+        const bus = busIds.get(e.from) || busIds.get(e.to);
+        const devId = busIds.has(e.from) ? e.to : e.from;
+        const dn = L.nodes.find((x) => x.id === devId);
+        if (bus && bus.cidr && dn && dn.ip && hostPart(dn.ip, bus.cidr) !== dn.ip && (!dn.ips || dn.ips.length <= 1)) {
+          parts.push(ipChip(l.x1 + (l.mx != null ? l.mx - l.x1 : l.x2 - l.x1) * 0.3,
+            l.y1 + (l.my != null ? l.my - l.y1 : l.y2 - l.y1) * 0.3 - 8, hostPart(dn.ip, bus.cidr), hue, dn.ip));
+          extIP.add(devId);
+        }
+      }
+    }
+  }
+  parts.push(...relParts);
   // フェンス（保守分界・責任分界）：⚑ 付きの重い破線。またぐものの責任がひと目で分かれる。
-  for (const f of L.fences) {
+  if (!layersOff.has('fence')) for (const f of L.fences) {
     const c = '#f5667a';
     if (f.orient === 'h') {
       parts.push(`<g data-drag="node" data-id="${iesc(f.id)}" style="cursor:grab">`
@@ -640,8 +734,8 @@ export function drawInfra(model, L, opts = {}) {
         + `<text x="${f.x + 8}" y="${f.y1 + 16}" fill="${c}" font-size="11" font-weight="600" writing-mode="tb">⚑ ${iesc(f.label)}</text></g>`);
     }
   }
-  const detail = opts.detail !== false;                      // セマンティックズーム：引いたらメタを省く
   L.nodes.forEach((n) => {
+    if (layersOff.has(n.layer)) return;                      // 消灯レイヤの機器は描かない
     const sel = !!opts.selected?.has?.(n.id);
     if (n.hub) {                                             // ハブ（二重円）：スポークの中心
       const hue = n.vlan != null ? vlanHue(n.vlan) : '#8ad1f5';
@@ -662,7 +756,7 @@ export function drawInfra(model, L, opts = {}) {
     }
     const hue = ROLE_HUE[n.role] || '#9aa3b5';
     const tag = ROLE_TAG[n.role];
-    const metas = metaLines(n);
+    const metas = metaLines(extIP.has(n.id) ? { ...n, ip: null, ips: [] } : n);   // 線側に出した IP は本体から省く
     let g = `<g data-drag="node" data-id="${iesc(n.id)}" style="cursor:grab">`;
     if (sel) g += `<rect x="${n.x - 5}" y="${n.y - 5}" width="${n.w + 10}" height="${n.h + 10}" rx="9" fill="none" stroke="#6aa9ff" stroke-opacity="0.5" stroke-dasharray="3 3"/>`;
     g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="7" fill="${T.nodeFill}" stroke="${hue}" stroke-width="${sel ? 2.6 : 1.5}"/>`
@@ -682,10 +776,13 @@ export function drawInfra(model, L, opts = {}) {
 
 // ---- 逆コンパイル ----------------------------------------------------------------
 
-const attrsOf = (n) => [n.role, n.os, n.ip, n.vlan != null ? 'vlan ' + n.vlan : null].filter(Boolean).join(', ');
+const attrsOf = (n) => [n.role, n.os, ...(n.ips && n.ips.length ? n.ips : (n.ip ? [n.ip] : [])),
+  n.vlan != null ? 'vlan ' + n.vlan : null, n.layer ? 'layer ' + n.layer : null].filter(Boolean).join(', ');
+const RED_WORD = { ha: '冗長', lacp: 'lacp', stack: 'stack', vrrp: 'vrrp' };
 const linkAttrsOf = (e) => [
-  e.redundant ? '冗長' : null, e.dashed ? '予備' : null, e.thick ? '幹線' : null,
-  e.arrow ? '一方向' : null, e.vlan != null ? 'vlan ' + e.vlan : null, e.label,
+  e.rel || null, e.redundant ? (RED_WORD[e.redType] || '冗長') : null, e.dashed ? '予備' : null,
+  e.thick ? '幹線' : null, e.arrow ? '一方向' : null, e.vlan != null ? 'vlan ' + e.vlan : null,
+  e.ipFrom && e.ipTo ? `${e.ipFrom} > ${e.ipTo}` : null, e.layer ? 'layer ' + e.layer : null, e.label,
 ].filter(Boolean).join(', ');
 
 export function infraBody(model) {
@@ -694,7 +791,7 @@ export function infraBody(model) {
   const nodeLine = (n, ind) => `${ind}${n.id}[${n.label}]${attrsOf(n) ? ' :' + attrsOf(n) : ''}`;
   const busLine = (b, ind) => {
     const attrs = [b.zone ? null : b.orient, b.vlan != null ? 'vlan ' + b.vlan : null, b.cidr,
-      b.len != null ? 'len ' + b.len : null].filter(Boolean).join(', ');
+      b.len != null ? 'len ' + b.len : null, b.layer ? 'layer ' + b.layer : null].filter(Boolean).join(', ');
     return `${ind}bus ${b.id}[${b.label}]${attrs ? ' :' + attrs : ''}`;
   };
   const hubLine = (h, ind) => {
