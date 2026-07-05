@@ -2082,6 +2082,47 @@ function layoutInfra(model) {
     z.x = x0; z.y = y0; z.w = x1 - x0; z.h = y1 - y0;
     z.h += busItems.filter((b) => b.zone === z.name).length * 30;   // ゾーン内バスの居場所ぶん伸ばす
   }
+  // 地図の decluttering：geo アンカーつきの拠点（札・枠・ハブ）が重なったら、
+  // 重なりの小さい軸に沿って半分ずつ押し離す（決定的・最小移動）。実座標には ○ を残し、
+  // 点線のリーダーで結ぶ——地図アプリのラベル整理と同じ作法。密集地帯（首都圏など）でも読める。
+  const mapAnchors = [];
+  if (model.meta.map) {
+    const decl = [];
+    for (const name of Object.keys(geoOf).sort()) {
+      const [ax, ay] = geoProject(geoOf[name][0], geoOf[name][1]);
+      const gn = byId.get(name);
+      if (gn) { decl.push({ name, ref: gn, ax, ay, node: true }); continue; }
+      const z = zoneOf.get(name);
+      if (z && !z.hidden) decl.push({ name, ref: z, ax, ay });
+    }
+    const pre = decl.map((d) => [d.ref.x, d.ref.y]);
+    const GAPD = 26;
+    for (let it = 0; it < 160; it++) {
+      let any = false;
+      for (let a = 0; a < decl.length; a++) for (let b = a + 1; b < decl.length; b++) {
+        const A = decl[a].ref, B = decl[b].ref;
+        const dx = (A.x + A.w / 2) - (B.x + B.w / 2), dy = (A.y + A.h / 2) - (B.y + B.h / 2);
+        const px = (A.w + B.w) / 2 + GAPD - Math.abs(dx), py = (A.h + B.h) / 2 + GAPD - Math.abs(dy);
+        if (px <= 0 || py <= 0) continue;
+        any = true;
+        if (px < py) { const s = (dx >= 0 ? px : -px) / 2; A.x += s; B.x -= s; }
+        else { const s = (dy >= 0 ? py : -py) / 2; A.y += s; B.y -= s; }
+      }
+      if (!any) break;
+    }
+    decl.forEach((d, i) => {
+      const ddx = d.ref.x - pre[i][0], ddy = d.ref.y - pre[i][1];
+      if ((ddx || ddy) && !d.node && !d.ref.folded) {           // 展開ゾーンは中身ごと追いかける
+        const under = new Set([d.name]);
+        let grew2 = true;
+        while (grew2) { grew2 = false; for (const zz of zones) if (zz.parent && under.has(zz.parent) && !under.has(zz.name)) { under.add(zz.name); grew2 = true; } }
+        for (const zz of zones) if (zz.name !== d.name && under.has(zz.name)) { zz.x += ddx; zz.y += ddy; }
+        for (const n of nodes) if (n.zone && under.has(n.zone)) { n.x += ddx; n.y += ddy; }
+      }
+      const cx = d.ref.x + d.ref.w / 2, cy = d.ref.y + d.ref.h / 2;
+      if (Math.hypot(cx - d.ax, cy - d.ay) > 46) mapAnchors.push({ x1: cx, y1: cy, x2: d.ax, y2: d.ay });
+    });
+  }
   const bx1 = Math.max(120, ...nodes.map((n) => n.x + n.w), ...zones.map((z) => z.x + z.w));
   const by1 = Math.max(80, ...nodes.map((n) => n.y + n.h), ...zones.map((z) => z.y + z.h));
   const bx0 = Math.min(20, ...nodes.map((n) => n.x), ...zones.map((z) => z.x));
@@ -2216,7 +2257,7 @@ function layoutInfra(model) {
   if (model.meta.map) {
     const sites = Object.keys(model.layout.geo || {}).map((name) => ({ name, lat: model.layout.geo[name][0], lng: model.layout.geo[name][1] }));
     const lay = model.meta.hazard && model.meta.hazard.length ? model.meta.hazard : null;
-    map = { exposure: geoExposure(sites, lay) };
+    map = { exposure: geoExposure(sites, lay), anchors: mapAnchors };
   }
   return { kind: 'infra', x0, y0, width: x1 - x0, height: y1 - y0,
     nodes, zones, buses, links, fences, map, errors: [] };
@@ -2290,6 +2331,11 @@ function drawInfra(model, L, opts = {}) {
           + `<text x="${px + 12}" y="${py - 10}" fill="${hue}" font-size="30" opacity="0.9">${iesc(h.name)}</text>`);
       }
     }
+    // decluttering で実座標からずれた拠点は、○ アンカーと点線リーダーで結ぶ（地図の作法）。
+    for (const a of (L.map && L.map.anchors) || [])
+      parts.push(`<line x1="${a.x1.toFixed(1)}" y1="${a.y1.toFixed(1)}" x2="${a.x2}" y2="${a.y2}" stroke="${T.landLine}" stroke-width="1.8" stroke-dasharray="3 6"/>`
+        + `<circle cx="${a.x2}" cy="${a.y2}" r="7" fill="none" stroke="${T.landLine}" stroke-width="1.8"/>`
+        + `<circle cx="${a.x2}" cy="${a.y2}" r="2.6" fill="${T.landLine}"/>`);
   }
   for (const z of [...L.zones].sort((a, b) => a.depth - b.depth)) {
     if (z.folded) {                                            // 畳まれたゾーン＝札。つかんで移動、▸ タップで開く
