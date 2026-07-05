@@ -395,7 +395,7 @@ export function boot() {
     L = layoutEff();
     lodBucket = bucketNow();
     for (const id of [...selected]) if (!model.items.some((x) => x.id === id)) selected.delete(id);
-    canvas.innerHTML = draw(model, L, drawOpts());
+    paint(draw(model, L, drawOpts()));
     document.body.classList.toggle('light', model.meta.theme === 'light');
     refreshDiff();
     syncAlignBar();
@@ -474,8 +474,98 @@ export function boot() {
       }
     for (const [key, img] of tileCache) if (!want.has(key)) { img.remove(); tileCache.delete(key); }
   }
+
+  // ---- Leaflet（v15）：地図モードの心臓。リミッター解除——本物のスリッピーマップに
+  // SVG 構成図を L.svgOverlay で貼る。投影が同じ Web メルカトルなので無変換でぴったり。
+  // ベースマップは OSM / 国土地理院（淡色・写真）、実ハザードはハザードマップポータルのタイル。
+  // Leaflet が無い/読めない環境では従来の自前ビューポートに静かにフォールバックする。
+  const LF = (typeof window !== 'undefined' && window.L) || null;
+  const BASEMAPS = {
+    osm: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap contributors', max: 19 },
+    gsi: { url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', attr: '国土地理院（淡色地図）', max: 18 },
+    photo: { url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', attr: '国土地理院（全国最新写真）', max: 18 },
+  };
+  const BASEMAP_JA = { none: 'なし（自前アウトライン）', osm: 'OSM 標準', gsi: '地理院 淡色', photo: '地理院 写真' };
+  const HAZARD_TILE_DEFS = {
+    flood: { url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png', label: '洪水浸水想定（想定最大）' },
+    tsunami: { url: 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png', label: '津波浸水想定' },
+    takashio: { url: 'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png', label: '高潮浸水想定' },
+    dosha: { url: 'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png', label: '土砂災害警戒（土石流）' },
+  };
+  let lmap = null, lsvg = null, lBase = null;
+  const lHz = new Map();
+  const lmapDiv = document.createElement('div');
+  lmapDiv.id = 'lmap';
+  lmapDiv.style.cssText = 'position:absolute;inset:0;display:none;z-index:0;background:transparent';
+  stage.insertBefore(lmapDiv, tilesDiv);
+  const basemapOf = () => model.meta.basemap || (model.meta.tiles ? 'osm' : 'none');
+  const leafletWanted = () => !!(LF && model && model.kind === 'infra' && model.meta.map);
+  const effS = () => lmap ? (256 * 2 ** lmap.getZoom()) / 144000 : view.s;
+  const sToZ = (s) => Math.log2((s * 144000) / 256);
+  const overlayBounds = () => {
+    const [aLat, aLng] = geoUnproject(L.x0 || 0, L.y0 || 0);
+    const [bLat, bLng] = geoUnproject((L.x0 || 0) + L.width, (L.y0 || 0) + L.height);
+    return LF.latLngBounds([[aLat, aLng], [bLat, bLng]]);
+  };
+  function enterLeaflet() {
+    if (lmap) return;
+    lmapDiv.style.display = '';
+    canvas.style.display = 'none';
+    tilesDiv.style.display = 'none'; osmCredit.style.display = 'none';
+    lmap = LF.map(lmapDiv, { zoomControl: false, attributionControl: true,
+      zoomSnap: 0, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, maxZoom: 19, minZoom: 3 });
+    lmap.setView([36.2, 137.5], 6);
+    if (typeof window !== 'undefined') window.__lmap = lmap;   // ヘッドレス検証用
+    lmap.on('zoom move', () => { view.s = effS(); $('zLabel').textContent = Math.round(view.s * 100) + '%'; });
+    lmap.on('zoomend', () => {
+      view.s = effS();
+      if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }   // 地図と同じ：引けば要約
+    });
+    lmap.on('click', () => { if (selected.size) { selected.clear(); redraw(); syncAlignBar(); } hidePop(); });
+    enterLeaflet._fitted = false;
+  }
+  function exitLeaflet() {
+    if (!lmap) return;
+    lmap.remove(); lmap = null; lsvg = null; lBase = null; lHz.clear();
+    lmapDiv.style.display = 'none';
+    canvas.style.display = '';
+  }
+  function paintLeaflet(svgStr) {
+    const tpl = document.createElement('div');
+    tpl.innerHTML = svgStr;
+    const el = tpl.firstElementChild;
+    el.removeAttribute('width'); el.removeAttribute('height');
+    el.setAttribute('preserveAspectRatio', 'none');
+    el.style.pointerEvents = 'auto';
+    if (lsvg) lsvg.remove();
+    lsvg = LF.svgOverlay(el, overlayBounds(), { interactive: true }).addTo(lmap);
+    if (!enterLeaflet._fitted) { enterLeaflet._fitted = true; lmap.fitBounds(overlayBounds(), { padding: [20, 20] }); }
+    view.s = effS();
+  }
+  function syncLeafletLayers() {
+    if (!lmap) return;
+    const wantB = basemapOf() + '|' + (model.meta.theme || 'dark');
+    if (syncLeafletLayers._bm !== wantB) {
+      if (lBase) { lBase.remove(); lBase = null; }
+      const bm = BASEMAPS[basemapOf()];
+      if (bm) lBase = LF.tileLayer(bm.url, { attribution: bm.attr, maxZoom: bm.max,
+        className: model.meta.theme !== 'light' ? 'darktiles' : '' }).addTo(lmap);
+      syncLeafletLayers._bm = wantB;
+    }
+    const hz = new Set(model.meta.hazardTiles || []);
+    for (const [k, layer] of lHz) if (!hz.has(k)) { layer.remove(); lHz.delete(k); }
+    for (const k of hz) if (!lHz.has(k) && HAZARD_TILE_DEFS[k])
+      lHz.set(k, LF.tileLayer(HAZARD_TILE_DEFS[k].url, { opacity: 0.55, maxZoom: 17,
+        attribution: 'ハザードマップポータルサイト' }).addTo(lmap));
+  }
+  // 描き込み口はひとつ：地図モードなら Leaflet のオーバレイへ、それ以外は従来どおり。
+  function paint(svgStr) {
+    if (leafletWanted()) { enterLeaflet(); paintLeaflet(svgStr); syncLeafletLayers(); }
+    else { exitLeaflet(); canvas.innerHTML = svgStr; }
+  }
   function fit() {
     if (!L) return;
+    if (lmap && leafletWanted()) { lmap.fitBounds(overlayBounds(), { padding: [24, 24] }); return; }
     const r = stage.getBoundingClientRect(), pad = 40;
     view.s = Math.max(0.04, Math.min(2, Math.min((r.width - pad) / L.width, (r.height - pad) / L.height)));
     view.tx = (r.width - L.width * view.s) / 2; view.ty = Math.max(16, (r.height - L.height * view.s) / 2);
@@ -485,11 +575,12 @@ export function boot() {
   function zoomTo(cx, cy, ns) {
     const r = stage.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
     ns = Math.max(0.04, Math.min(4, ns));
+    if (lmap && leafletWanted()) { lmap.setZoomAround(LF.point(x, y), sToZ(ns)); return; }
     view.tx = x - (x - view.tx) * (ns / view.s); view.ty = y - (y - view.ty) * (ns / view.s); view.s = ns; applyView();
     if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }   // 地図のように要約⇄詳細
   }
   const zoomAt = (cx, cy, factor) => zoomTo(cx, cy, view.s * factor);
-  stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
+  stage.addEventListener('wheel', (e) => { if (lmap && leafletWanted()) return; e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   $('zIn').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); };
   $('zOut').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); };
   $('zFit').onclick = fit;
@@ -502,6 +593,10 @@ export function boot() {
 
   function toWorld(cx, cy) {
     const r = stage.getBoundingClientRect();
+    if (lmap && leafletWanted()) {
+      const ll = lmap.containerPointToLatLng(LF.point(cx - r.left, cy - r.top));
+      return geoProject(ll.lat, ll.lng);
+    }
     return [(cx - r.left - view.tx) / view.s + (L?.x0 || 0), (cy - r.top - view.ty) / view.s + (L?.y0 || 0)];
   }
   const capture = (e) => { try { stage.setPointerCapture(e.pointerId); } catch (_) { /* 合成イベントは掴めなくてよい */ } };
@@ -521,7 +616,7 @@ export function boot() {
   }
   function redraw() {
     const keep = { ...view };
-    canvas.innerHTML = draw(model, L = layoutEff(), drawOpts());
+    paint(draw(model, L = layoutEff(), drawOpts()));
     refreshDiff();
     Object.assign(view, keep); applyView();
   }
@@ -572,7 +667,7 @@ export function boot() {
           drag = { id, kind: 'zfold', start: [z.x, z.y], px: e.clientX, py: e.clientY, moved: false };
         } else {                                               // 見出しをつかむと中の機器ごと動く
           const ids = zoneMembers(id);
-          if (!ids.length) { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); capture(e); e.preventDefault(); return; }
+          if (!ids.length) { if (lmap) return; pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); capture(e); e.preventDefault(); return; }
           const starts = new Map(ids.map((i2) => [i2, posOf(i2)]).filter(([, p2]) => p2));
           drag = { id, kind: 'node', zone: true, ids: [...starts.keys()], starts, px: e.clientX, py: e.clientY, moved: false, shift: false };
         }
@@ -582,7 +677,8 @@ export function boot() {
         drag = { id, kind, order: as.map((a) => a.id), spacing, px: e.clientX, py: e.clientY, moved: false };
       }
       else { const b = L.bars.find((x) => x.id === id); drag = { id, kind, day0: b.startDay, order: L.bars.map((x) => x.id), px: e.clientX, py: e.clientY, moved: false }; }
-    } else { pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); }
+    } else { if (lmap) return; pan = { tx: view.tx, ty: view.ty, px: e.clientX, py: e.clientY, moved: false }; stage.classList.add('panning'); }
+    if (lmap && drag) lmap.dragging.disable();               // 機器をつかんだら地図は止める
     capture(e); e.preventDefault();
   });
 
@@ -659,6 +755,7 @@ export function boot() {
         else hidePop();
       }
     } else if (pan && !pan.moved && selected.size) { selected.clear(); redraw(); syncAlignBar(); hidePop(); }       // 空クリック＝選択解除
+    if (lmap) lmap.dragging.enable();
     drag = null; pan = null; connect = null; stage.classList.remove('panning');
   }
   stage.addEventListener('pointerup', endPointer);
@@ -898,14 +995,18 @@ export function boot() {
   async function standalone(source) {
     if (window.__STUDIO_HTML__) return window.__STUDIO_HTML__(source);   // 単一HTML自身が持つ場合
     const base = new URL('.', location.href);
-    const [page, css, ...mods] = await Promise.all([
+    const [page, css, lcss, ljs, ...mods] = await Promise.all([
       fetch(new URL('index.html', base)).then((r) => r.text()),
       fetch(new URL('ui/editor.css', base)).then((r) => r.text()),
+      fetch(new URL('vendor/leaflet/leaflet.css', base)).then((r) => r.text()).catch(() => ''),
+      fetch(new URL('vendor/leaflet/leaflet.js', base)).then((r) => r.text()).catch(() => ''),
       ...MODULES.map((m) => fetch(new URL(m, base)).then((r) => r.text())),
     ]);
     const bundle = mods.map(strip).join('\n');
     // 置換は関数で（文字列だと $` などが特殊パターン展開されてコードが壊れる）。
-    return page.replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
+    return page.replace(/<link rel="stylesheet" href="ui\/editor\.css">/, () => `<style>\n${css}\n</style>`)
+      .replace(/<link rel="stylesheet" href="vendor\/leaflet\/leaflet\.css">/, () => `<style>\n${lcss}\n</style>`)
+      .replace(/<script src="vendor\/leaflet\/leaflet\.js"><\/script>/, () => `<script>\n${ljs.replace(/<\/script>/g, '<\\/script>')}\n<\/script>`)
       .replace(/<script type="module">[\s\S]*?<\/script>/, () => `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n<\/script>`);
   }
   const slug = (s) => (s || 'diagram').toLowerCase().replace(/[^\w぀-ヿ一-龯]+/g, '-').replace(/^-|-$/g, '') || 'diagram';
@@ -1218,6 +1319,21 @@ export function boot() {
         if (model.meta.tiles && !model.meta.map) model.meta.map = true;
         commitModel(); toast(model.meta.tiles ? '🌍 実地図タイル ON（© OpenStreetMap・オフラインでは出ません）' : '実地図タイルを OFF');
       } },
+      { t: 'ベースマップ切替 🗺（なし→OSM→地理院淡色→地理院写真）', k: 'basemap osm gsi leaflet べーすまっぷ ちず', run: () => {
+        const order = ['none', 'osm', 'gsi', 'photo'];
+        const cur = model.meta.basemap || (model.meta.tiles ? 'osm' : 'none');
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        model.meta.basemap = next === 'none' ? null : next;
+        model.meta.tiles = null;
+        if (next !== 'none' && !model.meta.map) model.meta.map = true;
+        commitModel(); toast(`🗺 ベースマップ: ${BASEMAP_JA[next]}`);
+      } },
+      { t: '実ハザードタイル ⚠（洪水・津波・高潮・土砂）ON / OFF', k: 'hazardtiles flood tsunami real じつはざーど こうずい つなみ', run: () => {
+        const on = !(model.meta.hazardTiles && model.meta.hazardTiles.length);
+        model.meta.hazardTiles = on ? Object.keys(HAZARD_TILE_DEFS) : null;
+        if (on && !model.meta.map) model.meta.map = true;
+        commitModel(); toast(on ? '⚠ 実ハザードタイルを表示（出典: ハザードマップポータルサイト）' : '実ハザードタイルを消灯');
+      } },
       { t: 'レイヤパネル ◫（通常線・関係線・バス・自由レイヤ）', k: 'layers layer れいや panel', run: () => $('zLayers').click() },
       { t: '台帳 ▤（機器台帳・IP アドレス台帳）', k: 'ledger ipam daicho だいちょう 台帳 IP', run: () => $('zLedger').click() },
       { t: 'ファイルセット (.zip) — 拠点ごとに分割して保存', k: 'fileset split zip ぶんかつ ふぁいる', run: () => doExport('fileset') },
@@ -1387,11 +1503,16 @@ export function boot() {
       else if (act) { cx = act.cx; cy = act.y + act.h / 2; }
     }
     if (cx == null) return;
-    const r = stage.getBoundingClientRect();
-    view.s = Math.max(view.s, 0.75);                        // 遠すぎたら少し寄る
-    view.tx = r.width / 2 - (cx - (L.x0 || 0)) * view.s;
-    view.ty = r.height / 2 - (cy - (L.y0 || 0)) * view.s;
-    applyView();
+    if (lmap && leafletWanted()) {
+      const [lat, lng] = geoUnproject(cx, cy);
+      lmap.setView([lat, lng], Math.max(lmap.getZoom(), sToZ(0.75)));
+    } else {
+      const r = stage.getBoundingClientRect();
+      view.s = Math.max(view.s, 0.75);                      // 遠すぎたら少し寄る
+      view.tx = r.width / 2 - (cx - (L.x0 || 0)) * view.s;
+      view.ty = r.height / 2 - (cy - (L.y0 || 0)) * view.s;
+      applyView();
+    }
     if (id && model.items.some((x) => x.id === id && (x.type === 'inode' || x.type === 'node' || x.type === 'class'))) {
       selected.clear(); selected.add(id); redraw(); syncAlignBar();
     }
@@ -1424,18 +1545,40 @@ export function boot() {
   }
   function buildLayers() {
     const off = new Set(model.meta.layersOff || []);
-    layersList.innerHTML = layerCatalog().map((l) =>
+    let html = layerCatalog().map((l) =>
       `<label><input type="checkbox" data-layer="${escHtml(l.key)}" ${off.has(l.key) ? '' : 'checked'}> ${escHtml(BUILTIN_JA[l.key] || l.key)}<span class="lc">${l.count}</span></label>`).join('')
       || '<label style="color:var(--dim)">レイヤに載るものがありません（infra 図種で）</label>';
+    if (LF && model.kind === 'infra' && model.meta.map) {          // Leaflet の実地図・実ハザード
+      const cur = basemapOf();
+      html += `<div class="lsec">🗺 ベースマップ（オンライン）</div>`
+        + Object.keys(BASEMAP_JA).map((k) =>
+          `<label><input type="radio" name="bm" data-basemap="${k}" ${cur === k ? 'checked' : ''}> ${BASEMAP_JA[k]}</label>`).join('');
+      const hz = new Set(model.meta.hazardTiles || []);
+      html += `<div class="lsec">⚠ 実ハザード（ハザードマップポータル）</div>`
+        + Object.keys(HAZARD_TILE_DEFS).map((k) =>
+          `<label><input type="checkbox" data-hztile="${k}" ${hz.has(k) ? 'checked' : ''}> ${HAZARD_TILE_DEFS[k].label}</label>`).join('');
+    }
+    layersList.innerHTML = html;
   }
   $('zLayers').onclick = () => { layersPanel.hidden = !layersPanel.hidden; if (!layersPanel.hidden) buildLayers(); };
   $('layersClose').onclick = () => { layersPanel.hidden = true; };
   layersList.addEventListener('change', (e) => {
-    const k = e.target.dataset && e.target.dataset.layer; if (!k) return;
-    const off = new Set(model.meta.layersOff || []);
-    e.target.checked ? off.delete(k) : off.add(k);
-    model.meta.layersOff = off.size ? [...off] : null;
-    commitModel();
+    const d = e.target.dataset || {};
+    if (d.layer) {
+      const off = new Set(model.meta.layersOff || []);
+      e.target.checked ? off.delete(d.layer) : off.add(d.layer);
+      model.meta.layersOff = off.size ? [...off] : null;
+      commitModel();
+    } else if (d.basemap) {                                    // ベースマップの切替（Leaflet）
+      model.meta.basemap = d.basemap === 'none' ? null : d.basemap;
+      model.meta.tiles = null;                                 // 旧記法は basemap に一本化
+      commitModel();
+    } else if (d.hztile) {                                     // 実ハザードタイルの点灯/消灯
+      const hz = new Set(model.meta.hazardTiles || []);
+      e.target.checked ? hz.add(d.hztile) : hz.delete(d.hztile);
+      model.meta.hazardTiles = hz.size ? [...hz] : null;
+      commitModel();
+    }
   });
 
   // ---- 台帳（v14）：機器台帳と IP アドレス台帳（IPAM・重複 ⚠・次の空き） ----
@@ -1563,12 +1706,12 @@ export function boot() {
 
   // ---- トースト・モバイル ----
   function toast(m) { const t2 = $('toast'); t2.textContent = m; t2.hidden = false; requestAnimationFrame(() => t2.classList.add('on')); clearTimeout(toast._t); toast._t = setTimeout(() => t2.classList.remove('on'), 1600); }
-  $('vToggle').onclick = () => document.body.classList.toggle('viewmax');
-  $('edToggle').onclick = () => document.body.classList.toggle('viewmax');
+  $('vToggle').onclick = () => { document.body.classList.toggle('viewmax'); setTimeout(() => lmap && lmap.invalidateSize(), 260); };
+  $('edToggle').onclick = () => { document.body.classList.toggle('viewmax'); setTimeout(() => lmap && lmap.invalidateSize(), 260); };
   // スマホでは、まず図に全画面を譲る（「コード ◧」で開ける）。
   if (window.matchMedia('(max-width: 820px)').matches) document.body.classList.add('viewmax');
   problems.addEventListener('click', (e) => { const p = e.target.closest('.p'); if (!p || !p.dataset.ln) return; const ln = +p.dataset.ln; const pos = src.value.split('\n').slice(0, ln - 1).join('\n').length + (ln > 1 ? 1 : 0); src.focus(); src.selectionStart = src.selectionEnd = pos; });
-  window.addEventListener('resize', () => { if (L) applyView(); });
+  window.addEventListener('resize', () => { if (L) applyView(); if (lmap) lmap.invalidateSize(); });
 
   // ---- 起動 ----
   function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); pushHistory(); }

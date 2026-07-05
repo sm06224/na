@@ -25,11 +25,15 @@ const strip = (s) => s.split('\n')
 
 export function html(source) {
   const page = read('index.html'), css = read('ui/editor.css');
+  const leafletCss = read('vendor/leaflet/leaflet.css');
+  const leafletJs = read('vendor/leaflet/leaflet.js').replace(/<\/script>/g, '<\\/script>');
   const bundle = MODULES.map((m) => strip(read(m))).join('\n');
   // 置換は必ず「関数」で渡す：文字列で渡すと $` や $' が特殊パターンとして展開され、
   // コード中の正規表現リテラル（例: parse.js の `?$`）がページ全体を呑み込む事故になる。
   return page
-    .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
+    .replace(/<link rel="stylesheet" href="ui\/editor\.css">/, () => `<style>\n${css}\n</style>`)
+    .replace(/<link rel="stylesheet" href="vendor\/leaflet\/leaflet\.css">/, () => `<style>\n${leafletCss}\n</style>`)
+    .replace(/<script src="vendor\/leaflet\/leaflet\.js"><\/script>/, () => `<script>\n${leafletJs}\n</script>`)
     .replace(/<script type="module">[\s\S]*?<\/script>/,
       () => `<script>\nwindow.STUDIO_SOURCE=${JSON.stringify(source)};\n${bundle}\nboot();\n</script>`);
 }

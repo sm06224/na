@@ -245,7 +245,7 @@ E.push('    hq_fw1 -- inet :冗長', '    dr_fw1 -- inet :予備');
 E.push('    aws_vpc -- wan :IPsec-VPN', '    az_gw -- wan :IPsec-VPN', '    saas -- inet :SSO');
 E.push('    hq_sv6 -- dr_sv6 :rep, 一方向, DRレプリケーション', '    hq_sv5 -- dr_sv5 :mirror, ストレージミラー');
 
-const dsl = [...B, '', ...E, '', '%% @layout', '%% lod', '%% map', '%% hazard quake|tsunami|volcano|typhoon|snow|geopol', ...G].join('\n') + '\n';
+const dsl = [...B, '', ...E, '', '%% @layout', '%% lod', '%% map', '%% basemap gsi', '%% hazard quake|tsunami|volcano|typhoon|snow|geopol', ...G].join('\n') + '\n';
 
 writeFileSync(join(HERE, '..', 'examples', 'megacorp.mmd'), dsl);
 writeFileSync(join(HERE, '..', 'engine', 'mega.js'),

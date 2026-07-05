@@ -135,7 +135,9 @@ function trailer(model) {
   if (model.meta.map) out.push('%% map');                           // 地理マップ（geo 配置＋ベースマップ）
   if (model.meta.hazard && model.meta.hazard.length) out.push(`%% hazard ${model.meta.hazard.join('|')}`);
   if (model.meta.layersOff && model.meta.layersOff.length) out.push(`%% layers off ${model.meta.layersOff.join('|')}`);
-  if (model.meta.tiles) out.push('%% tiles');                       // 実地図タイル（OSM）
+  if (model.meta.tiles) out.push('%% tiles');                       // 旧記法（= basemap osm）
+  if (model.meta.basemap) out.push(`%% basemap ${model.meta.basemap}`);   // ベースマップ選択
+  if (model.meta.hazardTiles && model.meta.hazardTiles.length) out.push(`%% hazardtiles ${model.meta.hazardTiles.join('|')}`);
   if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     if (model.kind === 'infra' && L.fold && L.fold.length) out.push(`%% fold ${L.fold.join('|')}`);
     if (model.kind === 'infra') for (const zn of Object.keys(L.zpos || {})) out.push(`%% zpos ${zn}|${num(L.zpos[zn][0])}|${num(L.zpos[zn][1])}`);
