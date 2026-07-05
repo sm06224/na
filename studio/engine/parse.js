@@ -353,7 +353,7 @@ export function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod|geo|map|hazard)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -371,6 +371,12 @@ export function parse(text) {
           const zm = /^zpos\s+(.+)\|(-?[\d.]+)\|(-?[\d.]+)$/.exec(d);
           if (zm) { model.layout.zpos = model.layout.zpos || {}; model.layout.zpos[zm[1]] = [parseFloat(zm[2]), parseFloat(zm[3])]; }
         }
+        else if (a[0] === 'geo') {                                     // ゾーンの実座標（緯度|経度）。%% map で地図に置く
+          const gm = /^geo\s+(.+)\|(-?[\d.]+)\|(-?[\d.]+)$/.exec(d);
+          if (gm) { model.layout.geo = model.layout.geo || {}; model.layout.geo[gm[1]] = [parseFloat(gm[2]), parseFloat(gm[3])]; }
+        }
+        else if (a[0] === 'map') model.meta.map = true;                // 地理マップ（自前ベースマップに geo で配置）
+        else if (a[0] === 'hazard') model.meta.hazard = d.replace(/^hazard\s*/, '').split('|').filter(Boolean);  // ハザードレイヤ
       }
       continue;                                            // ふつうのコメントは捨てる
     }

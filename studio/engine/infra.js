@@ -17,6 +17,7 @@
    キャンバスは事実上無限：どこへドラッグしても viewBox が中身を追いかけ、切れない。
    ============================================================ */
 import { themeOf } from '../render/draw.js';
+import { geoProject, GEO_OUTLINE, GEO_HAZARDS, GEO_LAYERS, geoExposure } from './geo.js';
 
 // 役割の正規化：書き方のゆらぎを吸収する。IT と OT を同じ語彙で。
 const ROLE_ALIAS = {
@@ -145,7 +146,8 @@ export function parseInfra(lines, model) {
     const fm = FENCE_RE.exec(line);
     if (fm) {
       const a = parseAttrs(fm[3]);
-      model.items.push({ type: 'fence', id: fm[1], label: fm[2] || fm[1], orient: a.orient || 'v' });
+      model.items.push({ type: 'fence', id: fm[1], label: fm[2] || fm[1], orient: a.orient || 'v',
+        zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(fm[1]);
       continue;
     }
@@ -211,7 +213,8 @@ export function layoutInfra(model) {
   const PAD = 14, HEAD = 24, GAP = 12;
   const foldSize = (z) => {
     const inside = nodesAll.filter((n) => hiddenIn.get(n.id) === z.name).length;
-    return { w: Math.ceil(textW(z.name, 8) + 76), h: 40, count: inside };
+    const k = model.meta.map && z.depth === 0 ? 2.4 : 1;     // 地図では拠点札を大きく（遠景で読める）
+    return { w: Math.ceil((textW(z.name, 8) + 76) * k), h: Math.round(40 * k), count: inside };
   };
   function pack(zname) {
     const kidZones = zones.filter((z) => z.parent === zname);
@@ -243,6 +246,23 @@ export function layoutInfra(model) {
   }
   place(null, 20, 20);
   for (const n of nodes) if (model.layout.pos[n.id]) { n.x = model.layout.pos[n.id][0]; n.y = model.layout.pos[n.id][1]; }
+  // %% map + %% geo：ゾーン（やハブ）を実座標（緯度|経度）へ。地図の上に日本のネットワークが立つ。
+  // zpos より先に効かせる——手で微調整した zpos が最後に勝つ。
+  const geoOf = (model.meta.map && model.layout.geo) || {};
+  for (const name of Object.keys(geoOf)) {
+    const [gx, gy] = geoProject(geoOf[name][0], geoOf[name][1]);
+    const gn = byId.get(name);
+    if (gn) { gn.x = gx - gn.w / 2; gn.y = gy - gn.h / 2; continue; }   // ハブや機器そのもの
+    const z = zoneOf.get(name);
+    if (!z || z.hidden) continue;
+    const dx = gx - (z.x + z.w / 2), dy = gy - (z.y + z.h / 2);
+    if (z.folded) { z.x += dx; z.y += dy; continue; }
+    const under = new Set([name]);
+    let grew0 = true;
+    while (grew0) { grew0 = false; for (const zz of zones) if (zz.parent && under.has(zz.parent) && !under.has(zz.name)) { under.add(zz.name); grew0 = true; } }
+    for (const zz of zones) if (under.has(zz.name)) { zz.x += dx; zz.y += dy; }
+    for (const n of nodes) if (n.zone && under.has(n.zone) && !model.layout.pos[n.id]) { n.x += dx; n.y += dy; }
+  }
   // zpos はゾーンの自由配置。畳んだ札はそのまま、展開ゾーンは中身ごと平行移動する
   // （明示 pos を持つ機器は絶対座標なので動かさない。枠は後段の bbox 追従が拾う）。
   const zpos = model.layout.zpos || {};
@@ -380,17 +400,20 @@ export function layoutInfra(model) {
     return { x1: cx, y1: sy, mx: cx, my: b.y, x2: x, y2: b.y, dot: true, elbow: x !== cx };
   }
 
-  // フェンス（保守分界・責任分界）：既定はコンテンツの右寄り／下寄り。ドラッグで置き直す。
+  // フェンス（保守分界・責任分界）：ゾーン内宣言ならそのゾーンに沿って立つ（ゾーンごと動き、
+  // 畳めば札の中へ）。グローバル宣言は従来どおりコンテンツ全体を跨ぐ。ドラッグで置き直す。
   const fences = [];
   let fi = 0;
   for (const f of model.items.filter((x) => x.type === 'fence')) {
     fi++;
+    if (f.zone && foldedAncestor(f.zone)) continue;
+    const fz = f.zone ? zoneOf.get(f.zone) : null;
     if (f.orient === 'h') {
-      const y = model.layout.pos[f.id] ? model.layout.pos[f.id][1] : by1 + 20 + fi * 30;
-      fences.push({ ...f, y, x1: bx0 - 24, x2: bx1 + 40 });
+      const y = model.layout.pos[f.id] ? model.layout.pos[f.id][1] : fz ? fz.y + fz.h - 6 : by1 + 20 + fi * 30;
+      fences.push({ ...f, y, x1: fz ? fz.x - 12 : bx0 - 24, x2: fz ? fz.x + fz.w + 12 : bx1 + 40 });
     } else {
-      const x = model.layout.pos[f.id] ? model.layout.pos[f.id][0] : bx0 + (bx1 - bx0) * 0.5 + fi * 40;
-      fences.push({ ...f, x, y1: 0, y2: by1 + 30 });
+      const x = model.layout.pos[f.id] ? model.layout.pos[f.id][0] : fz ? fz.x + fz.w * 0.62 : bx0 + (bx1 - bx0) * 0.5 + fi * 40;
+      fences.push({ ...f, x, y1: fz ? fz.y - 10 : 0, y2: fz ? fz.y + fz.h + 10 : by1 + 30 });
     }
   }
 
@@ -404,11 +427,20 @@ export function layoutInfra(model) {
     ...fences.map((f) => f.orient === 'h' ? f.y : f.y1), ...fences.map((f) => f.orient === 'h' ? f.y : f.y2),
     ...links.flatMap((l) => [l.y1, l.y2])];
   const M = 36;                                               // 上端も左右もゆったり（切れない）
+  if (model.meta.map) {                                       // 地図モード：ベースマップ全体も世界に含める
+    for (const isl of GEO_OUTLINE) for (const p of isl.pts) { const [px, py] = geoProject(p[0], p[1]); xs.push(px); ys.push(py); }
+  }
   const x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M;
   const x1 = Math.max(...xs) + M, y1 = Math.max(...ys) + M;
 
+  let map = null;                                             // BCP：拠点ごとのハザード露出（%% geo した名前が拠点）
+  if (model.meta.map) {
+    const sites = Object.keys(model.layout.geo || {}).map((name) => ({ name, lat: model.layout.geo[name][0], lng: model.layout.geo[name][1] }));
+    const lay = model.meta.hazard && model.meta.hazard.length ? model.meta.hazard : null;
+    map = { exposure: geoExposure(sites, lay) };
+  }
   return { kind: 'infra', x0, y0, width: x1 - x0, height: y1 - y0,
-    nodes, zones, buses, links, fences, errors: [] };
+    nodes, zones, buses, links, fences, map, errors: [] };
 }
 
 // ---- 描画 ----------------------------------------------------------------------
@@ -454,12 +486,39 @@ const iesc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&
 export function drawInfra(model, L, opts = {}) {
   const T = themeOf(opts);
   const parts = [];
+  if (model.meta.map) {                                        // ベースマップ（自前・低ポリ日本）＋ハザードレイヤ
+    const path = (pts, close) => 'M' + pts.map((p) => geoProject(p[0], p[1]).join(',')).join(' L') + (close ? ' Z' : '');
+    for (const isl of GEO_OUTLINE)
+      parts.push(`<path d="${path(isl.pts, true)}" fill="${T.land}" stroke="${T.landLine}" stroke-width="2" stroke-linejoin="round"/>`);
+    const active = model.meta.hazard || [];
+    const kmPx = (km, lat) => (km / (111.32 * Math.cos((lat * Math.PI) / 180))) * 400;   // km → px（緯度で補正）
+    for (const h of GEO_HAZARDS.filter((x) => active.includes(x.layer))) {
+      const hue = (GEO_LAYERS.find((l) => l.key === h.layer) || {}).hue || '#999';
+      if (h.kind === 'zone') {
+        const c = h.pts.reduce((a, p) => [a[0] + p[0] / h.pts.length, a[1] + p[1] / h.pts.length], [0, 0]);
+        const [cx, cy] = geoProject(c[0], c[1]);
+        parts.push(`<path d="${path(h.pts, true)}" fill="${hue}" fill-opacity="0.10" stroke="${hue}" stroke-opacity="0.5" stroke-dasharray="8 6" stroke-width="2"/>`
+          + `<text x="${cx}" y="${cy}" fill="${hue}" font-size="48" text-anchor="middle" opacity="0.85">${iesc(h.name)}</text>`);
+      } else if (h.kind === 'line') {
+        parts.push(`<path d="${path(h.pts, false)}" fill="none" stroke="${hue}" stroke-opacity="0.4" stroke-width="14" stroke-linecap="round"/>`);
+        const [lx, ly] = geoProject(h.pts[0][0], h.pts[0][1]);
+        parts.push(`<text x="${lx + 18}" y="${ly}" fill="${hue}" font-size="36" opacity="0.85">${iesc(h.name)}</text>`);
+      } else {
+        const [px, py] = geoProject(h.at[0], h.at[1]);
+        const r = kmPx(h.km || 50, h.at[0]);
+        parts.push(`<circle cx="${px}" cy="${py}" r="${r}" fill="${hue}" fill-opacity="0.08" stroke="${hue}" stroke-opacity="0.45" stroke-dasharray="4 5"/>`
+          + `<circle cx="${px}" cy="${py}" r="5" fill="${hue}"/>`
+          + `<text x="${px + 12}" y="${py - 10}" fill="${hue}" font-size="30" opacity="0.9">${iesc(h.name)}</text>`);
+      }
+    }
+  }
   for (const z of [...L.zones].sort((a, b) => a.depth - b.depth)) {
     if (z.folded) {                                            // 畳まれたゾーン＝札。つかんで移動、▸ タップで開く
+      const k = z.h / 40;                                      // 地図モードの拠点札は大きい——文字も比例して読める
       parts.push(`<g data-drag="zone" data-id="${iesc(z.name)}" data-folded="1" style="cursor:grab">`
-        + `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="9" fill="${T.chip}" stroke="${T.dim}" stroke-dasharray="5 4"/>`
-        + `<text x="${z.x + 30}" y="${z.y + 25}" fill="${T.head}" font-size="12" font-weight="700">${iesc(z.name)}<tspan fill="${T.dim}" font-weight="400"> ・ ${z.count} 台</tspan></text></g>`
-        + `<g data-fold="${iesc(z.name)}" style="cursor:pointer"><rect x="${z.x + 4}" y="${z.y + 10}" width="22" height="22" rx="5" fill="transparent"/><text x="${z.x + 12}" y="${z.y + 25}" fill="${T.head}" font-size="12" font-weight="700">▸</text></g>`);
+        + `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${9 * k}" fill="${T.chip}" stroke="${T.dim}" stroke-width="${k}" stroke-dasharray="5 4"/>`
+        + `<text x="${z.x + 30 * k}" y="${z.y + 25 * k}" fill="${T.head}" font-size="${12 * k}" font-weight="700">${iesc(z.name)}<tspan fill="${T.dim}" font-weight="400"> ・ ${z.count} 台</tspan></text></g>`
+        + `<g data-fold="${iesc(z.name)}" style="cursor:pointer"><rect x="${z.x + 4 * k}" y="${z.y + 10 * k}" width="${22 * k}" height="${22 * k}" rx="5" fill="transparent"/><text x="${z.x + 12 * k}" y="${z.y + 25 * k}" fill="${T.head}" font-size="${12 * k}" font-weight="700">▸</text></g>`);
       continue;
     }
     parts.push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="10" fill="${T.frameInk}" fill-opacity="${0.03 + z.depth * 0.02}" stroke="${T.dim}" stroke-dasharray="5 4" stroke-opacity="0.7"/>`);
@@ -604,13 +663,15 @@ export function infraBody(model) {
       out.push(`${ind}}`);
     }
     for (const n of model.items.filter((x) => x.type === 'inode' && x.zone === zname)) out.push(nodeLine(n, ind));
-    for (const h of model.items.filter((x) => x.type === 'hub' && x.zone === zname)) out.push(hubLine(h, ind));
+    if (zname) for (const h of model.items.filter((x) => x.type === 'hub' && x.zone === zname)) out.push(hubLine(h, ind));
     if (zname) for (const b of model.items.filter((x) => x.type === 'bus' && x.zone === zname)) out.push(busLine(b, ind));
+    if (zname) for (const f of model.items.filter((x) => x.type === 'fence' && x.zone === zname))
+      out.push(`${ind}fence ${f.id}[${f.label}] :${f.orient}`);
   };
   emitZone(null, '    ');
   for (const h of model.items.filter((x) => x.type === 'hub' && !x.zone)) out.push(hubLine(h, '    '));
   for (const b of model.items.filter((x) => x.type === 'bus' && !x.zone)) out.push(busLine(b, '    '));
-  for (const f of model.items.filter((x) => x.type === 'fence'))
+  for (const f of model.items.filter((x) => x.type === 'fence' && !x.zone))
     out.push(`    fence ${f.id}[${f.label}] :${f.orient}`);
   for (const e of model.edges) {
     const a = linkAttrsOf(e);

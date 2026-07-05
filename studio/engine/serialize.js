@@ -132,9 +132,12 @@ function trailer(model) {
   if (model.meta.hops) out.push('%% hops');                         // 交差ジャンプ
   if (model.meta.dots) out.push('%% dots');                         // 接続点の丸点
   if (model.meta.lod) out.push('%% lod');                           // セマンティックズーム
+  if (model.meta.map) out.push('%% map');                           // 地理マップ（geo 配置＋ベースマップ）
+  if (model.meta.hazard && model.meta.hazard.length) out.push(`%% hazard ${model.meta.hazard.join('|')}`);
   if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     if (model.kind === 'infra' && L.fold && L.fold.length) out.push(`%% fold ${L.fold.join('|')}`);
     if (model.kind === 'infra') for (const zn of Object.keys(L.zpos || {})) out.push(`%% zpos ${zn}|${num(L.zpos[zn][0])}|${num(L.zpos[zn][1])}`);
+    if (model.kind === 'infra') for (const zn of Object.keys(L.geo || {})) out.push(`%% geo ${zn}|${L.geo[zn][0]}|${L.geo[zn][1]}`);
     for (const id of model.order) if (L.pos[id]) out.push(`%% pos ${id} ${num(L.pos[id][0])} ${num(L.pos[id][1])}`);
     for (const id of Object.keys(model.images || {})) out.push(`%% img ${id} ${model.images[id]}`);
   } else if (model.kind === 'sequence') {
