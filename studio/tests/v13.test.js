@@ -130,6 +130,60 @@ test('fence: ゾーン内宣言はゾーンに沿って立ち、畳むと隠れ�
   assert.ok(!Lf.fences.some((ff) => ff.id === 'f1'), '畳んだら札の中');
 });
 
+const rectsApart = (a, b, gap = 0) =>
+  a.x + a.w + gap <= b.x || b.x + b.w + gap <= a.x || a.y + a.h + gap <= b.y || b.y + b.h + gap <= a.y;
+
+test('declutter: 同じ座標に置いた拠点が押し離され、リーダーで実位置と結ばれる', () => {
+  const D = `infra
+    zone 拠点A {
+      a1[SV-A] :server
+    }
+    zone 拠点B {
+      b1[SV-B] :server
+    }
+    zone 拠点C {
+      c1[SV-C] :server
+    }
+
+%% @layout
+%% map
+%% geo 拠点A|35.68|139.76
+%% geo 拠点B|35.68|139.76
+%% geo 拠点C|35.69|139.77`;
+  const m = parse(D);
+  const L = layout(m);
+  const [A, B, C] = ['拠点A', '拠点B', '拠点C'].map((n) => L.zones.find((z) => z.name === n));
+  assert.ok(rectsApart(A, B) && rectsApart(A, C) && rectsApart(B, C), '3 拠点とも重ならない');
+  // 中の機器はゾーンについていく
+  const a1 = L.nodes.find((n) => n.id === 'a1');
+  assert.ok(a1.x >= A.x && a1.x + a1.w <= A.x + A.w, '機器はゾーンの中');
+  // 実座標へのリーダー（ずれた拠点ぶん）
+  assert.ok(L.map.anchors.length >= 2, `リーダー ${L.map.anchors.length} 本`);
+  const [gx, gy] = geoProject(35.68, 139.76);
+  assert.ok(L.map.anchors.some((an) => an.x2 === gx && an.y2 === gy), 'アンカーは実座標');
+  assert.deepEqual(layout(parse(D)), L, '決定的');
+});
+
+test('declutter: メガコーポの 40+ 拠点（畳んだ札）が地図上で重ならない', () => {
+  const dsl = readFileSync(join(HERE, '..', 'examples', 'megacorp.mmd'), 'utf8');
+  const m = parse(dsl);
+  const names = Object.keys(m.layout.geo || {});
+  m.layout.fold = m.groups.filter((g) => !g.parent).map((g) => g.name);   // 遠景（LOD 0）を再現
+  const L = layout(m);
+  const boxes = [];
+  for (const n of names) {
+    const z = L.zones.find((zz) => zz.name === n && !zz.hidden);
+    if (z) boxes.push({ name: n, x: z.x, y: z.y, w: z.w, h: z.h });
+    const nd = L.nodes.find((x) => x.id === n);
+    if (nd) boxes.push({ name: n, x: nd.x, y: nd.y, w: nd.w, h: nd.h });
+  }
+  assert.ok(boxes.length >= 40, `拠点 ${boxes.length}`);
+  const bad = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++)
+    if (!rectsApart(boxes[i], boxes[j])) bad.push(`${boxes[i].name}×${boxes[j].name}`);
+  assert.deepEqual(bad, [], `重なり: ${bad.join(', ')}`);
+});
+
 test('回帰: ゾーン外ハブが二重に書き出されない（infraBody）', () => {
   const m = parse('infra\n  zone z {\n    a[A]\n  }\n  hub w[WAN] :vlan 1\n  a -- w');
   const s = serialize(m);
