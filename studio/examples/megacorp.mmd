@@ -1,0 +1,2521 @@
+infra
+    title 全国メガコーポ — 40 拠点・IT/OT/クラウド（🗾 地理×BCP）
+    zone クラウド {
+      aws_vpc[AWS VPC-RT] :router
+      aws_lb[ALB] :lb
+      az_gw[Azure VPN-GW] :router
+      cl_sv1[EC2/VM-1] :server, AmazonLinux
+      cl_sv2[EC2/VM-2] :server, Ubuntu22
+      cl_sv3[EC2/VM-3] :server, AmazonLinux
+      cl_sv4[EC2/VM-4] :server, Ubuntu22
+      cl_sv5[EC2/VM-5] :server, AmazonLinux
+      cl_sv6[EC2/VM-6] :server, Ubuntu22
+      cl_sv7[EC2/VM-7] :server, AmazonLinux
+      cl_sv8[EC2/VM-8] :server, Ubuntu22
+      saas[SaaS(M365/Box)] :cloud
+    }
+    zone 東京本社 {
+      zone 東京本社-コア {
+        hq_core1[CORE-1] :core, NX-OS, 10.10.0.1
+        hq_core2[CORE-2] :core, NX-OS, 10.10.0.2
+        hq_fw1[FW-1] :firewall, FortiOS, 10.10.0.11
+        hq_fw2[FW-2] :firewall, FortiOS, 10.10.0.12
+        hq_wanrt[WAN-RT] :router, IOS-XE, 10.10.0.254
+        bus hq_corebus[コア収容] :vlan 10, 10.10.0.0/24
+      }
+      zone 東京本社-サーバ {
+        hq_sv1[AP-1] :server, Ubuntu22, 10.10.1.1
+        hq_sv2[AP-2] :server, WinSv2022, 10.10.1.2
+        hq_sv3[AP-3] :server, RHEL9, 10.10.1.3
+        hq_sv4[AP-4] :server, Ubuntu22, 10.10.1.4
+        hq_sv5[ST-5] :storage, WinSv2022, 10.10.1.5
+        hq_sv6[DB-6] :db, RHEL9, 10.10.1.6
+        hq_sv7[AP-7] :server, Ubuntu22, 10.10.1.7
+        hq_sv8[AP-8] :server, WinSv2022, 10.10.1.8
+        hq_sv9[AP-9] :server, RHEL9, 10.10.1.9
+        hq_sv10[ST-10] :storage, Ubuntu22, 10.10.1.10
+        hq_sv11[AP-11] :server, WinSv2022, 10.10.1.11
+        hq_sv12[DB-12] :db, RHEL9, 10.10.1.12
+        hq_sv13[AP-13] :server, Ubuntu22, 10.10.1.13
+        hq_sv14[AP-14] :server, WinSv2022, 10.10.1.14
+        hq_sv15[ST-15] :storage, RHEL9, 10.10.1.15
+        hq_sv16[AP-16] :server, Ubuntu22, 10.10.1.16
+        hq_sv17[AP-17] :server, WinSv2022, 10.10.1.17
+        hq_sv18[DB-18] :db, RHEL9, 10.10.1.18
+        hq_sv19[AP-19] :server, Ubuntu22, 10.10.1.19
+        hq_sv20[ST-20] :storage, WinSv2022, 10.10.1.20
+        hq_sv21[AP-21] :server, RHEL9, 10.10.1.21
+        hq_sv22[AP-22] :server, Ubuntu22, 10.10.1.22
+        hq_sv23[AP-23] :server, WinSv2022, 10.10.1.23
+        hq_sv24[DB-24] :db, RHEL9, 10.10.1.24
+        hq_sv25[ST-25] :storage, Ubuntu22, 10.10.1.25
+        hq_sv26[AP-26] :server, WinSv2022, 10.10.1.26
+        hq_sv27[AP-27] :server, RHEL9, 10.10.1.27
+        hq_sv28[AP-28] :server, Ubuntu22, 10.10.1.28
+        hq_sv29[AP-29] :server, WinSv2022, 10.10.1.29
+        hq_sv30[DB-30] :db, RHEL9, 10.10.1.30
+        hq_sv31[AP-31] :server, Ubuntu22, 10.10.1.31
+        hq_sv32[AP-32] :server, WinSv2022, 10.10.1.32
+        hq_sv33[AP-33] :server, RHEL9, 10.10.1.33
+        hq_sv34[AP-34] :server, Ubuntu22, 10.10.1.34
+        hq_sv35[ST-35] :storage, WinSv2022, 10.10.1.35
+        hq_sv36[DB-36] :db, RHEL9, 10.10.1.36
+        hq_sv37[AP-37] :server, Ubuntu22, 10.10.1.37
+        hq_sv38[AP-38] :server, WinSv2022, 10.10.1.38
+        hq_sv39[AP-39] :server, RHEL9, 10.10.1.39
+        hq_sv40[ST-40] :storage, Ubuntu22, 10.10.1.40
+        bus hq_svbus[サーバ収容] :vlan 100, 10.10.1.0/24
+      }
+      zone 東京本社-DMZ {
+        hq_px[PX] :lb, RHEL9, 192.168.10.1
+        hq_web1[WEB1] :server, RHEL9, 192.168.10.2
+        hq_web2[WEB2] :server, RHEL9, 192.168.10.3
+        hq_mx[MX] :server, RHEL9, 192.168.10.4
+      }
+      zone 東京本社-1F {
+        hq_fsw1[SW-1F] :access, IOS15, vlan 101
+        hq_fap1[AP-1F] :ap, vlan 101
+        hq_fpc1_1[島1] :pc, Win11, vlan 101
+        hq_fpc1_2[島2] :pc, Win11, vlan 101
+        hq_fpc1_3[島3] :pc, Win11, vlan 101
+        hq_fpc1_4[島4] :pc, Win11, vlan 101
+        hq_fpc1_5[島5] :pc, Win11, vlan 101
+        hq_fpc1_6[島6] :pc, Win11, vlan 101
+      }
+      zone 東京本社-2F {
+        hq_fsw2[SW-2F] :access, IOS15, vlan 102
+        hq_fap2[AP-2F] :ap, vlan 102
+        hq_fpc2_1[島1] :pc, Win11, vlan 102
+        hq_fpc2_2[島2] :pc, Win11, vlan 102
+        hq_fpc2_3[島3] :pc, Win11, vlan 102
+        hq_fpc2_4[島4] :pc, Win11, vlan 102
+        hq_fpc2_5[島5] :pc, Win11, vlan 102
+        hq_fpc2_6[島6] :pc, Win11, vlan 102
+      }
+      zone 東京本社-3F {
+        hq_fsw3[SW-3F] :access, IOS15, vlan 103
+        hq_fap3[AP-3F] :ap, vlan 103
+        hq_fpc3_1[島1] :pc, Win11, vlan 103
+        hq_fpc3_2[島2] :pc, Win11, vlan 103
+        hq_fpc3_3[島3] :pc, Win11, vlan 103
+        hq_fpc3_4[島4] :pc, Win11, vlan 103
+        hq_fpc3_5[島5] :pc, Win11, vlan 103
+        hq_fpc3_6[島6] :pc, Win11, vlan 103
+      }
+      zone 東京本社-4F {
+        hq_fsw4[SW-4F] :access, IOS15, vlan 104
+        hq_fap4[AP-4F] :ap, vlan 104
+        hq_fpc4_1[島1] :pc, Win11, vlan 104
+        hq_fpc4_2[島2] :pc, Win11, vlan 104
+        hq_fpc4_3[島3] :pc, Win11, vlan 104
+        hq_fpc4_4[島4] :pc, Win11, vlan 104
+        hq_fpc4_5[島5] :pc, Win11, vlan 104
+        hq_fpc4_6[島6] :pc, Win11, vlan 104
+      }
+    }
+    zone 大阪DR {
+      zone 大阪DR-コア {
+        dr_core1[CORE-1] :core, NX-OS, 10.11.0.1
+        dr_core2[CORE-2] :core, NX-OS, 10.11.0.2
+        dr_fw1[FW-1] :firewall, FortiOS, 10.11.0.11
+        dr_fw2[FW-2] :firewall, FortiOS, 10.11.0.12
+        dr_wanrt[WAN-RT] :router, IOS-XE, 10.11.0.254
+        bus dr_corebus[コア収容] :vlan 11, 10.11.0.0/24
+      }
+      zone 大阪DR-サーバ {
+        dr_sv1[AP-1] :server, Ubuntu22, 10.11.1.1
+        dr_sv2[AP-2] :server, WinSv2022, 10.11.1.2
+        dr_sv3[AP-3] :server, RHEL9, 10.11.1.3
+        dr_sv4[AP-4] :server, Ubuntu22, 10.11.1.4
+        dr_sv5[ST-5] :storage, WinSv2022, 10.11.1.5
+        dr_sv6[DB-6] :db, RHEL9, 10.11.1.6
+        dr_sv7[AP-7] :server, Ubuntu22, 10.11.1.7
+        dr_sv8[AP-8] :server, WinSv2022, 10.11.1.8
+        dr_sv9[AP-9] :server, RHEL9, 10.11.1.9
+        dr_sv10[ST-10] :storage, Ubuntu22, 10.11.1.10
+        dr_sv11[AP-11] :server, WinSv2022, 10.11.1.11
+        dr_sv12[DB-12] :db, RHEL9, 10.11.1.12
+        dr_sv13[AP-13] :server, Ubuntu22, 10.11.1.13
+        dr_sv14[AP-14] :server, WinSv2022, 10.11.1.14
+        dr_sv15[ST-15] :storage, RHEL9, 10.11.1.15
+        dr_sv16[AP-16] :server, Ubuntu22, 10.11.1.16
+        dr_sv17[AP-17] :server, WinSv2022, 10.11.1.17
+        dr_sv18[DB-18] :db, RHEL9, 10.11.1.18
+        dr_sv19[AP-19] :server, Ubuntu22, 10.11.1.19
+        dr_sv20[ST-20] :storage, WinSv2022, 10.11.1.20
+        dr_sv21[AP-21] :server, RHEL9, 10.11.1.21
+        dr_sv22[AP-22] :server, Ubuntu22, 10.11.1.22
+        dr_sv23[AP-23] :server, WinSv2022, 10.11.1.23
+        dr_sv24[DB-24] :db, RHEL9, 10.11.1.24
+        dr_sv25[ST-25] :storage, Ubuntu22, 10.11.1.25
+        dr_sv26[AP-26] :server, WinSv2022, 10.11.1.26
+        dr_sv27[AP-27] :server, RHEL9, 10.11.1.27
+        dr_sv28[AP-28] :server, Ubuntu22, 10.11.1.28
+        bus dr_svbus[サーバ収容] :vlan 110, 10.11.1.0/24
+      }
+      zone 大阪DR-DMZ {
+        dr_px[PX] :lb, RHEL9, 192.168.11.1
+        dr_web1[WEB1] :server, RHEL9, 192.168.11.2
+        dr_web2[WEB2] :server, RHEL9, 192.168.11.3
+        dr_mx[MX] :server, RHEL9, 192.168.11.4
+      }
+      zone 大阪DR-1F {
+        dr_fsw1[SW-1F] :access, IOS15, vlan 101
+        dr_fap1[AP-1F] :ap, vlan 101
+        dr_fpc1_1[島1] :pc, Win11, vlan 101
+        dr_fpc1_2[島2] :pc, Win11, vlan 101
+        dr_fpc1_3[島3] :pc, Win11, vlan 101
+        dr_fpc1_4[島4] :pc, Win11, vlan 101
+        dr_fpc1_5[島5] :pc, Win11, vlan 101
+        dr_fpc1_6[島6] :pc, Win11, vlan 101
+      }
+      zone 大阪DR-2F {
+        dr_fsw2[SW-2F] :access, IOS15, vlan 102
+        dr_fap2[AP-2F] :ap, vlan 102
+        dr_fpc2_1[島1] :pc, Win11, vlan 102
+        dr_fpc2_2[島2] :pc, Win11, vlan 102
+        dr_fpc2_3[島3] :pc, Win11, vlan 102
+        dr_fpc2_4[島4] :pc, Win11, vlan 102
+        dr_fpc2_5[島5] :pc, Win11, vlan 102
+        dr_fpc2_6[島6] :pc, Win11, vlan 102
+      }
+    }
+    zone 札幌支社 {
+      zone 札幌支社-機械室 {
+        sap_core[CORE-SW] :core, NX-OS, 10.30.0.1
+        sap_fw[FW] :firewall, FortiOS, 10.30.0.11
+        sap_rt[WAN-RT] :router, IOS-XE, 10.30.0.254
+        sap_sv1[SV-1] :server, RHEL9, 10.30.1.1
+        sap_sv2[SV-2] :server, WinSv2022, 10.30.1.2
+        sap_sv3[SV-3] :server, RHEL9, 10.30.1.3
+        sap_sv4[SV-4] :server, WinSv2022, 10.30.1.4
+        sap_sv5[SV-5] :server, RHEL9, 10.30.1.5
+        sap_sv6[SV-6] :server, WinSv2022, 10.30.1.6
+        sap_sv7[SV-7] :server, RHEL9, 10.30.1.7
+        sap_sv8[SV-8] :server, WinSv2022, 10.30.1.8
+        sap_sv9[SV-9] :server, RHEL9, 10.30.1.9
+        sap_sv10[SV-10] :server, WinSv2022, 10.30.1.10
+        sap_nas[NAS] :storage, 10.30.1.100
+        bus sap_bus[支社基幹] :vlan 30, 10.30.0.0/23
+      }
+      zone 札幌支社-1F {
+        sap_sw1[SW-1F] :access, vlan 201
+        sap_ap1[AP-1F] :ap, vlan 201
+        sap_pc1_1[島1] :pc, Win11, vlan 201
+        sap_pc1_2[島2] :pc, Win11, vlan 201
+        sap_pc1_3[島3] :pc, Win11, vlan 201
+        sap_pc1_4[島4] :pc, Win11, vlan 201
+        sap_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 札幌支社-2F {
+        sap_sw2[SW-2F] :access, vlan 202
+        sap_ap2[AP-2F] :ap, vlan 202
+        sap_pc2_1[島1] :pc, Win11, vlan 202
+        sap_pc2_2[島2] :pc, Win11, vlan 202
+        sap_pc2_3[島3] :pc, Win11, vlan 202
+        sap_pc2_4[島4] :pc, Win11, vlan 202
+        sap_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 仙台支社 {
+      zone 仙台支社-機械室 {
+        sen_core[CORE-SW] :core, NX-OS, 10.31.0.1
+        sen_fw[FW] :firewall, FortiOS, 10.31.0.11
+        sen_rt[WAN-RT] :router, IOS-XE, 10.31.0.254
+        sen_sv1[SV-1] :server, RHEL9, 10.31.1.1
+        sen_sv2[SV-2] :server, WinSv2022, 10.31.1.2
+        sen_sv3[SV-3] :server, RHEL9, 10.31.1.3
+        sen_sv4[SV-4] :server, WinSv2022, 10.31.1.4
+        sen_sv5[SV-5] :server, RHEL9, 10.31.1.5
+        sen_sv6[SV-6] :server, WinSv2022, 10.31.1.6
+        sen_sv7[SV-7] :server, RHEL9, 10.31.1.7
+        sen_sv8[SV-8] :server, WinSv2022, 10.31.1.8
+        sen_sv9[SV-9] :server, RHEL9, 10.31.1.9
+        sen_sv10[SV-10] :server, WinSv2022, 10.31.1.10
+        sen_nas[NAS] :storage, 10.31.1.100
+        bus sen_bus[支社基幹] :vlan 31, 10.31.0.0/23
+      }
+      zone 仙台支社-1F {
+        sen_sw1[SW-1F] :access, vlan 201
+        sen_ap1[AP-1F] :ap, vlan 201
+        sen_pc1_1[島1] :pc, Win11, vlan 201
+        sen_pc1_2[島2] :pc, Win11, vlan 201
+        sen_pc1_3[島3] :pc, Win11, vlan 201
+        sen_pc1_4[島4] :pc, Win11, vlan 201
+        sen_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 仙台支社-2F {
+        sen_sw2[SW-2F] :access, vlan 202
+        sen_ap2[AP-2F] :ap, vlan 202
+        sen_pc2_1[島1] :pc, Win11, vlan 202
+        sen_pc2_2[島2] :pc, Win11, vlan 202
+        sen_pc2_3[島3] :pc, Win11, vlan 202
+        sen_pc2_4[島4] :pc, Win11, vlan 202
+        sen_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 名古屋支社 {
+      zone 名古屋支社-機械室 {
+        nag_core[CORE-SW] :core, NX-OS, 10.32.0.1
+        nag_fw[FW] :firewall, FortiOS, 10.32.0.11
+        nag_rt[WAN-RT] :router, IOS-XE, 10.32.0.254
+        nag_sv1[SV-1] :server, RHEL9, 10.32.1.1
+        nag_sv2[SV-2] :server, WinSv2022, 10.32.1.2
+        nag_sv3[SV-3] :server, RHEL9, 10.32.1.3
+        nag_sv4[SV-4] :server, WinSv2022, 10.32.1.4
+        nag_sv5[SV-5] :server, RHEL9, 10.32.1.5
+        nag_sv6[SV-6] :server, WinSv2022, 10.32.1.6
+        nag_sv7[SV-7] :server, RHEL9, 10.32.1.7
+        nag_sv8[SV-8] :server, WinSv2022, 10.32.1.8
+        nag_sv9[SV-9] :server, RHEL9, 10.32.1.9
+        nag_sv10[SV-10] :server, WinSv2022, 10.32.1.10
+        nag_nas[NAS] :storage, 10.32.1.100
+        bus nag_bus[支社基幹] :vlan 32, 10.32.0.0/23
+      }
+      zone 名古屋支社-1F {
+        nag_sw1[SW-1F] :access, vlan 201
+        nag_ap1[AP-1F] :ap, vlan 201
+        nag_pc1_1[島1] :pc, Win11, vlan 201
+        nag_pc1_2[島2] :pc, Win11, vlan 201
+        nag_pc1_3[島3] :pc, Win11, vlan 201
+        nag_pc1_4[島4] :pc, Win11, vlan 201
+        nag_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 名古屋支社-2F {
+        nag_sw2[SW-2F] :access, vlan 202
+        nag_ap2[AP-2F] :ap, vlan 202
+        nag_pc2_1[島1] :pc, Win11, vlan 202
+        nag_pc2_2[島2] :pc, Win11, vlan 202
+        nag_pc2_3[島3] :pc, Win11, vlan 202
+        nag_pc2_4[島4] :pc, Win11, vlan 202
+        nag_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 広島支社 {
+      zone 広島支社-機械室 {
+        hir_core[CORE-SW] :core, NX-OS, 10.33.0.1
+        hir_fw[FW] :firewall, FortiOS, 10.33.0.11
+        hir_rt[WAN-RT] :router, IOS-XE, 10.33.0.254
+        hir_sv1[SV-1] :server, RHEL9, 10.33.1.1
+        hir_sv2[SV-2] :server, WinSv2022, 10.33.1.2
+        hir_sv3[SV-3] :server, RHEL9, 10.33.1.3
+        hir_sv4[SV-4] :server, WinSv2022, 10.33.1.4
+        hir_sv5[SV-5] :server, RHEL9, 10.33.1.5
+        hir_sv6[SV-6] :server, WinSv2022, 10.33.1.6
+        hir_sv7[SV-7] :server, RHEL9, 10.33.1.7
+        hir_sv8[SV-8] :server, WinSv2022, 10.33.1.8
+        hir_sv9[SV-9] :server, RHEL9, 10.33.1.9
+        hir_sv10[SV-10] :server, WinSv2022, 10.33.1.10
+        hir_nas[NAS] :storage, 10.33.1.100
+        bus hir_bus[支社基幹] :vlan 33, 10.33.0.0/23
+      }
+      zone 広島支社-1F {
+        hir_sw1[SW-1F] :access, vlan 201
+        hir_ap1[AP-1F] :ap, vlan 201
+        hir_pc1_1[島1] :pc, Win11, vlan 201
+        hir_pc1_2[島2] :pc, Win11, vlan 201
+        hir_pc1_3[島3] :pc, Win11, vlan 201
+        hir_pc1_4[島4] :pc, Win11, vlan 201
+        hir_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 広島支社-2F {
+        hir_sw2[SW-2F] :access, vlan 202
+        hir_ap2[AP-2F] :ap, vlan 202
+        hir_pc2_1[島1] :pc, Win11, vlan 202
+        hir_pc2_2[島2] :pc, Win11, vlan 202
+        hir_pc2_3[島3] :pc, Win11, vlan 202
+        hir_pc2_4[島4] :pc, Win11, vlan 202
+        hir_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 高松支社 {
+      zone 高松支社-機械室 {
+        tak_core[CORE-SW] :core, NX-OS, 10.34.0.1
+        tak_fw[FW] :firewall, FortiOS, 10.34.0.11
+        tak_rt[WAN-RT] :router, IOS-XE, 10.34.0.254
+        tak_sv1[SV-1] :server, RHEL9, 10.34.1.1
+        tak_sv2[SV-2] :server, WinSv2022, 10.34.1.2
+        tak_sv3[SV-3] :server, RHEL9, 10.34.1.3
+        tak_sv4[SV-4] :server, WinSv2022, 10.34.1.4
+        tak_sv5[SV-5] :server, RHEL9, 10.34.1.5
+        tak_sv6[SV-6] :server, WinSv2022, 10.34.1.6
+        tak_sv7[SV-7] :server, RHEL9, 10.34.1.7
+        tak_sv8[SV-8] :server, WinSv2022, 10.34.1.8
+        tak_sv9[SV-9] :server, RHEL9, 10.34.1.9
+        tak_sv10[SV-10] :server, WinSv2022, 10.34.1.10
+        tak_nas[NAS] :storage, 10.34.1.100
+        bus tak_bus[支社基幹] :vlan 34, 10.34.0.0/23
+      }
+      zone 高松支社-1F {
+        tak_sw1[SW-1F] :access, vlan 201
+        tak_ap1[AP-1F] :ap, vlan 201
+        tak_pc1_1[島1] :pc, Win11, vlan 201
+        tak_pc1_2[島2] :pc, Win11, vlan 201
+        tak_pc1_3[島3] :pc, Win11, vlan 201
+        tak_pc1_4[島4] :pc, Win11, vlan 201
+        tak_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 高松支社-2F {
+        tak_sw2[SW-2F] :access, vlan 202
+        tak_ap2[AP-2F] :ap, vlan 202
+        tak_pc2_1[島1] :pc, Win11, vlan 202
+        tak_pc2_2[島2] :pc, Win11, vlan 202
+        tak_pc2_3[島3] :pc, Win11, vlan 202
+        tak_pc2_4[島4] :pc, Win11, vlan 202
+        tak_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 福岡支社 {
+      zone 福岡支社-機械室 {
+        fuk_core[CORE-SW] :core, NX-OS, 10.35.0.1
+        fuk_fw[FW] :firewall, FortiOS, 10.35.0.11
+        fuk_rt[WAN-RT] :router, IOS-XE, 10.35.0.254
+        fuk_sv1[SV-1] :server, RHEL9, 10.35.1.1
+        fuk_sv2[SV-2] :server, WinSv2022, 10.35.1.2
+        fuk_sv3[SV-3] :server, RHEL9, 10.35.1.3
+        fuk_sv4[SV-4] :server, WinSv2022, 10.35.1.4
+        fuk_sv5[SV-5] :server, RHEL9, 10.35.1.5
+        fuk_sv6[SV-6] :server, WinSv2022, 10.35.1.6
+        fuk_sv7[SV-7] :server, RHEL9, 10.35.1.7
+        fuk_sv8[SV-8] :server, WinSv2022, 10.35.1.8
+        fuk_sv9[SV-9] :server, RHEL9, 10.35.1.9
+        fuk_sv10[SV-10] :server, WinSv2022, 10.35.1.10
+        fuk_nas[NAS] :storage, 10.35.1.100
+        bus fuk_bus[支社基幹] :vlan 35, 10.35.0.0/23
+      }
+      zone 福岡支社-1F {
+        fuk_sw1[SW-1F] :access, vlan 201
+        fuk_ap1[AP-1F] :ap, vlan 201
+        fuk_pc1_1[島1] :pc, Win11, vlan 201
+        fuk_pc1_2[島2] :pc, Win11, vlan 201
+        fuk_pc1_3[島3] :pc, Win11, vlan 201
+        fuk_pc1_4[島4] :pc, Win11, vlan 201
+        fuk_pc1_5[島5] :pc, Win11, vlan 201
+      }
+      zone 福岡支社-2F {
+        fuk_sw2[SW-2F] :access, vlan 202
+        fuk_ap2[AP-2F] :ap, vlan 202
+        fuk_pc2_1[島1] :pc, Win11, vlan 202
+        fuk_pc2_2[島2] :pc, Win11, vlan 202
+        fuk_pc2_3[島3] :pc, Win11, vlan 202
+        fuk_pc2_4[島4] :pc, Win11, vlan 202
+        fuk_pc2_5[島5] :pc, Win11, vlan 202
+      }
+    }
+    zone 苫小牧工場 {
+      zone 苫小牧工場-情報LAN {
+        tom_itfw[IT-FW] :firewall, FortiOS, 10.50.0.1
+        tom_itsw[IT-SW] :switch, 10.50.0.2
+        tom_mes[MES] :server, RHEL9, 10.50.0.21
+        tom_erp[ERP連携] :server, WinSv2022, 10.50.0.22
+        tom_opc1[事務1] :pc, Win11, vlan 300
+        tom_opc2[事務2] :pc, Win11, vlan 300
+        tom_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 苫小牧工場-監視室 {
+        tom_scada[SCADA] :scada, WinSv2019, 172.16.50.10
+        tom_hist[Historian] :historian, WinSv2019, 172.16.50.11
+        tom_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.50.21
+        tom_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.50.22
+        tom_ews[EWS] :ews, Win10, 172.16.50.30
+        tom_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.50.12
+        tom_diode[データダイオード] :diode, 172.16.50.99
+        bus tom_ctlbus[制御LAN] :vlan 400, 172.16.50.0/24
+      }
+      zone 苫小牧工場-ライン1 {
+        tom_plc1[PLC-1] :plc, 172.17.50.10
+        tom_rio1[リモートIO-1] :rtu, 172.17.50.11
+        tom_drv1[ドライブ-1] :drive, 172.17.50.12
+        tom_rob1[ロボット-1] :robot, 172.17.50.13
+        tom_sen1[センサ群-1] :sensor, 172.17.50.14
+        tom_cnc1[CNC-1] :cnc, 172.17.50.15
+        tom_gw1[セルGW-1] :gateway, 172.17.50.16
+      }
+      zone 苫小牧工場-ライン2 {
+        tom_plc2[PLC-2] :plc, 172.17.50.20
+        tom_rio2[リモートIO-2] :rtu, 172.17.50.21
+        tom_drv2[ドライブ-2] :drive, 172.17.50.22
+        tom_rob2[ロボット-2] :robot, 172.17.50.23
+        tom_sen2[センサ群-2] :sensor, 172.17.50.24
+        tom_cnc2[CNC-2] :cnc, 172.17.50.25
+        tom_gw2[セルGW-2] :gateway, 172.17.50.26
+      }
+      zone 苫小牧工場-安全計装 {
+        tom_sis[SIS] :sis, 172.18.50.1
+      }
+      fence tom_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 北上工場 {
+      zone 北上工場-情報LAN {
+        kit_itfw[IT-FW] :firewall, FortiOS, 10.51.0.1
+        kit_itsw[IT-SW] :switch, 10.51.0.2
+        kit_mes[MES] :server, RHEL9, 10.51.0.21
+        kit_erp[ERP連携] :server, WinSv2022, 10.51.0.22
+        kit_opc1[事務1] :pc, Win11, vlan 300
+        kit_opc2[事務2] :pc, Win11, vlan 300
+        kit_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 北上工場-監視室 {
+        kit_scada[SCADA] :scada, WinSv2019, 172.16.51.10
+        kit_hist[Historian] :historian, WinSv2019, 172.16.51.11
+        kit_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.51.21
+        kit_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.51.22
+        kit_ews[EWS] :ews, Win10, 172.16.51.30
+        kit_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.51.12
+        kit_diode[データダイオード] :diode, 172.16.51.99
+        bus kit_ctlbus[制御LAN] :vlan 401, 172.16.51.0/24
+      }
+      zone 北上工場-ライン1 {
+        kit_plc1[PLC-1] :plc, 172.17.51.10
+        kit_rio1[リモートIO-1] :rtu, 172.17.51.11
+        kit_drv1[ドライブ-1] :drive, 172.17.51.12
+        kit_rob1[ロボット-1] :robot, 172.17.51.13
+        kit_sen1[センサ群-1] :sensor, 172.17.51.14
+        kit_cnc1[CNC-1] :cnc, 172.17.51.15
+        kit_gw1[セルGW-1] :gateway, 172.17.51.16
+      }
+      zone 北上工場-ライン2 {
+        kit_plc2[PLC-2] :plc, 172.17.51.20
+        kit_rio2[リモートIO-2] :rtu, 172.17.51.21
+        kit_drv2[ドライブ-2] :drive, 172.17.51.22
+        kit_rob2[ロボット-2] :robot, 172.17.51.23
+        kit_sen2[センサ群-2] :sensor, 172.17.51.24
+        kit_cnc2[CNC-2] :cnc, 172.17.51.25
+        kit_gw2[セルGW-2] :gateway, 172.17.51.26
+      }
+      zone 北上工場-安全計装 {
+        kit_sis[SIS] :sis, 172.18.51.1
+      }
+      fence kit_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 太田工場 {
+      zone 太田工場-情報LAN {
+        ota_itfw[IT-FW] :firewall, FortiOS, 10.52.0.1
+        ota_itsw[IT-SW] :switch, 10.52.0.2
+        ota_mes[MES] :server, RHEL9, 10.52.0.21
+        ota_erp[ERP連携] :server, WinSv2022, 10.52.0.22
+        ota_opc1[事務1] :pc, Win11, vlan 300
+        ota_opc2[事務2] :pc, Win11, vlan 300
+        ota_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 太田工場-監視室 {
+        ota_scada[SCADA] :scada, WinSv2019, 172.16.52.10
+        ota_hist[Historian] :historian, WinSv2019, 172.16.52.11
+        ota_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.52.21
+        ota_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.52.22
+        ota_ews[EWS] :ews, Win10, 172.16.52.30
+        ota_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.52.12
+        ota_diode[データダイオード] :diode, 172.16.52.99
+        bus ota_ctlbus[制御LAN] :vlan 402, 172.16.52.0/24
+      }
+      zone 太田工場-ライン1 {
+        ota_plc1[PLC-1] :plc, 172.17.52.10
+        ota_rio1[リモートIO-1] :rtu, 172.17.52.11
+        ota_drv1[ドライブ-1] :drive, 172.17.52.12
+        ota_rob1[ロボット-1] :robot, 172.17.52.13
+        ota_sen1[センサ群-1] :sensor, 172.17.52.14
+        ota_cnc1[CNC-1] :cnc, 172.17.52.15
+        ota_gw1[セルGW-1] :gateway, 172.17.52.16
+      }
+      zone 太田工場-ライン2 {
+        ota_plc2[PLC-2] :plc, 172.17.52.20
+        ota_rio2[リモートIO-2] :rtu, 172.17.52.21
+        ota_drv2[ドライブ-2] :drive, 172.17.52.22
+        ota_rob2[ロボット-2] :robot, 172.17.52.23
+        ota_sen2[センサ群-2] :sensor, 172.17.52.24
+        ota_cnc2[CNC-2] :cnc, 172.17.52.25
+        ota_gw2[セルGW-2] :gateway, 172.17.52.26
+      }
+      zone 太田工場-ライン3 {
+        ota_plc3[PLC-3] :plc, 172.17.52.30
+        ota_rio3[リモートIO-3] :rtu, 172.17.52.31
+        ota_drv3[ドライブ-3] :drive, 172.17.52.32
+        ota_rob3[ロボット-3] :robot, 172.17.52.33
+        ota_sen3[センサ群-3] :sensor, 172.17.52.34
+        ota_cnc3[CNC-3] :cnc, 172.17.52.35
+        ota_gw3[セルGW-3] :gateway, 172.17.52.36
+      }
+      zone 太田工場-安全計装 {
+        ota_sis[SIS] :sis, 172.18.52.1
+      }
+      fence ota_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 富山工場 {
+      zone 富山工場-情報LAN {
+        toy_itfw[IT-FW] :firewall, FortiOS, 10.53.0.1
+        toy_itsw[IT-SW] :switch, 10.53.0.2
+        toy_mes[MES] :server, RHEL9, 10.53.0.21
+        toy_erp[ERP連携] :server, WinSv2022, 10.53.0.22
+        toy_opc1[事務1] :pc, Win11, vlan 300
+        toy_opc2[事務2] :pc, Win11, vlan 300
+        toy_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 富山工場-監視室 {
+        toy_scada[SCADA] :scada, WinSv2019, 172.16.53.10
+        toy_hist[Historian] :historian, WinSv2019, 172.16.53.11
+        toy_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.53.21
+        toy_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.53.22
+        toy_ews[EWS] :ews, Win10, 172.16.53.30
+        toy_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.53.12
+        toy_diode[データダイオード] :diode, 172.16.53.99
+        bus toy_ctlbus[制御LAN] :vlan 403, 172.16.53.0/24
+      }
+      zone 富山工場-ライン1 {
+        toy_plc1[PLC-1] :plc, 172.17.53.10
+        toy_rio1[リモートIO-1] :rtu, 172.17.53.11
+        toy_drv1[ドライブ-1] :drive, 172.17.53.12
+        toy_rob1[ロボット-1] :robot, 172.17.53.13
+        toy_sen1[センサ群-1] :sensor, 172.17.53.14
+        toy_cnc1[CNC-1] :cnc, 172.17.53.15
+        toy_gw1[セルGW-1] :gateway, 172.17.53.16
+      }
+      zone 富山工場-ライン2 {
+        toy_plc2[PLC-2] :plc, 172.17.53.20
+        toy_rio2[リモートIO-2] :rtu, 172.17.53.21
+        toy_drv2[ドライブ-2] :drive, 172.17.53.22
+        toy_rob2[ロボット-2] :robot, 172.17.53.23
+        toy_sen2[センサ群-2] :sensor, 172.17.53.24
+        toy_cnc2[CNC-2] :cnc, 172.17.53.25
+        toy_gw2[セルGW-2] :gateway, 172.17.53.26
+      }
+      zone 富山工場-安全計装 {
+        toy_sis[SIS] :sis, 172.18.53.1
+      }
+      fence toy_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 浜松工場 {
+      zone 浜松工場-情報LAN {
+        ham_itfw[IT-FW] :firewall, FortiOS, 10.54.0.1
+        ham_itsw[IT-SW] :switch, 10.54.0.2
+        ham_mes[MES] :server, RHEL9, 10.54.0.21
+        ham_erp[ERP連携] :server, WinSv2022, 10.54.0.22
+        ham_opc1[事務1] :pc, Win11, vlan 300
+        ham_opc2[事務2] :pc, Win11, vlan 300
+        ham_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 浜松工場-監視室 {
+        ham_scada[SCADA] :scada, WinSv2019, 172.16.54.10
+        ham_hist[Historian] :historian, WinSv2019, 172.16.54.11
+        ham_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.54.21
+        ham_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.54.22
+        ham_ews[EWS] :ews, Win10, 172.16.54.30
+        ham_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.54.12
+        ham_diode[データダイオード] :diode, 172.16.54.99
+        bus ham_ctlbus[制御LAN] :vlan 404, 172.16.54.0/24
+      }
+      zone 浜松工場-ライン1 {
+        ham_plc1[PLC-1] :plc, 172.17.54.10
+        ham_rio1[リモートIO-1] :rtu, 172.17.54.11
+        ham_drv1[ドライブ-1] :drive, 172.17.54.12
+        ham_rob1[ロボット-1] :robot, 172.17.54.13
+        ham_sen1[センサ群-1] :sensor, 172.17.54.14
+        ham_cnc1[CNC-1] :cnc, 172.17.54.15
+        ham_gw1[セルGW-1] :gateway, 172.17.54.16
+      }
+      zone 浜松工場-ライン2 {
+        ham_plc2[PLC-2] :plc, 172.17.54.20
+        ham_rio2[リモートIO-2] :rtu, 172.17.54.21
+        ham_drv2[ドライブ-2] :drive, 172.17.54.22
+        ham_rob2[ロボット-2] :robot, 172.17.54.23
+        ham_sen2[センサ群-2] :sensor, 172.17.54.24
+        ham_cnc2[CNC-2] :cnc, 172.17.54.25
+        ham_gw2[セルGW-2] :gateway, 172.17.54.26
+      }
+      zone 浜松工場-ライン3 {
+        ham_plc3[PLC-3] :plc, 172.17.54.30
+        ham_rio3[リモートIO-3] :rtu, 172.17.54.31
+        ham_drv3[ドライブ-3] :drive, 172.17.54.32
+        ham_rob3[ロボット-3] :robot, 172.17.54.33
+        ham_sen3[センサ群-3] :sensor, 172.17.54.34
+        ham_cnc3[CNC-3] :cnc, 172.17.54.35
+        ham_gw3[セルGW-3] :gateway, 172.17.54.36
+      }
+      zone 浜松工場-安全計装 {
+        ham_sis[SIS] :sis, 172.18.54.1
+      }
+      fence ham_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 四日市工場 {
+      zone 四日市工場-情報LAN {
+        yok_itfw[IT-FW] :firewall, FortiOS, 10.55.0.1
+        yok_itsw[IT-SW] :switch, 10.55.0.2
+        yok_mes[MES] :server, RHEL9, 10.55.0.21
+        yok_erp[ERP連携] :server, WinSv2022, 10.55.0.22
+        yok_opc1[事務1] :pc, Win11, vlan 300
+        yok_opc2[事務2] :pc, Win11, vlan 300
+        yok_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 四日市工場-監視室 {
+        yok_scada[SCADA] :scada, WinSv2019, 172.16.55.10
+        yok_hist[Historian] :historian, WinSv2019, 172.16.55.11
+        yok_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.55.21
+        yok_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.55.22
+        yok_ews[EWS] :ews, Win10, 172.16.55.30
+        yok_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.55.12
+        yok_diode[データダイオード] :diode, 172.16.55.99
+        bus yok_ctlbus[制御LAN] :vlan 405, 172.16.55.0/24
+      }
+      zone 四日市工場-ライン1 {
+        yok_plc1[PLC-1] :plc, 172.17.55.10
+        yok_rio1[リモートIO-1] :rtu, 172.17.55.11
+        yok_drv1[ドライブ-1] :drive, 172.17.55.12
+        yok_rob1[ロボット-1] :robot, 172.17.55.13
+        yok_sen1[センサ群-1] :sensor, 172.17.55.14
+        yok_cnc1[CNC-1] :cnc, 172.17.55.15
+        yok_gw1[セルGW-1] :gateway, 172.17.55.16
+      }
+      zone 四日市工場-ライン2 {
+        yok_plc2[PLC-2] :plc, 172.17.55.20
+        yok_rio2[リモートIO-2] :rtu, 172.17.55.21
+        yok_drv2[ドライブ-2] :drive, 172.17.55.22
+        yok_rob2[ロボット-2] :robot, 172.17.55.23
+        yok_sen2[センサ群-2] :sensor, 172.17.55.24
+        yok_cnc2[CNC-2] :cnc, 172.17.55.25
+        yok_gw2[セルGW-2] :gateway, 172.17.55.26
+      }
+      zone 四日市工場-安全計装 {
+        yok_sis[SIS] :sis, 172.18.55.1
+      }
+      fence yok_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 倉敷工場 {
+      zone 倉敷工場-情報LAN {
+        kur_itfw[IT-FW] :firewall, FortiOS, 10.56.0.1
+        kur_itsw[IT-SW] :switch, 10.56.0.2
+        kur_mes[MES] :server, RHEL9, 10.56.0.21
+        kur_erp[ERP連携] :server, WinSv2022, 10.56.0.22
+        kur_opc1[事務1] :pc, Win11, vlan 300
+        kur_opc2[事務2] :pc, Win11, vlan 300
+        kur_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 倉敷工場-監視室 {
+        kur_scada[SCADA] :scada, WinSv2019, 172.16.56.10
+        kur_hist[Historian] :historian, WinSv2019, 172.16.56.11
+        kur_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.56.21
+        kur_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.56.22
+        kur_ews[EWS] :ews, Win10, 172.16.56.30
+        kur_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.56.12
+        kur_diode[データダイオード] :diode, 172.16.56.99
+        bus kur_ctlbus[制御LAN] :vlan 406, 172.16.56.0/24
+      }
+      zone 倉敷工場-ライン1 {
+        kur_plc1[PLC-1] :plc, 172.17.56.10
+        kur_rio1[リモートIO-1] :rtu, 172.17.56.11
+        kur_drv1[ドライブ-1] :drive, 172.17.56.12
+        kur_rob1[ロボット-1] :robot, 172.17.56.13
+        kur_sen1[センサ群-1] :sensor, 172.17.56.14
+        kur_cnc1[CNC-1] :cnc, 172.17.56.15
+        kur_gw1[セルGW-1] :gateway, 172.17.56.16
+      }
+      zone 倉敷工場-ライン2 {
+        kur_plc2[PLC-2] :plc, 172.17.56.20
+        kur_rio2[リモートIO-2] :rtu, 172.17.56.21
+        kur_drv2[ドライブ-2] :drive, 172.17.56.22
+        kur_rob2[ロボット-2] :robot, 172.17.56.23
+        kur_sen2[センサ群-2] :sensor, 172.17.56.24
+        kur_cnc2[CNC-2] :cnc, 172.17.56.25
+        kur_gw2[セルGW-2] :gateway, 172.17.56.26
+      }
+      zone 倉敷工場-安全計装 {
+        kur_sis[SIS] :sis, 172.18.56.1
+      }
+      fence kur_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 熊本工場 {
+      zone 熊本工場-情報LAN {
+        kum_itfw[IT-FW] :firewall, FortiOS, 10.57.0.1
+        kum_itsw[IT-SW] :switch, 10.57.0.2
+        kum_mes[MES] :server, RHEL9, 10.57.0.21
+        kum_erp[ERP連携] :server, WinSv2022, 10.57.0.22
+        kum_opc1[事務1] :pc, Win11, vlan 300
+        kum_opc2[事務2] :pc, Win11, vlan 300
+        kum_opc3[事務3] :pc, Win11, vlan 300
+      }
+      zone 熊本工場-監視室 {
+        kum_scada[SCADA] :scada, WinSv2019, 172.16.57.10
+        kum_hist[Historian] :historian, WinSv2019, 172.16.57.11
+        kum_hmi1[HMI-1] :hmi, Win10 IoT, 172.16.57.21
+        kum_hmi2[HMI-2] :hmi, Win10 IoT, 172.16.57.22
+        kum_ews[EWS] :ews, Win10, 172.16.57.30
+        kum_hist2[Historian-Mirror] :historian, WinSv2019, 172.16.57.12
+        kum_diode[データダイオード] :diode, 172.16.57.99
+        bus kum_ctlbus[制御LAN] :vlan 407, 172.16.57.0/24
+      }
+      zone 熊本工場-ライン1 {
+        kum_plc1[PLC-1] :plc, 172.17.57.10
+        kum_rio1[リモートIO-1] :rtu, 172.17.57.11
+        kum_drv1[ドライブ-1] :drive, 172.17.57.12
+        kum_rob1[ロボット-1] :robot, 172.17.57.13
+        kum_sen1[センサ群-1] :sensor, 172.17.57.14
+        kum_cnc1[CNC-1] :cnc, 172.17.57.15
+        kum_gw1[セルGW-1] :gateway, 172.17.57.16
+      }
+      zone 熊本工場-ライン2 {
+        kum_plc2[PLC-2] :plc, 172.17.57.20
+        kum_rio2[リモートIO-2] :rtu, 172.17.57.21
+        kum_drv2[ドライブ-2] :drive, 172.17.57.22
+        kum_rob2[ロボット-2] :robot, 172.17.57.23
+        kum_sen2[センサ群-2] :sensor, 172.17.57.24
+        kum_cnc2[CNC-2] :cnc, 172.17.57.25
+        kum_gw2[セルGW-2] :gateway, 172.17.57.26
+      }
+      zone 熊本工場-安全計装 {
+        kum_sis[SIS] :sis, 172.18.57.1
+      }
+      fence kum_fence[保守分界（当社/ベンダー）] :v
+    }
+    zone 旭川支店 {
+      asa_rt[ルータ] :router, 192.168.1.1
+      asa_utm[UTM] :firewall, 192.168.1.2
+      asa_sw[SW] :access, 192.168.1.3
+      asa_ap[AP] :ap, 192.168.1.4
+      asa_nas[NAS] :storage, 192.168.1.5
+      asa_prn[複合機] :printer, 192.168.1.6
+      asa_tel[電話GW] :gateway, 192.168.1.7
+      asa_pc1[PC島1] :pc, Win11
+      asa_pc2[PC島2] :pc, Win11
+      asa_pc3[PC島3] :pc, Win11
+      asa_pc4[PC島4] :pc, Win11
+      asa_pc5[PC島5] :pc, Win11
+      asa_pc6[PC島6] :pc, Win11
+      asa_pc7[PC島7] :pc, Win11
+      asa_pc8[PC島8] :pc, Win11
+      asa_pc9[PC島9] :pc, Win11
+      asa_pc10[PC島10] :pc, Win11
+      asa_pc11[PC島11] :pc, Win11
+      asa_pc12[PC島12] :pc, Win11
+      asa_pc13[PC島13] :pc, Win11
+    }
+    zone 青森支店 {
+      aom_rt[ルータ] :router, 192.168.2.1
+      aom_utm[UTM] :firewall, 192.168.2.2
+      aom_sw[SW] :access, 192.168.2.3
+      aom_ap[AP] :ap, 192.168.2.4
+      aom_nas[NAS] :storage, 192.168.2.5
+      aom_prn[複合機] :printer, 192.168.2.6
+      aom_tel[電話GW] :gateway, 192.168.2.7
+      aom_pc1[PC島1] :pc, Win11
+      aom_pc2[PC島2] :pc, Win11
+      aom_pc3[PC島3] :pc, Win11
+      aom_pc4[PC島4] :pc, Win11
+      aom_pc5[PC島5] :pc, Win11
+      aom_pc6[PC島6] :pc, Win11
+      aom_pc7[PC島7] :pc, Win11
+      aom_pc8[PC島8] :pc, Win11
+      aom_pc9[PC島9] :pc, Win11
+      aom_pc10[PC島10] :pc, Win11
+      aom_pc11[PC島11] :pc, Win11
+      aom_pc12[PC島12] :pc, Win11
+      aom_pc13[PC島13] :pc, Win11
+      aom_pc14[PC島14] :pc, Win11
+    }
+    zone 秋田支店 {
+      aki_rt[ルータ] :router, 192.168.3.1
+      aki_utm[UTM] :firewall, 192.168.3.2
+      aki_sw[SW] :access, 192.168.3.3
+      aki_ap[AP] :ap, 192.168.3.4
+      aki_nas[NAS] :storage, 192.168.3.5
+      aki_prn[複合機] :printer, 192.168.3.6
+      aki_tel[電話GW] :gateway, 192.168.3.7
+      aki_pc1[PC島1] :pc, Win11
+      aki_pc2[PC島2] :pc, Win11
+      aki_pc3[PC島3] :pc, Win11
+      aki_pc4[PC島4] :pc, Win11
+      aki_pc5[PC島5] :pc, Win11
+      aki_pc6[PC島6] :pc, Win11
+      aki_pc7[PC島7] :pc, Win11
+      aki_pc8[PC島8] :pc, Win11
+      aki_pc9[PC島9] :pc, Win11
+      aki_pc10[PC島10] :pc, Win11
+      aki_pc11[PC島11] :pc, Win11
+      aki_pc12[PC島12] :pc, Win11
+      aki_pc13[PC島13] :pc, Win11
+      aki_pc14[PC島14] :pc, Win11
+      aki_pc15[PC島15] :pc, Win11
+    }
+    zone 盛岡支店 {
+      mor_rt[ルータ] :router, 192.168.4.1
+      mor_utm[UTM] :firewall, 192.168.4.2
+      mor_sw[SW] :access, 192.168.4.3
+      mor_ap[AP] :ap, 192.168.4.4
+      mor_nas[NAS] :storage, 192.168.4.5
+      mor_prn[複合機] :printer, 192.168.4.6
+      mor_tel[電話GW] :gateway, 192.168.4.7
+      mor_pc1[PC島1] :pc, Win11
+      mor_pc2[PC島2] :pc, Win11
+      mor_pc3[PC島3] :pc, Win11
+      mor_pc4[PC島4] :pc, Win11
+      mor_pc5[PC島5] :pc, Win11
+      mor_pc6[PC島6] :pc, Win11
+      mor_pc7[PC島7] :pc, Win11
+      mor_pc8[PC島8] :pc, Win11
+      mor_pc9[PC島9] :pc, Win11
+      mor_pc10[PC島10] :pc, Win11
+      mor_pc11[PC島11] :pc, Win11
+      mor_pc12[PC島12] :pc, Win11
+      mor_pc13[PC島13] :pc, Win11
+      mor_pc14[PC島14] :pc, Win11
+      mor_pc15[PC島15] :pc, Win11
+      mor_pc16[PC島16] :pc, Win11
+    }
+    zone 山形支店 {
+      yam_rt[ルータ] :router, 192.168.5.1
+      yam_utm[UTM] :firewall, 192.168.5.2
+      yam_sw[SW] :access, 192.168.5.3
+      yam_ap[AP] :ap, 192.168.5.4
+      yam_nas[NAS] :storage, 192.168.5.5
+      yam_prn[複合機] :printer, 192.168.5.6
+      yam_tel[電話GW] :gateway, 192.168.5.7
+      yam_pc1[PC島1] :pc, Win11
+      yam_pc2[PC島2] :pc, Win11
+      yam_pc3[PC島3] :pc, Win11
+      yam_pc4[PC島4] :pc, Win11
+      yam_pc5[PC島5] :pc, Win11
+      yam_pc6[PC島6] :pc, Win11
+      yam_pc7[PC島7] :pc, Win11
+      yam_pc8[PC島8] :pc, Win11
+      yam_pc9[PC島9] :pc, Win11
+      yam_pc10[PC島10] :pc, Win11
+      yam_pc11[PC島11] :pc, Win11
+      yam_pc12[PC島12] :pc, Win11
+      yam_pc13[PC島13] :pc, Win11
+      yam_pc14[PC島14] :pc, Win11
+      yam_pc15[PC島15] :pc, Win11
+      yam_pc16[PC島16] :pc, Win11
+      yam_pc17[PC島17] :pc, Win11
+    }
+    zone 郡山支店 {
+      kor_rt[ルータ] :router, 192.168.6.1
+      kor_utm[UTM] :firewall, 192.168.6.2
+      kor_sw[SW] :access, 192.168.6.3
+      kor_ap[AP] :ap, 192.168.6.4
+      kor_nas[NAS] :storage, 192.168.6.5
+      kor_prn[複合機] :printer, 192.168.6.6
+      kor_tel[電話GW] :gateway, 192.168.6.7
+      kor_pc1[PC島1] :pc, Win11
+      kor_pc2[PC島2] :pc, Win11
+      kor_pc3[PC島3] :pc, Win11
+      kor_pc4[PC島4] :pc, Win11
+      kor_pc5[PC島5] :pc, Win11
+      kor_pc6[PC島6] :pc, Win11
+      kor_pc7[PC島7] :pc, Win11
+      kor_pc8[PC島8] :pc, Win11
+      kor_pc9[PC島9] :pc, Win11
+      kor_pc10[PC島10] :pc, Win11
+      kor_pc11[PC島11] :pc, Win11
+      kor_pc12[PC島12] :pc, Win11
+      kor_pc13[PC島13] :pc, Win11
+    }
+    zone 新潟支店 {
+      nii_rt[ルータ] :router, 192.168.7.1
+      nii_utm[UTM] :firewall, 192.168.7.2
+      nii_sw[SW] :access, 192.168.7.3
+      nii_ap[AP] :ap, 192.168.7.4
+      nii_nas[NAS] :storage, 192.168.7.5
+      nii_prn[複合機] :printer, 192.168.7.6
+      nii_tel[電話GW] :gateway, 192.168.7.7
+      nii_pc1[PC島1] :pc, Win11
+      nii_pc2[PC島2] :pc, Win11
+      nii_pc3[PC島3] :pc, Win11
+      nii_pc4[PC島4] :pc, Win11
+      nii_pc5[PC島5] :pc, Win11
+      nii_pc6[PC島6] :pc, Win11
+      nii_pc7[PC島7] :pc, Win11
+      nii_pc8[PC島8] :pc, Win11
+      nii_pc9[PC島9] :pc, Win11
+      nii_pc10[PC島10] :pc, Win11
+      nii_pc11[PC島11] :pc, Win11
+      nii_pc12[PC島12] :pc, Win11
+      nii_pc13[PC島13] :pc, Win11
+      nii_pc14[PC島14] :pc, Win11
+    }
+    zone 宇都宮支店 {
+      utu_rt[ルータ] :router, 192.168.8.1
+      utu_utm[UTM] :firewall, 192.168.8.2
+      utu_sw[SW] :access, 192.168.8.3
+      utu_ap[AP] :ap, 192.168.8.4
+      utu_nas[NAS] :storage, 192.168.8.5
+      utu_prn[複合機] :printer, 192.168.8.6
+      utu_tel[電話GW] :gateway, 192.168.8.7
+      utu_pc1[PC島1] :pc, Win11
+      utu_pc2[PC島2] :pc, Win11
+      utu_pc3[PC島3] :pc, Win11
+      utu_pc4[PC島4] :pc, Win11
+      utu_pc5[PC島5] :pc, Win11
+      utu_pc6[PC島6] :pc, Win11
+      utu_pc7[PC島7] :pc, Win11
+      utu_pc8[PC島8] :pc, Win11
+      utu_pc9[PC島9] :pc, Win11
+      utu_pc10[PC島10] :pc, Win11
+      utu_pc11[PC島11] :pc, Win11
+      utu_pc12[PC島12] :pc, Win11
+      utu_pc13[PC島13] :pc, Win11
+      utu_pc14[PC島14] :pc, Win11
+      utu_pc15[PC島15] :pc, Win11
+    }
+    zone さいたま支店 {
+      sai_rt[ルータ] :router, 192.168.9.1
+      sai_utm[UTM] :firewall, 192.168.9.2
+      sai_sw[SW] :access, 192.168.9.3
+      sai_ap[AP] :ap, 192.168.9.4
+      sai_nas[NAS] :storage, 192.168.9.5
+      sai_prn[複合機] :printer, 192.168.9.6
+      sai_tel[電話GW] :gateway, 192.168.9.7
+      sai_pc1[PC島1] :pc, Win11
+      sai_pc2[PC島2] :pc, Win11
+      sai_pc3[PC島3] :pc, Win11
+      sai_pc4[PC島4] :pc, Win11
+      sai_pc5[PC島5] :pc, Win11
+      sai_pc6[PC島6] :pc, Win11
+      sai_pc7[PC島7] :pc, Win11
+      sai_pc8[PC島8] :pc, Win11
+      sai_pc9[PC島9] :pc, Win11
+      sai_pc10[PC島10] :pc, Win11
+      sai_pc11[PC島11] :pc, Win11
+      sai_pc12[PC島12] :pc, Win11
+      sai_pc13[PC島13] :pc, Win11
+      sai_pc14[PC島14] :pc, Win11
+      sai_pc15[PC島15] :pc, Win11
+      sai_pc16[PC島16] :pc, Win11
+    }
+    zone 千葉支店 {
+      chb_rt[ルータ] :router, 192.168.10.1
+      chb_utm[UTM] :firewall, 192.168.10.2
+      chb_sw[SW] :access, 192.168.10.3
+      chb_ap[AP] :ap, 192.168.10.4
+      chb_nas[NAS] :storage, 192.168.10.5
+      chb_prn[複合機] :printer, 192.168.10.6
+      chb_tel[電話GW] :gateway, 192.168.10.7
+      chb_pc1[PC島1] :pc, Win11
+      chb_pc2[PC島2] :pc, Win11
+      chb_pc3[PC島3] :pc, Win11
+      chb_pc4[PC島4] :pc, Win11
+      chb_pc5[PC島5] :pc, Win11
+      chb_pc6[PC島6] :pc, Win11
+      chb_pc7[PC島7] :pc, Win11
+      chb_pc8[PC島8] :pc, Win11
+      chb_pc9[PC島9] :pc, Win11
+      chb_pc10[PC島10] :pc, Win11
+      chb_pc11[PC島11] :pc, Win11
+      chb_pc12[PC島12] :pc, Win11
+      chb_pc13[PC島13] :pc, Win11
+      chb_pc14[PC島14] :pc, Win11
+      chb_pc15[PC島15] :pc, Win11
+      chb_pc16[PC島16] :pc, Win11
+      chb_pc17[PC島17] :pc, Win11
+    }
+    zone 横浜支店 {
+      ykh_rt[ルータ] :router, 192.168.11.1
+      ykh_utm[UTM] :firewall, 192.168.11.2
+      ykh_sw[SW] :access, 192.168.11.3
+      ykh_ap[AP] :ap, 192.168.11.4
+      ykh_nas[NAS] :storage, 192.168.11.5
+      ykh_prn[複合機] :printer, 192.168.11.6
+      ykh_tel[電話GW] :gateway, 192.168.11.7
+      ykh_pc1[PC島1] :pc, Win11
+      ykh_pc2[PC島2] :pc, Win11
+      ykh_pc3[PC島3] :pc, Win11
+      ykh_pc4[PC島4] :pc, Win11
+      ykh_pc5[PC島5] :pc, Win11
+      ykh_pc6[PC島6] :pc, Win11
+      ykh_pc7[PC島7] :pc, Win11
+      ykh_pc8[PC島8] :pc, Win11
+      ykh_pc9[PC島9] :pc, Win11
+      ykh_pc10[PC島10] :pc, Win11
+      ykh_pc11[PC島11] :pc, Win11
+      ykh_pc12[PC島12] :pc, Win11
+      ykh_pc13[PC島13] :pc, Win11
+    }
+    zone 静岡支店 {
+      siz_rt[ルータ] :router, 192.168.12.1
+      siz_utm[UTM] :firewall, 192.168.12.2
+      siz_sw[SW] :access, 192.168.12.3
+      siz_ap[AP] :ap, 192.168.12.4
+      siz_nas[NAS] :storage, 192.168.12.5
+      siz_prn[複合機] :printer, 192.168.12.6
+      siz_tel[電話GW] :gateway, 192.168.12.7
+      siz_pc1[PC島1] :pc, Win11
+      siz_pc2[PC島2] :pc, Win11
+      siz_pc3[PC島3] :pc, Win11
+      siz_pc4[PC島4] :pc, Win11
+      siz_pc5[PC島5] :pc, Win11
+      siz_pc6[PC島6] :pc, Win11
+      siz_pc7[PC島7] :pc, Win11
+      siz_pc8[PC島8] :pc, Win11
+      siz_pc9[PC島9] :pc, Win11
+      siz_pc10[PC島10] :pc, Win11
+      siz_pc11[PC島11] :pc, Win11
+      siz_pc12[PC島12] :pc, Win11
+      siz_pc13[PC島13] :pc, Win11
+      siz_pc14[PC島14] :pc, Win11
+    }
+    zone 金沢支店 {
+      kan_rt[ルータ] :router, 192.168.13.1
+      kan_utm[UTM] :firewall, 192.168.13.2
+      kan_sw[SW] :access, 192.168.13.3
+      kan_ap[AP] :ap, 192.168.13.4
+      kan_nas[NAS] :storage, 192.168.13.5
+      kan_prn[複合機] :printer, 192.168.13.6
+      kan_tel[電話GW] :gateway, 192.168.13.7
+      kan_pc1[PC島1] :pc, Win11
+      kan_pc2[PC島2] :pc, Win11
+      kan_pc3[PC島3] :pc, Win11
+      kan_pc4[PC島4] :pc, Win11
+      kan_pc5[PC島5] :pc, Win11
+      kan_pc6[PC島6] :pc, Win11
+      kan_pc7[PC島7] :pc, Win11
+      kan_pc8[PC島8] :pc, Win11
+      kan_pc9[PC島9] :pc, Win11
+      kan_pc10[PC島10] :pc, Win11
+      kan_pc11[PC島11] :pc, Win11
+      kan_pc12[PC島12] :pc, Win11
+      kan_pc13[PC島13] :pc, Win11
+      kan_pc14[PC島14] :pc, Win11
+      kan_pc15[PC島15] :pc, Win11
+    }
+    zone 長野支店 {
+      ngn_rt[ルータ] :router, 192.168.14.1
+      ngn_utm[UTM] :firewall, 192.168.14.2
+      ngn_sw[SW] :access, 192.168.14.3
+      ngn_ap[AP] :ap, 192.168.14.4
+      ngn_nas[NAS] :storage, 192.168.14.5
+      ngn_prn[複合機] :printer, 192.168.14.6
+      ngn_tel[電話GW] :gateway, 192.168.14.7
+      ngn_pc1[PC島1] :pc, Win11
+      ngn_pc2[PC島2] :pc, Win11
+      ngn_pc3[PC島3] :pc, Win11
+      ngn_pc4[PC島4] :pc, Win11
+      ngn_pc5[PC島5] :pc, Win11
+      ngn_pc6[PC島6] :pc, Win11
+      ngn_pc7[PC島7] :pc, Win11
+      ngn_pc8[PC島8] :pc, Win11
+      ngn_pc9[PC島9] :pc, Win11
+      ngn_pc10[PC島10] :pc, Win11
+      ngn_pc11[PC島11] :pc, Win11
+      ngn_pc12[PC島12] :pc, Win11
+      ngn_pc13[PC島13] :pc, Win11
+      ngn_pc14[PC島14] :pc, Win11
+      ngn_pc15[PC島15] :pc, Win11
+      ngn_pc16[PC島16] :pc, Win11
+    }
+    zone 岐阜支店 {
+      gif_rt[ルータ] :router, 192.168.15.1
+      gif_utm[UTM] :firewall, 192.168.15.2
+      gif_sw[SW] :access, 192.168.15.3
+      gif_ap[AP] :ap, 192.168.15.4
+      gif_nas[NAS] :storage, 192.168.15.5
+      gif_prn[複合機] :printer, 192.168.15.6
+      gif_tel[電話GW] :gateway, 192.168.15.7
+      gif_pc1[PC島1] :pc, Win11
+      gif_pc2[PC島2] :pc, Win11
+      gif_pc3[PC島3] :pc, Win11
+      gif_pc4[PC島4] :pc, Win11
+      gif_pc5[PC島5] :pc, Win11
+      gif_pc6[PC島6] :pc, Win11
+      gif_pc7[PC島7] :pc, Win11
+      gif_pc8[PC島8] :pc, Win11
+      gif_pc9[PC島9] :pc, Win11
+      gif_pc10[PC島10] :pc, Win11
+      gif_pc11[PC島11] :pc, Win11
+      gif_pc12[PC島12] :pc, Win11
+      gif_pc13[PC島13] :pc, Win11
+      gif_pc14[PC島14] :pc, Win11
+      gif_pc15[PC島15] :pc, Win11
+      gif_pc16[PC島16] :pc, Win11
+      gif_pc17[PC島17] :pc, Win11
+    }
+    zone 京都支店 {
+      kyo_rt[ルータ] :router, 192.168.16.1
+      kyo_utm[UTM] :firewall, 192.168.16.2
+      kyo_sw[SW] :access, 192.168.16.3
+      kyo_ap[AP] :ap, 192.168.16.4
+      kyo_nas[NAS] :storage, 192.168.16.5
+      kyo_prn[複合機] :printer, 192.168.16.6
+      kyo_tel[電話GW] :gateway, 192.168.16.7
+      kyo_pc1[PC島1] :pc, Win11
+      kyo_pc2[PC島2] :pc, Win11
+      kyo_pc3[PC島3] :pc, Win11
+      kyo_pc4[PC島4] :pc, Win11
+      kyo_pc5[PC島5] :pc, Win11
+      kyo_pc6[PC島6] :pc, Win11
+      kyo_pc7[PC島7] :pc, Win11
+      kyo_pc8[PC島8] :pc, Win11
+      kyo_pc9[PC島9] :pc, Win11
+      kyo_pc10[PC島10] :pc, Win11
+      kyo_pc11[PC島11] :pc, Win11
+      kyo_pc12[PC島12] :pc, Win11
+      kyo_pc13[PC島13] :pc, Win11
+    }
+    zone 神戸支店 {
+      kob_rt[ルータ] :router, 192.168.17.1
+      kob_utm[UTM] :firewall, 192.168.17.2
+      kob_sw[SW] :access, 192.168.17.3
+      kob_ap[AP] :ap, 192.168.17.4
+      kob_nas[NAS] :storage, 192.168.17.5
+      kob_prn[複合機] :printer, 192.168.17.6
+      kob_tel[電話GW] :gateway, 192.168.17.7
+      kob_pc1[PC島1] :pc, Win11
+      kob_pc2[PC島2] :pc, Win11
+      kob_pc3[PC島3] :pc, Win11
+      kob_pc4[PC島4] :pc, Win11
+      kob_pc5[PC島5] :pc, Win11
+      kob_pc6[PC島6] :pc, Win11
+      kob_pc7[PC島7] :pc, Win11
+      kob_pc8[PC島8] :pc, Win11
+      kob_pc9[PC島9] :pc, Win11
+      kob_pc10[PC島10] :pc, Win11
+      kob_pc11[PC島11] :pc, Win11
+      kob_pc12[PC島12] :pc, Win11
+      kob_pc13[PC島13] :pc, Win11
+      kob_pc14[PC島14] :pc, Win11
+    }
+    zone 岡山支店 {
+      oka_rt[ルータ] :router, 192.168.18.1
+      oka_utm[UTM] :firewall, 192.168.18.2
+      oka_sw[SW] :access, 192.168.18.3
+      oka_ap[AP] :ap, 192.168.18.4
+      oka_nas[NAS] :storage, 192.168.18.5
+      oka_prn[複合機] :printer, 192.168.18.6
+      oka_tel[電話GW] :gateway, 192.168.18.7
+      oka_pc1[PC島1] :pc, Win11
+      oka_pc2[PC島2] :pc, Win11
+      oka_pc3[PC島3] :pc, Win11
+      oka_pc4[PC島4] :pc, Win11
+      oka_pc5[PC島5] :pc, Win11
+      oka_pc6[PC島6] :pc, Win11
+      oka_pc7[PC島7] :pc, Win11
+      oka_pc8[PC島8] :pc, Win11
+      oka_pc9[PC島9] :pc, Win11
+      oka_pc10[PC島10] :pc, Win11
+      oka_pc11[PC島11] :pc, Win11
+      oka_pc12[PC島12] :pc, Win11
+      oka_pc13[PC島13] :pc, Win11
+      oka_pc14[PC島14] :pc, Win11
+      oka_pc15[PC島15] :pc, Win11
+    }
+    zone 松山支店 {
+      mat_rt[ルータ] :router, 192.168.19.1
+      mat_utm[UTM] :firewall, 192.168.19.2
+      mat_sw[SW] :access, 192.168.19.3
+      mat_ap[AP] :ap, 192.168.19.4
+      mat_nas[NAS] :storage, 192.168.19.5
+      mat_prn[複合機] :printer, 192.168.19.6
+      mat_tel[電話GW] :gateway, 192.168.19.7
+      mat_pc1[PC島1] :pc, Win11
+      mat_pc2[PC島2] :pc, Win11
+      mat_pc3[PC島3] :pc, Win11
+      mat_pc4[PC島4] :pc, Win11
+      mat_pc5[PC島5] :pc, Win11
+      mat_pc6[PC島6] :pc, Win11
+      mat_pc7[PC島7] :pc, Win11
+      mat_pc8[PC島8] :pc, Win11
+      mat_pc9[PC島9] :pc, Win11
+      mat_pc10[PC島10] :pc, Win11
+      mat_pc11[PC島11] :pc, Win11
+      mat_pc12[PC島12] :pc, Win11
+      mat_pc13[PC島13] :pc, Win11
+      mat_pc14[PC島14] :pc, Win11
+      mat_pc15[PC島15] :pc, Win11
+      mat_pc16[PC島16] :pc, Win11
+    }
+    zone 高知支店 {
+      koc_rt[ルータ] :router, 192.168.20.1
+      koc_utm[UTM] :firewall, 192.168.20.2
+      koc_sw[SW] :access, 192.168.20.3
+      koc_ap[AP] :ap, 192.168.20.4
+      koc_nas[NAS] :storage, 192.168.20.5
+      koc_prn[複合機] :printer, 192.168.20.6
+      koc_tel[電話GW] :gateway, 192.168.20.7
+      koc_pc1[PC島1] :pc, Win11
+      koc_pc2[PC島2] :pc, Win11
+      koc_pc3[PC島3] :pc, Win11
+      koc_pc4[PC島4] :pc, Win11
+      koc_pc5[PC島5] :pc, Win11
+      koc_pc6[PC島6] :pc, Win11
+      koc_pc7[PC島7] :pc, Win11
+      koc_pc8[PC島8] :pc, Win11
+      koc_pc9[PC島9] :pc, Win11
+      koc_pc10[PC島10] :pc, Win11
+      koc_pc11[PC島11] :pc, Win11
+      koc_pc12[PC島12] :pc, Win11
+      koc_pc13[PC島13] :pc, Win11
+      koc_pc14[PC島14] :pc, Win11
+      koc_pc15[PC島15] :pc, Win11
+      koc_pc16[PC島16] :pc, Win11
+      koc_pc17[PC島17] :pc, Win11
+    }
+    zone 長崎支店 {
+      ngs_rt[ルータ] :router, 192.168.21.1
+      ngs_utm[UTM] :firewall, 192.168.21.2
+      ngs_sw[SW] :access, 192.168.21.3
+      ngs_ap[AP] :ap, 192.168.21.4
+      ngs_nas[NAS] :storage, 192.168.21.5
+      ngs_prn[複合機] :printer, 192.168.21.6
+      ngs_tel[電話GW] :gateway, 192.168.21.7
+      ngs_pc1[PC島1] :pc, Win11
+      ngs_pc2[PC島2] :pc, Win11
+      ngs_pc3[PC島3] :pc, Win11
+      ngs_pc4[PC島4] :pc, Win11
+      ngs_pc5[PC島5] :pc, Win11
+      ngs_pc6[PC島6] :pc, Win11
+      ngs_pc7[PC島7] :pc, Win11
+      ngs_pc8[PC島8] :pc, Win11
+      ngs_pc9[PC島9] :pc, Win11
+      ngs_pc10[PC島10] :pc, Win11
+      ngs_pc11[PC島11] :pc, Win11
+      ngs_pc12[PC島12] :pc, Win11
+      ngs_pc13[PC島13] :pc, Win11
+    }
+    zone 大分支店 {
+      oit_rt[ルータ] :router, 192.168.22.1
+      oit_utm[UTM] :firewall, 192.168.22.2
+      oit_sw[SW] :access, 192.168.22.3
+      oit_ap[AP] :ap, 192.168.22.4
+      oit_nas[NAS] :storage, 192.168.22.5
+      oit_prn[複合機] :printer, 192.168.22.6
+      oit_tel[電話GW] :gateway, 192.168.22.7
+      oit_pc1[PC島1] :pc, Win11
+      oit_pc2[PC島2] :pc, Win11
+      oit_pc3[PC島3] :pc, Win11
+      oit_pc4[PC島4] :pc, Win11
+      oit_pc5[PC島5] :pc, Win11
+      oit_pc6[PC島6] :pc, Win11
+      oit_pc7[PC島7] :pc, Win11
+      oit_pc8[PC島8] :pc, Win11
+      oit_pc9[PC島9] :pc, Win11
+      oit_pc10[PC島10] :pc, Win11
+      oit_pc11[PC島11] :pc, Win11
+      oit_pc12[PC島12] :pc, Win11
+      oit_pc13[PC島13] :pc, Win11
+      oit_pc14[PC島14] :pc, Win11
+    }
+    zone 宮崎支店 {
+      miy_rt[ルータ] :router, 192.168.23.1
+      miy_utm[UTM] :firewall, 192.168.23.2
+      miy_sw[SW] :access, 192.168.23.3
+      miy_ap[AP] :ap, 192.168.23.4
+      miy_nas[NAS] :storage, 192.168.23.5
+      miy_prn[複合機] :printer, 192.168.23.6
+      miy_tel[電話GW] :gateway, 192.168.23.7
+      miy_pc1[PC島1] :pc, Win11
+      miy_pc2[PC島2] :pc, Win11
+      miy_pc3[PC島3] :pc, Win11
+      miy_pc4[PC島4] :pc, Win11
+      miy_pc5[PC島5] :pc, Win11
+      miy_pc6[PC島6] :pc, Win11
+      miy_pc7[PC島7] :pc, Win11
+      miy_pc8[PC島8] :pc, Win11
+      miy_pc9[PC島9] :pc, Win11
+      miy_pc10[PC島10] :pc, Win11
+      miy_pc11[PC島11] :pc, Win11
+      miy_pc12[PC島12] :pc, Win11
+      miy_pc13[PC島13] :pc, Win11
+      miy_pc14[PC島14] :pc, Win11
+      miy_pc15[PC島15] :pc, Win11
+    }
+    zone 那覇支店 {
+      nah_rt[ルータ] :router, 192.168.24.1
+      nah_utm[UTM] :firewall, 192.168.24.2
+      nah_sw[SW] :access, 192.168.24.3
+      nah_ap[AP] :ap, 192.168.24.4
+      nah_nas[NAS] :storage, 192.168.24.5
+      nah_prn[複合機] :printer, 192.168.24.6
+      nah_tel[電話GW] :gateway, 192.168.24.7
+      nah_pc1[PC島1] :pc, Win11
+      nah_pc2[PC島2] :pc, Win11
+      nah_pc3[PC島3] :pc, Win11
+      nah_pc4[PC島4] :pc, Win11
+      nah_pc5[PC島5] :pc, Win11
+      nah_pc6[PC島6] :pc, Win11
+      nah_pc7[PC島7] :pc, Win11
+      nah_pc8[PC島8] :pc, Win11
+      nah_pc9[PC島9] :pc, Win11
+      nah_pc10[PC島10] :pc, Win11
+      nah_pc11[PC島11] :pc, Win11
+      nah_pc12[PC島12] :pc, Win11
+      nah_pc13[PC島13] :pc, Win11
+      nah_pc14[PC島14] :pc, Win11
+      nah_pc15[PC島15] :pc, Win11
+      nah_pc16[PC島16] :pc, Win11
+    }
+    hub wan[全国WAN] :vlan 1, 10.0.0.0/8
+    hub h_hokkaido[道内網] :vlan 11
+    hub h_tohoku[東北網] :vlan 12
+    hub h_kanto[関東網] :vlan 13
+    hub h_chubu[中部網] :vlan 14
+    hub h_kinki[近畿網] :vlan 15
+    hub h_chushi[中四国網] :vlan 16
+    hub h_kyushu[九州網] :vlan 17
+    inet[インターネット] :cloud
+
+    aws_lb -- aws_vpc
+    cl_sv1 -- aws_vpc
+    cl_sv2 -- az_gw
+    cl_sv3 -- aws_vpc
+    cl_sv4 -- az_gw
+    cl_sv5 -- aws_vpc
+    cl_sv6 -- az_gw
+    cl_sv7 -- aws_vpc
+    cl_sv8 -- az_gw
+    hq_core1 -- hq_corebus
+    hq_core2 -- hq_corebus
+    hq_core1 -- hq_core2 :冗長, スタック
+    hq_fw1 -- hq_corebus
+    hq_fw2 -- hq_corebus
+    hq_wanrt -- hq_corebus
+    hq_sv1 -- hq_svbus
+    hq_sv2 -- hq_svbus
+    hq_sv3 -- hq_svbus
+    hq_sv4 -- hq_svbus
+    hq_sv5 -- hq_svbus
+    hq_sv6 -- hq_svbus
+    hq_sv7 -- hq_svbus
+    hq_sv8 -- hq_svbus
+    hq_sv9 -- hq_svbus
+    hq_sv10 -- hq_svbus
+    hq_sv11 -- hq_svbus
+    hq_sv12 -- hq_svbus
+    hq_sv13 -- hq_svbus
+    hq_sv14 -- hq_svbus
+    hq_sv15 -- hq_svbus
+    hq_sv16 -- hq_svbus
+    hq_sv17 -- hq_svbus
+    hq_sv18 -- hq_svbus
+    hq_sv19 -- hq_svbus
+    hq_sv20 -- hq_svbus
+    hq_sv21 -- hq_svbus
+    hq_sv22 -- hq_svbus
+    hq_sv23 -- hq_svbus
+    hq_sv24 -- hq_svbus
+    hq_sv25 -- hq_svbus
+    hq_sv26 -- hq_svbus
+    hq_sv27 -- hq_svbus
+    hq_sv28 -- hq_svbus
+    hq_sv29 -- hq_svbus
+    hq_sv30 -- hq_svbus
+    hq_sv31 -- hq_svbus
+    hq_sv32 -- hq_svbus
+    hq_sv33 -- hq_svbus
+    hq_sv34 -- hq_svbus
+    hq_sv35 -- hq_svbus
+    hq_sv36 -- hq_svbus
+    hq_sv37 -- hq_svbus
+    hq_sv38 -- hq_svbus
+    hq_sv39 -- hq_svbus
+    hq_sv40 -- hq_svbus
+    hq_svbus -- hq_core1 :幹線
+    hq_px -- hq_fw1
+    hq_web1 -- hq_px
+    hq_web2 -- hq_px
+    hq_mx -- hq_px
+    hq_fsw1 -- hq_core1 :vlan 101
+    hq_fap1 -- hq_fsw1
+    hq_fpc1_1 -- hq_fsw1
+    hq_fpc1_2 -- hq_fsw1
+    hq_fpc1_3 -- hq_fsw1
+    hq_fpc1_4 -- hq_fsw1
+    hq_fpc1_5 -- hq_fsw1
+    hq_fpc1_6 -- hq_fsw1
+    hq_fsw2 -- hq_core1 :vlan 102
+    hq_fap2 -- hq_fsw2
+    hq_fpc2_1 -- hq_fsw2
+    hq_fpc2_2 -- hq_fsw2
+    hq_fpc2_3 -- hq_fsw2
+    hq_fpc2_4 -- hq_fsw2
+    hq_fpc2_5 -- hq_fsw2
+    hq_fpc2_6 -- hq_fsw2
+    hq_fsw3 -- hq_core1 :vlan 103
+    hq_fap3 -- hq_fsw3
+    hq_fpc3_1 -- hq_fsw3
+    hq_fpc3_2 -- hq_fsw3
+    hq_fpc3_3 -- hq_fsw3
+    hq_fpc3_4 -- hq_fsw3
+    hq_fpc3_5 -- hq_fsw3
+    hq_fpc3_6 -- hq_fsw3
+    hq_fsw4 -- hq_core1 :vlan 104
+    hq_fap4 -- hq_fsw4
+    hq_fpc4_1 -- hq_fsw4
+    hq_fpc4_2 -- hq_fsw4
+    hq_fpc4_3 -- hq_fsw4
+    hq_fpc4_4 -- hq_fsw4
+    hq_fpc4_5 -- hq_fsw4
+    hq_fpc4_6 -- hq_fsw4
+    hq_wanrt -- h_kanto :冗長, 幹線
+    dr_core1 -- dr_corebus
+    dr_core2 -- dr_corebus
+    dr_core1 -- dr_core2 :冗長, スタック
+    dr_fw1 -- dr_corebus
+    dr_fw2 -- dr_corebus
+    dr_wanrt -- dr_corebus
+    dr_sv1 -- dr_svbus
+    dr_sv2 -- dr_svbus
+    dr_sv3 -- dr_svbus
+    dr_sv4 -- dr_svbus
+    dr_sv5 -- dr_svbus
+    dr_sv6 -- dr_svbus
+    dr_sv7 -- dr_svbus
+    dr_sv8 -- dr_svbus
+    dr_sv9 -- dr_svbus
+    dr_sv10 -- dr_svbus
+    dr_sv11 -- dr_svbus
+    dr_sv12 -- dr_svbus
+    dr_sv13 -- dr_svbus
+    dr_sv14 -- dr_svbus
+    dr_sv15 -- dr_svbus
+    dr_sv16 -- dr_svbus
+    dr_sv17 -- dr_svbus
+    dr_sv18 -- dr_svbus
+    dr_sv19 -- dr_svbus
+    dr_sv20 -- dr_svbus
+    dr_sv21 -- dr_svbus
+    dr_sv22 -- dr_svbus
+    dr_sv23 -- dr_svbus
+    dr_sv24 -- dr_svbus
+    dr_sv25 -- dr_svbus
+    dr_sv26 -- dr_svbus
+    dr_sv27 -- dr_svbus
+    dr_sv28 -- dr_svbus
+    dr_svbus -- dr_core1 :幹線
+    dr_px -- dr_fw1
+    dr_web1 -- dr_px
+    dr_web2 -- dr_px
+    dr_mx -- dr_px
+    dr_fsw1 -- dr_core1 :vlan 101
+    dr_fap1 -- dr_fsw1
+    dr_fpc1_1 -- dr_fsw1
+    dr_fpc1_2 -- dr_fsw1
+    dr_fpc1_3 -- dr_fsw1
+    dr_fpc1_4 -- dr_fsw1
+    dr_fpc1_5 -- dr_fsw1
+    dr_fpc1_6 -- dr_fsw1
+    dr_fsw2 -- dr_core1 :vlan 102
+    dr_fap2 -- dr_fsw2
+    dr_fpc2_1 -- dr_fsw2
+    dr_fpc2_2 -- dr_fsw2
+    dr_fpc2_3 -- dr_fsw2
+    dr_fpc2_4 -- dr_fsw2
+    dr_fpc2_5 -- dr_fsw2
+    dr_fpc2_6 -- dr_fsw2
+    dr_wanrt -- h_kinki :冗長, 幹線
+    sap_core -- sap_bus
+    sap_fw -- sap_bus
+    sap_rt -- sap_bus
+    sap_sv1 -- sap_bus
+    sap_sv2 -- sap_bus
+    sap_sv3 -- sap_bus
+    sap_sv4 -- sap_bus
+    sap_sv5 -- sap_bus
+    sap_sv6 -- sap_bus
+    sap_sv7 -- sap_bus
+    sap_sv8 -- sap_bus
+    sap_sv9 -- sap_bus
+    sap_sv10 -- sap_bus
+    sap_nas -- sap_bus :バックアップ
+    sap_sw1 -- sap_core :vlan 201
+    sap_ap1 -- sap_sw1
+    sap_pc1_1 -- sap_sw1
+    sap_pc1_2 -- sap_sw1
+    sap_pc1_3 -- sap_sw1
+    sap_pc1_4 -- sap_sw1
+    sap_pc1_5 -- sap_sw1
+    sap_sw2 -- sap_core :vlan 202
+    sap_ap2 -- sap_sw2
+    sap_pc2_1 -- sap_sw2
+    sap_pc2_2 -- sap_sw2
+    sap_pc2_3 -- sap_sw2
+    sap_pc2_4 -- sap_sw2
+    sap_pc2_5 -- sap_sw2
+    sap_rt -- h_hokkaido :冗長, 専用線
+    sen_core -- sen_bus
+    sen_fw -- sen_bus
+    sen_rt -- sen_bus
+    sen_sv1 -- sen_bus
+    sen_sv2 -- sen_bus
+    sen_sv3 -- sen_bus
+    sen_sv4 -- sen_bus
+    sen_sv5 -- sen_bus
+    sen_sv6 -- sen_bus
+    sen_sv7 -- sen_bus
+    sen_sv8 -- sen_bus
+    sen_sv9 -- sen_bus
+    sen_sv10 -- sen_bus
+    sen_nas -- sen_bus :バックアップ
+    sen_sw1 -- sen_core :vlan 201
+    sen_ap1 -- sen_sw1
+    sen_pc1_1 -- sen_sw1
+    sen_pc1_2 -- sen_sw1
+    sen_pc1_3 -- sen_sw1
+    sen_pc1_4 -- sen_sw1
+    sen_pc1_5 -- sen_sw1
+    sen_sw2 -- sen_core :vlan 202
+    sen_ap2 -- sen_sw2
+    sen_pc2_1 -- sen_sw2
+    sen_pc2_2 -- sen_sw2
+    sen_pc2_3 -- sen_sw2
+    sen_pc2_4 -- sen_sw2
+    sen_pc2_5 -- sen_sw2
+    sen_rt -- h_tohoku :冗長, 専用線
+    nag_core -- nag_bus
+    nag_fw -- nag_bus
+    nag_rt -- nag_bus
+    nag_sv1 -- nag_bus
+    nag_sv2 -- nag_bus
+    nag_sv3 -- nag_bus
+    nag_sv4 -- nag_bus
+    nag_sv5 -- nag_bus
+    nag_sv6 -- nag_bus
+    nag_sv7 -- nag_bus
+    nag_sv8 -- nag_bus
+    nag_sv9 -- nag_bus
+    nag_sv10 -- nag_bus
+    nag_nas -- nag_bus :バックアップ
+    nag_sw1 -- nag_core :vlan 201
+    nag_ap1 -- nag_sw1
+    nag_pc1_1 -- nag_sw1
+    nag_pc1_2 -- nag_sw1
+    nag_pc1_3 -- nag_sw1
+    nag_pc1_4 -- nag_sw1
+    nag_pc1_5 -- nag_sw1
+    nag_sw2 -- nag_core :vlan 202
+    nag_ap2 -- nag_sw2
+    nag_pc2_1 -- nag_sw2
+    nag_pc2_2 -- nag_sw2
+    nag_pc2_3 -- nag_sw2
+    nag_pc2_4 -- nag_sw2
+    nag_pc2_5 -- nag_sw2
+    nag_rt -- h_chubu :冗長, 専用線
+    hir_core -- hir_bus
+    hir_fw -- hir_bus
+    hir_rt -- hir_bus
+    hir_sv1 -- hir_bus
+    hir_sv2 -- hir_bus
+    hir_sv3 -- hir_bus
+    hir_sv4 -- hir_bus
+    hir_sv5 -- hir_bus
+    hir_sv6 -- hir_bus
+    hir_sv7 -- hir_bus
+    hir_sv8 -- hir_bus
+    hir_sv9 -- hir_bus
+    hir_sv10 -- hir_bus
+    hir_nas -- hir_bus :バックアップ
+    hir_sw1 -- hir_core :vlan 201
+    hir_ap1 -- hir_sw1
+    hir_pc1_1 -- hir_sw1
+    hir_pc1_2 -- hir_sw1
+    hir_pc1_3 -- hir_sw1
+    hir_pc1_4 -- hir_sw1
+    hir_pc1_5 -- hir_sw1
+    hir_sw2 -- hir_core :vlan 202
+    hir_ap2 -- hir_sw2
+    hir_pc2_1 -- hir_sw2
+    hir_pc2_2 -- hir_sw2
+    hir_pc2_3 -- hir_sw2
+    hir_pc2_4 -- hir_sw2
+    hir_pc2_5 -- hir_sw2
+    hir_rt -- h_chushi :冗長, 専用線
+    tak_core -- tak_bus
+    tak_fw -- tak_bus
+    tak_rt -- tak_bus
+    tak_sv1 -- tak_bus
+    tak_sv2 -- tak_bus
+    tak_sv3 -- tak_bus
+    tak_sv4 -- tak_bus
+    tak_sv5 -- tak_bus
+    tak_sv6 -- tak_bus
+    tak_sv7 -- tak_bus
+    tak_sv8 -- tak_bus
+    tak_sv9 -- tak_bus
+    tak_sv10 -- tak_bus
+    tak_nas -- tak_bus :バックアップ
+    tak_sw1 -- tak_core :vlan 201
+    tak_ap1 -- tak_sw1
+    tak_pc1_1 -- tak_sw1
+    tak_pc1_2 -- tak_sw1
+    tak_pc1_3 -- tak_sw1
+    tak_pc1_4 -- tak_sw1
+    tak_pc1_5 -- tak_sw1
+    tak_sw2 -- tak_core :vlan 202
+    tak_ap2 -- tak_sw2
+    tak_pc2_1 -- tak_sw2
+    tak_pc2_2 -- tak_sw2
+    tak_pc2_3 -- tak_sw2
+    tak_pc2_4 -- tak_sw2
+    tak_pc2_5 -- tak_sw2
+    tak_rt -- h_chushi :冗長, 専用線
+    fuk_core -- fuk_bus
+    fuk_fw -- fuk_bus
+    fuk_rt -- fuk_bus
+    fuk_sv1 -- fuk_bus
+    fuk_sv2 -- fuk_bus
+    fuk_sv3 -- fuk_bus
+    fuk_sv4 -- fuk_bus
+    fuk_sv5 -- fuk_bus
+    fuk_sv6 -- fuk_bus
+    fuk_sv7 -- fuk_bus
+    fuk_sv8 -- fuk_bus
+    fuk_sv9 -- fuk_bus
+    fuk_sv10 -- fuk_bus
+    fuk_nas -- fuk_bus :バックアップ
+    fuk_sw1 -- fuk_core :vlan 201
+    fuk_ap1 -- fuk_sw1
+    fuk_pc1_1 -- fuk_sw1
+    fuk_pc1_2 -- fuk_sw1
+    fuk_pc1_3 -- fuk_sw1
+    fuk_pc1_4 -- fuk_sw1
+    fuk_pc1_5 -- fuk_sw1
+    fuk_sw2 -- fuk_core :vlan 202
+    fuk_ap2 -- fuk_sw2
+    fuk_pc2_1 -- fuk_sw2
+    fuk_pc2_2 -- fuk_sw2
+    fuk_pc2_3 -- fuk_sw2
+    fuk_pc2_4 -- fuk_sw2
+    fuk_pc2_5 -- fuk_sw2
+    fuk_rt -- h_kyushu :冗長, 専用線
+    tom_itsw -- tom_itfw
+    tom_mes -- tom_itsw
+    tom_erp -- tom_itsw
+    tom_opc1 -- tom_itsw
+    tom_opc2 -- tom_itsw
+    tom_opc3 -- tom_itsw
+    tom_scada -- tom_ctlbus :冗長
+    tom_hist -- tom_ctlbus
+    tom_hmi1 -- tom_ctlbus
+    tom_hmi2 -- tom_ctlbus
+    tom_ews -- tom_ctlbus
+    tom_hist2 -- tom_hist :ミラー
+    tom_diode -- tom_hist :一方向
+    tom_itfw -- tom_diode :一方向, 上位連携
+    tom_plc1 -- tom_ctlbus :vlan 400
+    tom_rio1 -- tom_plc1
+    tom_drv1 -- tom_plc1
+    tom_rob1 -- tom_plc1
+    tom_sen1 -- tom_plc1
+    tom_cnc1 -- tom_plc1
+    tom_gw1 -- tom_ctlbus
+    tom_plc2 -- tom_ctlbus :vlan 400
+    tom_rio2 -- tom_plc2
+    tom_drv2 -- tom_plc2
+    tom_rob2 -- tom_plc2
+    tom_sen2 -- tom_plc2
+    tom_cnc2 -- tom_plc2
+    tom_gw2 -- tom_ctlbus
+    tom_sis -- tom_plc1 :安全連動
+    tom_itfw -- h_hokkaido :IP-VPN
+    kit_itsw -- kit_itfw
+    kit_mes -- kit_itsw
+    kit_erp -- kit_itsw
+    kit_opc1 -- kit_itsw
+    kit_opc2 -- kit_itsw
+    kit_opc3 -- kit_itsw
+    kit_scada -- kit_ctlbus :冗長
+    kit_hist -- kit_ctlbus
+    kit_hmi1 -- kit_ctlbus
+    kit_hmi2 -- kit_ctlbus
+    kit_ews -- kit_ctlbus
+    kit_hist2 -- kit_hist :ミラー
+    kit_diode -- kit_hist :一方向
+    kit_itfw -- kit_diode :一方向, 上位連携
+    kit_plc1 -- kit_ctlbus :vlan 401
+    kit_rio1 -- kit_plc1
+    kit_drv1 -- kit_plc1
+    kit_rob1 -- kit_plc1
+    kit_sen1 -- kit_plc1
+    kit_cnc1 -- kit_plc1
+    kit_gw1 -- kit_ctlbus
+    kit_plc2 -- kit_ctlbus :vlan 401
+    kit_rio2 -- kit_plc2
+    kit_drv2 -- kit_plc2
+    kit_rob2 -- kit_plc2
+    kit_sen2 -- kit_plc2
+    kit_cnc2 -- kit_plc2
+    kit_gw2 -- kit_ctlbus
+    kit_sis -- kit_plc1 :安全連動
+    kit_itfw -- h_tohoku :IP-VPN
+    ota_itsw -- ota_itfw
+    ota_mes -- ota_itsw
+    ota_erp -- ota_itsw
+    ota_opc1 -- ota_itsw
+    ota_opc2 -- ota_itsw
+    ota_opc3 -- ota_itsw
+    ota_scada -- ota_ctlbus :冗長
+    ota_hist -- ota_ctlbus
+    ota_hmi1 -- ota_ctlbus
+    ota_hmi2 -- ota_ctlbus
+    ota_ews -- ota_ctlbus
+    ota_hist2 -- ota_hist :ミラー
+    ota_diode -- ota_hist :一方向
+    ota_itfw -- ota_diode :一方向, 上位連携
+    ota_plc1 -- ota_ctlbus :vlan 402
+    ota_rio1 -- ota_plc1
+    ota_drv1 -- ota_plc1
+    ota_rob1 -- ota_plc1
+    ota_sen1 -- ota_plc1
+    ota_cnc1 -- ota_plc1
+    ota_gw1 -- ota_ctlbus
+    ota_plc2 -- ota_ctlbus :vlan 402
+    ota_rio2 -- ota_plc2
+    ota_drv2 -- ota_plc2
+    ota_rob2 -- ota_plc2
+    ota_sen2 -- ota_plc2
+    ota_cnc2 -- ota_plc2
+    ota_gw2 -- ota_ctlbus
+    ota_plc3 -- ota_ctlbus :vlan 402
+    ota_rio3 -- ota_plc3
+    ota_drv3 -- ota_plc3
+    ota_rob3 -- ota_plc3
+    ota_sen3 -- ota_plc3
+    ota_cnc3 -- ota_plc3
+    ota_gw3 -- ota_ctlbus
+    ota_sis -- ota_plc1 :安全連動
+    ota_itfw -- h_kanto :IP-VPN
+    toy_itsw -- toy_itfw
+    toy_mes -- toy_itsw
+    toy_erp -- toy_itsw
+    toy_opc1 -- toy_itsw
+    toy_opc2 -- toy_itsw
+    toy_opc3 -- toy_itsw
+    toy_scada -- toy_ctlbus :冗長
+    toy_hist -- toy_ctlbus
+    toy_hmi1 -- toy_ctlbus
+    toy_hmi2 -- toy_ctlbus
+    toy_ews -- toy_ctlbus
+    toy_hist2 -- toy_hist :ミラー
+    toy_diode -- toy_hist :一方向
+    toy_itfw -- toy_diode :一方向, 上位連携
+    toy_plc1 -- toy_ctlbus :vlan 403
+    toy_rio1 -- toy_plc1
+    toy_drv1 -- toy_plc1
+    toy_rob1 -- toy_plc1
+    toy_sen1 -- toy_plc1
+    toy_cnc1 -- toy_plc1
+    toy_gw1 -- toy_ctlbus
+    toy_plc2 -- toy_ctlbus :vlan 403
+    toy_rio2 -- toy_plc2
+    toy_drv2 -- toy_plc2
+    toy_rob2 -- toy_plc2
+    toy_sen2 -- toy_plc2
+    toy_cnc2 -- toy_plc2
+    toy_gw2 -- toy_ctlbus
+    toy_sis -- toy_plc1 :安全連動
+    toy_itfw -- h_chubu :IP-VPN
+    ham_itsw -- ham_itfw
+    ham_mes -- ham_itsw
+    ham_erp -- ham_itsw
+    ham_opc1 -- ham_itsw
+    ham_opc2 -- ham_itsw
+    ham_opc3 -- ham_itsw
+    ham_scada -- ham_ctlbus :冗長
+    ham_hist -- ham_ctlbus
+    ham_hmi1 -- ham_ctlbus
+    ham_hmi2 -- ham_ctlbus
+    ham_ews -- ham_ctlbus
+    ham_hist2 -- ham_hist :ミラー
+    ham_diode -- ham_hist :一方向
+    ham_itfw -- ham_diode :一方向, 上位連携
+    ham_plc1 -- ham_ctlbus :vlan 404
+    ham_rio1 -- ham_plc1
+    ham_drv1 -- ham_plc1
+    ham_rob1 -- ham_plc1
+    ham_sen1 -- ham_plc1
+    ham_cnc1 -- ham_plc1
+    ham_gw1 -- ham_ctlbus
+    ham_plc2 -- ham_ctlbus :vlan 404
+    ham_rio2 -- ham_plc2
+    ham_drv2 -- ham_plc2
+    ham_rob2 -- ham_plc2
+    ham_sen2 -- ham_plc2
+    ham_cnc2 -- ham_plc2
+    ham_gw2 -- ham_ctlbus
+    ham_plc3 -- ham_ctlbus :vlan 404
+    ham_rio3 -- ham_plc3
+    ham_drv3 -- ham_plc3
+    ham_rob3 -- ham_plc3
+    ham_sen3 -- ham_plc3
+    ham_cnc3 -- ham_plc3
+    ham_gw3 -- ham_ctlbus
+    ham_sis -- ham_plc1 :安全連動
+    ham_itfw -- h_chubu :IP-VPN
+    yok_itsw -- yok_itfw
+    yok_mes -- yok_itsw
+    yok_erp -- yok_itsw
+    yok_opc1 -- yok_itsw
+    yok_opc2 -- yok_itsw
+    yok_opc3 -- yok_itsw
+    yok_scada -- yok_ctlbus :冗長
+    yok_hist -- yok_ctlbus
+    yok_hmi1 -- yok_ctlbus
+    yok_hmi2 -- yok_ctlbus
+    yok_ews -- yok_ctlbus
+    yok_hist2 -- yok_hist :ミラー
+    yok_diode -- yok_hist :一方向
+    yok_itfw -- yok_diode :一方向, 上位連携
+    yok_plc1 -- yok_ctlbus :vlan 405
+    yok_rio1 -- yok_plc1
+    yok_drv1 -- yok_plc1
+    yok_rob1 -- yok_plc1
+    yok_sen1 -- yok_plc1
+    yok_cnc1 -- yok_plc1
+    yok_gw1 -- yok_ctlbus
+    yok_plc2 -- yok_ctlbus :vlan 405
+    yok_rio2 -- yok_plc2
+    yok_drv2 -- yok_plc2
+    yok_rob2 -- yok_plc2
+    yok_sen2 -- yok_plc2
+    yok_cnc2 -- yok_plc2
+    yok_gw2 -- yok_ctlbus
+    yok_sis -- yok_plc1 :安全連動
+    yok_itfw -- h_kinki :IP-VPN
+    kur_itsw -- kur_itfw
+    kur_mes -- kur_itsw
+    kur_erp -- kur_itsw
+    kur_opc1 -- kur_itsw
+    kur_opc2 -- kur_itsw
+    kur_opc3 -- kur_itsw
+    kur_scada -- kur_ctlbus :冗長
+    kur_hist -- kur_ctlbus
+    kur_hmi1 -- kur_ctlbus
+    kur_hmi2 -- kur_ctlbus
+    kur_ews -- kur_ctlbus
+    kur_hist2 -- kur_hist :ミラー
+    kur_diode -- kur_hist :一方向
+    kur_itfw -- kur_diode :一方向, 上位連携
+    kur_plc1 -- kur_ctlbus :vlan 406
+    kur_rio1 -- kur_plc1
+    kur_drv1 -- kur_plc1
+    kur_rob1 -- kur_plc1
+    kur_sen1 -- kur_plc1
+    kur_cnc1 -- kur_plc1
+    kur_gw1 -- kur_ctlbus
+    kur_plc2 -- kur_ctlbus :vlan 406
+    kur_rio2 -- kur_plc2
+    kur_drv2 -- kur_plc2
+    kur_rob2 -- kur_plc2
+    kur_sen2 -- kur_plc2
+    kur_cnc2 -- kur_plc2
+    kur_gw2 -- kur_ctlbus
+    kur_sis -- kur_plc1 :安全連動
+    kur_itfw -- h_chushi :IP-VPN
+    kum_itsw -- kum_itfw
+    kum_mes -- kum_itsw
+    kum_erp -- kum_itsw
+    kum_opc1 -- kum_itsw
+    kum_opc2 -- kum_itsw
+    kum_opc3 -- kum_itsw
+    kum_scada -- kum_ctlbus :冗長
+    kum_hist -- kum_ctlbus
+    kum_hmi1 -- kum_ctlbus
+    kum_hmi2 -- kum_ctlbus
+    kum_ews -- kum_ctlbus
+    kum_hist2 -- kum_hist :ミラー
+    kum_diode -- kum_hist :一方向
+    kum_itfw -- kum_diode :一方向, 上位連携
+    kum_plc1 -- kum_ctlbus :vlan 407
+    kum_rio1 -- kum_plc1
+    kum_drv1 -- kum_plc1
+    kum_rob1 -- kum_plc1
+    kum_sen1 -- kum_plc1
+    kum_cnc1 -- kum_plc1
+    kum_gw1 -- kum_ctlbus
+    kum_plc2 -- kum_ctlbus :vlan 407
+    kum_rio2 -- kum_plc2
+    kum_drv2 -- kum_plc2
+    kum_rob2 -- kum_plc2
+    kum_sen2 -- kum_plc2
+    kum_cnc2 -- kum_plc2
+    kum_gw2 -- kum_ctlbus
+    kum_sis -- kum_plc1 :安全連動
+    kum_itfw -- h_kyushu :IP-VPN
+    asa_utm -- asa_rt
+    asa_sw -- asa_utm
+    asa_ap -- asa_sw
+    asa_nas -- asa_sw
+    asa_prn -- asa_sw
+    asa_tel -- asa_sw
+    asa_pc1 -- asa_sw
+    asa_pc2 -- asa_sw
+    asa_pc3 -- asa_sw
+    asa_pc4 -- asa_sw
+    asa_pc5 -- asa_sw
+    asa_pc6 -- asa_sw
+    asa_pc7 -- asa_sw
+    asa_pc8 -- asa_sw
+    asa_pc9 -- asa_sw
+    asa_pc10 -- asa_sw
+    asa_pc11 -- asa_sw
+    asa_pc12 -- asa_sw
+    asa_pc13 -- asa_sw
+    asa_rt -- h_hokkaido :IP-VPN
+    aom_utm -- aom_rt
+    aom_sw -- aom_utm
+    aom_ap -- aom_sw
+    aom_nas -- aom_sw
+    aom_prn -- aom_sw
+    aom_tel -- aom_sw
+    aom_pc1 -- aom_sw
+    aom_pc2 -- aom_sw
+    aom_pc3 -- aom_sw
+    aom_pc4 -- aom_sw
+    aom_pc5 -- aom_sw
+    aom_pc6 -- aom_sw
+    aom_pc7 -- aom_sw
+    aom_pc8 -- aom_sw
+    aom_pc9 -- aom_sw
+    aom_pc10 -- aom_sw
+    aom_pc11 -- aom_sw
+    aom_pc12 -- aom_sw
+    aom_pc13 -- aom_sw
+    aom_pc14 -- aom_sw
+    aom_rt -- h_tohoku :IP-VPN
+    aki_utm -- aki_rt
+    aki_sw -- aki_utm
+    aki_ap -- aki_sw
+    aki_nas -- aki_sw
+    aki_prn -- aki_sw
+    aki_tel -- aki_sw
+    aki_pc1 -- aki_sw
+    aki_pc2 -- aki_sw
+    aki_pc3 -- aki_sw
+    aki_pc4 -- aki_sw
+    aki_pc5 -- aki_sw
+    aki_pc6 -- aki_sw
+    aki_pc7 -- aki_sw
+    aki_pc8 -- aki_sw
+    aki_pc9 -- aki_sw
+    aki_pc10 -- aki_sw
+    aki_pc11 -- aki_sw
+    aki_pc12 -- aki_sw
+    aki_pc13 -- aki_sw
+    aki_pc14 -- aki_sw
+    aki_pc15 -- aki_sw
+    aki_rt -- h_tohoku :IP-VPN
+    mor_utm -- mor_rt
+    mor_sw -- mor_utm
+    mor_ap -- mor_sw
+    mor_nas -- mor_sw
+    mor_prn -- mor_sw
+    mor_tel -- mor_sw
+    mor_pc1 -- mor_sw
+    mor_pc2 -- mor_sw
+    mor_pc3 -- mor_sw
+    mor_pc4 -- mor_sw
+    mor_pc5 -- mor_sw
+    mor_pc6 -- mor_sw
+    mor_pc7 -- mor_sw
+    mor_pc8 -- mor_sw
+    mor_pc9 -- mor_sw
+    mor_pc10 -- mor_sw
+    mor_pc11 -- mor_sw
+    mor_pc12 -- mor_sw
+    mor_pc13 -- mor_sw
+    mor_pc14 -- mor_sw
+    mor_pc15 -- mor_sw
+    mor_pc16 -- mor_sw
+    mor_rt -- h_tohoku :IP-VPN
+    yam_utm -- yam_rt
+    yam_sw -- yam_utm
+    yam_ap -- yam_sw
+    yam_nas -- yam_sw
+    yam_prn -- yam_sw
+    yam_tel -- yam_sw
+    yam_pc1 -- yam_sw
+    yam_pc2 -- yam_sw
+    yam_pc3 -- yam_sw
+    yam_pc4 -- yam_sw
+    yam_pc5 -- yam_sw
+    yam_pc6 -- yam_sw
+    yam_pc7 -- yam_sw
+    yam_pc8 -- yam_sw
+    yam_pc9 -- yam_sw
+    yam_pc10 -- yam_sw
+    yam_pc11 -- yam_sw
+    yam_pc12 -- yam_sw
+    yam_pc13 -- yam_sw
+    yam_pc14 -- yam_sw
+    yam_pc15 -- yam_sw
+    yam_pc16 -- yam_sw
+    yam_pc17 -- yam_sw
+    yam_rt -- h_tohoku :IP-VPN
+    kor_utm -- kor_rt
+    kor_sw -- kor_utm
+    kor_ap -- kor_sw
+    kor_nas -- kor_sw
+    kor_prn -- kor_sw
+    kor_tel -- kor_sw
+    kor_pc1 -- kor_sw
+    kor_pc2 -- kor_sw
+    kor_pc3 -- kor_sw
+    kor_pc4 -- kor_sw
+    kor_pc5 -- kor_sw
+    kor_pc6 -- kor_sw
+    kor_pc7 -- kor_sw
+    kor_pc8 -- kor_sw
+    kor_pc9 -- kor_sw
+    kor_pc10 -- kor_sw
+    kor_pc11 -- kor_sw
+    kor_pc12 -- kor_sw
+    kor_pc13 -- kor_sw
+    kor_rt -- h_tohoku :IP-VPN
+    nii_utm -- nii_rt
+    nii_sw -- nii_utm
+    nii_ap -- nii_sw
+    nii_nas -- nii_sw
+    nii_prn -- nii_sw
+    nii_tel -- nii_sw
+    nii_pc1 -- nii_sw
+    nii_pc2 -- nii_sw
+    nii_pc3 -- nii_sw
+    nii_pc4 -- nii_sw
+    nii_pc5 -- nii_sw
+    nii_pc6 -- nii_sw
+    nii_pc7 -- nii_sw
+    nii_pc8 -- nii_sw
+    nii_pc9 -- nii_sw
+    nii_pc10 -- nii_sw
+    nii_pc11 -- nii_sw
+    nii_pc12 -- nii_sw
+    nii_pc13 -- nii_sw
+    nii_pc14 -- nii_sw
+    nii_rt -- h_chubu :IP-VPN
+    utu_utm -- utu_rt
+    utu_sw -- utu_utm
+    utu_ap -- utu_sw
+    utu_nas -- utu_sw
+    utu_prn -- utu_sw
+    utu_tel -- utu_sw
+    utu_pc1 -- utu_sw
+    utu_pc2 -- utu_sw
+    utu_pc3 -- utu_sw
+    utu_pc4 -- utu_sw
+    utu_pc5 -- utu_sw
+    utu_pc6 -- utu_sw
+    utu_pc7 -- utu_sw
+    utu_pc8 -- utu_sw
+    utu_pc9 -- utu_sw
+    utu_pc10 -- utu_sw
+    utu_pc11 -- utu_sw
+    utu_pc12 -- utu_sw
+    utu_pc13 -- utu_sw
+    utu_pc14 -- utu_sw
+    utu_pc15 -- utu_sw
+    utu_rt -- h_kanto :IP-VPN
+    sai_utm -- sai_rt
+    sai_sw -- sai_utm
+    sai_ap -- sai_sw
+    sai_nas -- sai_sw
+    sai_prn -- sai_sw
+    sai_tel -- sai_sw
+    sai_pc1 -- sai_sw
+    sai_pc2 -- sai_sw
+    sai_pc3 -- sai_sw
+    sai_pc4 -- sai_sw
+    sai_pc5 -- sai_sw
+    sai_pc6 -- sai_sw
+    sai_pc7 -- sai_sw
+    sai_pc8 -- sai_sw
+    sai_pc9 -- sai_sw
+    sai_pc10 -- sai_sw
+    sai_pc11 -- sai_sw
+    sai_pc12 -- sai_sw
+    sai_pc13 -- sai_sw
+    sai_pc14 -- sai_sw
+    sai_pc15 -- sai_sw
+    sai_pc16 -- sai_sw
+    sai_rt -- h_kanto :IP-VPN
+    chb_utm -- chb_rt
+    chb_sw -- chb_utm
+    chb_ap -- chb_sw
+    chb_nas -- chb_sw
+    chb_prn -- chb_sw
+    chb_tel -- chb_sw
+    chb_pc1 -- chb_sw
+    chb_pc2 -- chb_sw
+    chb_pc3 -- chb_sw
+    chb_pc4 -- chb_sw
+    chb_pc5 -- chb_sw
+    chb_pc6 -- chb_sw
+    chb_pc7 -- chb_sw
+    chb_pc8 -- chb_sw
+    chb_pc9 -- chb_sw
+    chb_pc10 -- chb_sw
+    chb_pc11 -- chb_sw
+    chb_pc12 -- chb_sw
+    chb_pc13 -- chb_sw
+    chb_pc14 -- chb_sw
+    chb_pc15 -- chb_sw
+    chb_pc16 -- chb_sw
+    chb_pc17 -- chb_sw
+    chb_rt -- h_kanto :IP-VPN
+    ykh_utm -- ykh_rt
+    ykh_sw -- ykh_utm
+    ykh_ap -- ykh_sw
+    ykh_nas -- ykh_sw
+    ykh_prn -- ykh_sw
+    ykh_tel -- ykh_sw
+    ykh_pc1 -- ykh_sw
+    ykh_pc2 -- ykh_sw
+    ykh_pc3 -- ykh_sw
+    ykh_pc4 -- ykh_sw
+    ykh_pc5 -- ykh_sw
+    ykh_pc6 -- ykh_sw
+    ykh_pc7 -- ykh_sw
+    ykh_pc8 -- ykh_sw
+    ykh_pc9 -- ykh_sw
+    ykh_pc10 -- ykh_sw
+    ykh_pc11 -- ykh_sw
+    ykh_pc12 -- ykh_sw
+    ykh_pc13 -- ykh_sw
+    ykh_rt -- h_kanto :IP-VPN
+    siz_utm -- siz_rt
+    siz_sw -- siz_utm
+    siz_ap -- siz_sw
+    siz_nas -- siz_sw
+    siz_prn -- siz_sw
+    siz_tel -- siz_sw
+    siz_pc1 -- siz_sw
+    siz_pc2 -- siz_sw
+    siz_pc3 -- siz_sw
+    siz_pc4 -- siz_sw
+    siz_pc5 -- siz_sw
+    siz_pc6 -- siz_sw
+    siz_pc7 -- siz_sw
+    siz_pc8 -- siz_sw
+    siz_pc9 -- siz_sw
+    siz_pc10 -- siz_sw
+    siz_pc11 -- siz_sw
+    siz_pc12 -- siz_sw
+    siz_pc13 -- siz_sw
+    siz_pc14 -- siz_sw
+    siz_rt -- h_chubu :IP-VPN
+    kan_utm -- kan_rt
+    kan_sw -- kan_utm
+    kan_ap -- kan_sw
+    kan_nas -- kan_sw
+    kan_prn -- kan_sw
+    kan_tel -- kan_sw
+    kan_pc1 -- kan_sw
+    kan_pc2 -- kan_sw
+    kan_pc3 -- kan_sw
+    kan_pc4 -- kan_sw
+    kan_pc5 -- kan_sw
+    kan_pc6 -- kan_sw
+    kan_pc7 -- kan_sw
+    kan_pc8 -- kan_sw
+    kan_pc9 -- kan_sw
+    kan_pc10 -- kan_sw
+    kan_pc11 -- kan_sw
+    kan_pc12 -- kan_sw
+    kan_pc13 -- kan_sw
+    kan_pc14 -- kan_sw
+    kan_pc15 -- kan_sw
+    kan_rt -- h_chubu :IP-VPN
+    ngn_utm -- ngn_rt
+    ngn_sw -- ngn_utm
+    ngn_ap -- ngn_sw
+    ngn_nas -- ngn_sw
+    ngn_prn -- ngn_sw
+    ngn_tel -- ngn_sw
+    ngn_pc1 -- ngn_sw
+    ngn_pc2 -- ngn_sw
+    ngn_pc3 -- ngn_sw
+    ngn_pc4 -- ngn_sw
+    ngn_pc5 -- ngn_sw
+    ngn_pc6 -- ngn_sw
+    ngn_pc7 -- ngn_sw
+    ngn_pc8 -- ngn_sw
+    ngn_pc9 -- ngn_sw
+    ngn_pc10 -- ngn_sw
+    ngn_pc11 -- ngn_sw
+    ngn_pc12 -- ngn_sw
+    ngn_pc13 -- ngn_sw
+    ngn_pc14 -- ngn_sw
+    ngn_pc15 -- ngn_sw
+    ngn_pc16 -- ngn_sw
+    ngn_rt -- h_chubu :IP-VPN
+    gif_utm -- gif_rt
+    gif_sw -- gif_utm
+    gif_ap -- gif_sw
+    gif_nas -- gif_sw
+    gif_prn -- gif_sw
+    gif_tel -- gif_sw
+    gif_pc1 -- gif_sw
+    gif_pc2 -- gif_sw
+    gif_pc3 -- gif_sw
+    gif_pc4 -- gif_sw
+    gif_pc5 -- gif_sw
+    gif_pc6 -- gif_sw
+    gif_pc7 -- gif_sw
+    gif_pc8 -- gif_sw
+    gif_pc9 -- gif_sw
+    gif_pc10 -- gif_sw
+    gif_pc11 -- gif_sw
+    gif_pc12 -- gif_sw
+    gif_pc13 -- gif_sw
+    gif_pc14 -- gif_sw
+    gif_pc15 -- gif_sw
+    gif_pc16 -- gif_sw
+    gif_pc17 -- gif_sw
+    gif_rt -- h_chubu :IP-VPN
+    kyo_utm -- kyo_rt
+    kyo_sw -- kyo_utm
+    kyo_ap -- kyo_sw
+    kyo_nas -- kyo_sw
+    kyo_prn -- kyo_sw
+    kyo_tel -- kyo_sw
+    kyo_pc1 -- kyo_sw
+    kyo_pc2 -- kyo_sw
+    kyo_pc3 -- kyo_sw
+    kyo_pc4 -- kyo_sw
+    kyo_pc5 -- kyo_sw
+    kyo_pc6 -- kyo_sw
+    kyo_pc7 -- kyo_sw
+    kyo_pc8 -- kyo_sw
+    kyo_pc9 -- kyo_sw
+    kyo_pc10 -- kyo_sw
+    kyo_pc11 -- kyo_sw
+    kyo_pc12 -- kyo_sw
+    kyo_pc13 -- kyo_sw
+    kyo_rt -- h_kinki :IP-VPN
+    kob_utm -- kob_rt
+    kob_sw -- kob_utm
+    kob_ap -- kob_sw
+    kob_nas -- kob_sw
+    kob_prn -- kob_sw
+    kob_tel -- kob_sw
+    kob_pc1 -- kob_sw
+    kob_pc2 -- kob_sw
+    kob_pc3 -- kob_sw
+    kob_pc4 -- kob_sw
+    kob_pc5 -- kob_sw
+    kob_pc6 -- kob_sw
+    kob_pc7 -- kob_sw
+    kob_pc8 -- kob_sw
+    kob_pc9 -- kob_sw
+    kob_pc10 -- kob_sw
+    kob_pc11 -- kob_sw
+    kob_pc12 -- kob_sw
+    kob_pc13 -- kob_sw
+    kob_pc14 -- kob_sw
+    kob_rt -- h_kinki :IP-VPN
+    oka_utm -- oka_rt
+    oka_sw -- oka_utm
+    oka_ap -- oka_sw
+    oka_nas -- oka_sw
+    oka_prn -- oka_sw
+    oka_tel -- oka_sw
+    oka_pc1 -- oka_sw
+    oka_pc2 -- oka_sw
+    oka_pc3 -- oka_sw
+    oka_pc4 -- oka_sw
+    oka_pc5 -- oka_sw
+    oka_pc6 -- oka_sw
+    oka_pc7 -- oka_sw
+    oka_pc8 -- oka_sw
+    oka_pc9 -- oka_sw
+    oka_pc10 -- oka_sw
+    oka_pc11 -- oka_sw
+    oka_pc12 -- oka_sw
+    oka_pc13 -- oka_sw
+    oka_pc14 -- oka_sw
+    oka_pc15 -- oka_sw
+    oka_rt -- h_chushi :IP-VPN
+    mat_utm -- mat_rt
+    mat_sw -- mat_utm
+    mat_ap -- mat_sw
+    mat_nas -- mat_sw
+    mat_prn -- mat_sw
+    mat_tel -- mat_sw
+    mat_pc1 -- mat_sw
+    mat_pc2 -- mat_sw
+    mat_pc3 -- mat_sw
+    mat_pc4 -- mat_sw
+    mat_pc5 -- mat_sw
+    mat_pc6 -- mat_sw
+    mat_pc7 -- mat_sw
+    mat_pc8 -- mat_sw
+    mat_pc9 -- mat_sw
+    mat_pc10 -- mat_sw
+    mat_pc11 -- mat_sw
+    mat_pc12 -- mat_sw
+    mat_pc13 -- mat_sw
+    mat_pc14 -- mat_sw
+    mat_pc15 -- mat_sw
+    mat_pc16 -- mat_sw
+    mat_rt -- h_chushi :IP-VPN
+    koc_utm -- koc_rt
+    koc_sw -- koc_utm
+    koc_ap -- koc_sw
+    koc_nas -- koc_sw
+    koc_prn -- koc_sw
+    koc_tel -- koc_sw
+    koc_pc1 -- koc_sw
+    koc_pc2 -- koc_sw
+    koc_pc3 -- koc_sw
+    koc_pc4 -- koc_sw
+    koc_pc5 -- koc_sw
+    koc_pc6 -- koc_sw
+    koc_pc7 -- koc_sw
+    koc_pc8 -- koc_sw
+    koc_pc9 -- koc_sw
+    koc_pc10 -- koc_sw
+    koc_pc11 -- koc_sw
+    koc_pc12 -- koc_sw
+    koc_pc13 -- koc_sw
+    koc_pc14 -- koc_sw
+    koc_pc15 -- koc_sw
+    koc_pc16 -- koc_sw
+    koc_pc17 -- koc_sw
+    koc_rt -- h_chushi :IP-VPN
+    ngs_utm -- ngs_rt
+    ngs_sw -- ngs_utm
+    ngs_ap -- ngs_sw
+    ngs_nas -- ngs_sw
+    ngs_prn -- ngs_sw
+    ngs_tel -- ngs_sw
+    ngs_pc1 -- ngs_sw
+    ngs_pc2 -- ngs_sw
+    ngs_pc3 -- ngs_sw
+    ngs_pc4 -- ngs_sw
+    ngs_pc5 -- ngs_sw
+    ngs_pc6 -- ngs_sw
+    ngs_pc7 -- ngs_sw
+    ngs_pc8 -- ngs_sw
+    ngs_pc9 -- ngs_sw
+    ngs_pc10 -- ngs_sw
+    ngs_pc11 -- ngs_sw
+    ngs_pc12 -- ngs_sw
+    ngs_pc13 -- ngs_sw
+    ngs_rt -- h_kyushu :IP-VPN
+    oit_utm -- oit_rt
+    oit_sw -- oit_utm
+    oit_ap -- oit_sw
+    oit_nas -- oit_sw
+    oit_prn -- oit_sw
+    oit_tel -- oit_sw
+    oit_pc1 -- oit_sw
+    oit_pc2 -- oit_sw
+    oit_pc3 -- oit_sw
+    oit_pc4 -- oit_sw
+    oit_pc5 -- oit_sw
+    oit_pc6 -- oit_sw
+    oit_pc7 -- oit_sw
+    oit_pc8 -- oit_sw
+    oit_pc9 -- oit_sw
+    oit_pc10 -- oit_sw
+    oit_pc11 -- oit_sw
+    oit_pc12 -- oit_sw
+    oit_pc13 -- oit_sw
+    oit_pc14 -- oit_sw
+    oit_rt -- h_kyushu :IP-VPN
+    miy_utm -- miy_rt
+    miy_sw -- miy_utm
+    miy_ap -- miy_sw
+    miy_nas -- miy_sw
+    miy_prn -- miy_sw
+    miy_tel -- miy_sw
+    miy_pc1 -- miy_sw
+    miy_pc2 -- miy_sw
+    miy_pc3 -- miy_sw
+    miy_pc4 -- miy_sw
+    miy_pc5 -- miy_sw
+    miy_pc6 -- miy_sw
+    miy_pc7 -- miy_sw
+    miy_pc8 -- miy_sw
+    miy_pc9 -- miy_sw
+    miy_pc10 -- miy_sw
+    miy_pc11 -- miy_sw
+    miy_pc12 -- miy_sw
+    miy_pc13 -- miy_sw
+    miy_pc14 -- miy_sw
+    miy_pc15 -- miy_sw
+    miy_rt -- h_kyushu :IP-VPN
+    nah_utm -- nah_rt
+    nah_sw -- nah_utm
+    nah_ap -- nah_sw
+    nah_nas -- nah_sw
+    nah_prn -- nah_sw
+    nah_tel -- nah_sw
+    nah_pc1 -- nah_sw
+    nah_pc2 -- nah_sw
+    nah_pc3 -- nah_sw
+    nah_pc4 -- nah_sw
+    nah_pc5 -- nah_sw
+    nah_pc6 -- nah_sw
+    nah_pc7 -- nah_sw
+    nah_pc8 -- nah_sw
+    nah_pc9 -- nah_sw
+    nah_pc10 -- nah_sw
+    nah_pc11 -- nah_sw
+    nah_pc12 -- nah_sw
+    nah_pc13 -- nah_sw
+    nah_pc14 -- nah_sw
+    nah_pc15 -- nah_sw
+    nah_pc16 -- nah_sw
+    nah_rt -- h_kyushu :IP-VPN
+    h_hokkaido -- wan :冗長, 幹線
+    h_tohoku -- wan :冗長, 幹線
+    h_kanto -- wan :冗長, 幹線
+    h_chubu -- wan :冗長, 幹線
+    h_kinki -- wan :冗長, 幹線
+    h_chushi -- wan :冗長, 幹線
+    h_kyushu -- wan :冗長, 幹線
+    hq_fw1 -- inet :冗長
+    dr_fw1 -- inet :予備
+    aws_vpc -- wan :IPsec-VPN
+    az_gw -- wan :IPsec-VPN
+    saas -- inet :SSO
+    hq_core1 -- dr_core1 :一方向, DRレプリケーション
+
+%% @layout
+%% lod
+%% map
+%% hazard quake|tsunami|volcano|typhoon|snow|geopol
+%% geo 東京本社|35.68|139.76
+%% geo 大阪DR|34.69|135.5
+%% geo 札幌支社|43.06|141.35
+%% geo 仙台支社|38.27|140.87
+%% geo 名古屋支社|35.18|136.91
+%% geo 広島支社|34.39|132.46
+%% geo 高松支社|34.34|134.05
+%% geo 福岡支社|33.59|130.4
+%% geo 苫小牧工場|42.63|141.6
+%% geo 北上工場|39.29|141.11
+%% geo 太田工場|36.29|139.38
+%% geo 富山工場|36.7|137.21
+%% geo 浜松工場|34.71|137.73
+%% geo 四日市工場|34.97|136.62
+%% geo 倉敷工場|34.6|133.77
+%% geo 熊本工場|32.8|130.71
+%% geo 旭川支店|43.77|142.36
+%% geo 青森支店|40.82|140.74
+%% geo 秋田支店|39.72|140.1
+%% geo 盛岡支店|39.7|141.15
+%% geo 山形支店|38.24|140.36
+%% geo 郡山支店|37.4|140.36
+%% geo 新潟支店|37.9|139.02
+%% geo 宇都宮支店|36.56|139.88
+%% geo さいたま支店|35.86|139.65
+%% geo 千葉支店|35.61|140.11
+%% geo 横浜支店|35.44|139.64
+%% geo 静岡支店|34.98|138.38
+%% geo 金沢支店|36.59|136.63
+%% geo 長野支店|36.65|138.18
+%% geo 岐阜支店|35.42|136.76
+%% geo 京都支店|35.01|135.77
+%% geo 神戸支店|34.69|135.2
+%% geo 岡山支店|34.66|133.92
+%% geo 松山支店|33.84|132.77
+%% geo 高知支店|33.56|133.53
+%% geo 長崎支店|32.75|129.88
+%% geo 大分支店|33.24|131.61
+%% geo 宮崎支店|31.91|131.42
+%% geo 那覇支店|26.21|127.68
+%% geo h_hokkaido|43.6|143.9
+%% geo h_tohoku|39.2|143.2
+%% geo h_kanto|35|141.4
+%% geo h_chubu|36.9|135.4
+%% geo h_kinki|33.6|134.9
+%% geo h_chushi|33.2|132.4
+%% geo h_kyushu|31|129.2
+%% geo wan|37.6|143.6
+%% geo クラウド|28.6|136.0
+%% geo inet|30.5|141.8

@@ -14,10 +14,12 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export const THEMES = {
   dark: { ink: '#e7ebf4', sub: '#c7d0e0', head: '#aeb6c6', dim: '#8a93a6', line: '#9aa3b5',
     faint: '#5a6b86', nodeFill: '#161b26', paper: '#0b0e14', chip: '#1c2436',
-    noteFill: '#2e2a1c', noteInk: '#e8dcb0', frameInk: '#ffffff' },
+    noteFill: '#2e2a1c', noteInk: '#e8dcb0', frameInk: '#ffffff',
+    land: 'rgba(140,170,205,0.07)', landLine: 'rgba(140,170,205,0.38)' },
   light: { ink: '#1d2534', sub: '#333f52', head: '#3d4a5e', dim: '#5d6b80', line: '#5a6b7e',
     faint: '#8fa0b5', nodeFill: '#ffffff', paper: '#ffffff', chip: '#e8edf5',
-    noteFill: '#fff6dc', noteInk: '#6b5410', frameInk: '#000000' },
+    noteFill: '#fff6dc', noteInk: '#6b5410', frameInk: '#000000',
+    land: 'rgba(90,125,165,0.08)', landLine: 'rgba(90,120,160,0.45)' },
 };
 export const themeOf = (opts) => THEMES[opts && opts.theme] || THEMES.dark;
 

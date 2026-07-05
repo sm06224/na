@@ -12,6 +12,8 @@ import { addDays } from '../engine/date.js';
 import { csvToMermaid, universal } from '../engine/import.js';
 import { toDrawio } from '../engine/drawio.js';
 import { diffModels } from '../engine/diff.js';
+import { GEO_LAYERS } from '../engine/geo.js';
+import { MEGA_DSL } from '../engine/mega.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -145,6 +147,7 @@ export const SAMPLES = {
 %% @layout
 %% lod
 %% zpos 本社|157|374`,
+  '全国 — メガコーポ 1000 ノード（🗾 地理×BCP）': MEGA_DSL,
   '巨大 — 全社グランドビュー（IT/OT/クラウド/拠点）': `infra
     title 全社グランドビュー — IT / OT / クラウド / 拠点
     zone 東京本社 {
@@ -297,7 +300,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -383,14 +386,14 @@ export function boot() {
   function fit() {
     if (!L) return;
     const r = stage.getBoundingClientRect(), pad = 40;
-    view.s = Math.max(0.2, Math.min(2, Math.min((r.width - pad) / L.width, (r.height - pad) / L.height)));
+    view.s = Math.max(0.04, Math.min(2, Math.min((r.width - pad) / L.width, (r.height - pad) / L.height)));
     view.tx = (r.width - L.width * view.s) / 2; view.ty = Math.max(16, (r.height - L.height * view.s) / 2);
     applyView();
     if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }
   }
   function zoomTo(cx, cy, ns) {
     const r = stage.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
-    ns = Math.max(0.15, Math.min(4, ns));
+    ns = Math.max(0.04, Math.min(4, ns));
     view.tx = x - (x - view.tx) * (ns / view.s); view.ty = y - (y - view.ty) * (ns / view.s); view.s = ns; applyView();
     if (bucketNow() !== lodBucket) { lodBucket = bucketNow(); redraw(); }   // 地図のように要約⇄詳細
   }
@@ -1082,6 +1085,20 @@ export function boot() {
       { t: 'ラインジャンプ切替 ⌒（交差を跨ぐ）', k: 'hops jump cross こうさ じゃんぷ', run: () => { model.meta.hops = !model.meta.hops || null; commitModel(); toast(model.meta.hops ? '交差をジャンプ ⌒' : 'ジャンプを解除'); } },
       { t: '接続点の丸点切替 ●', k: 'dots junction terminal まるてん せつぞくてん', run: () => { model.meta.dots = !model.meta.dots || null; commitModel(); toast(model.meta.dots ? '接続点に丸点 ●' : '丸点を解除'); } },
       { t: 'セマンティックズーム切替 🗺（引くと要約）', k: 'lod semantic zoom map ちず さまらいず', run: () => { model.meta.lod = !model.meta.lod || null; commitModel(); toast(model.meta.lod ? '🗺 地図モード：ズームで要約⇄詳細' : '地図モードを解除'); } },
+      { t: '地理マップ切替 🗾（%% geo で実座標に置く）', k: 'geo map japan にほん ちり じっざひょう bcp', run: () => { model.meta.map = !model.meta.map || null; commitModel(); fit(); toast(model.meta.map ? '🗾 地理マップ：%% geo 名前|緯度|経度 で拠点が地図に立つ' : '地理マップを解除'); } },
+      ...GEO_LAYERS.map((ly) => ({ t: `ハザード切替 ⚠ ${ly.label}`, k: `hazard bcp risk ${ly.key} はざーど ぼうさい`, run: () => {
+        const cur = new Set(model.meta.hazard || []);
+        cur.has(ly.key) ? cur.delete(ly.key) : cur.add(ly.key);
+        model.meta.hazard = cur.size ? [...cur] : null;
+        if (cur.size && !model.meta.map) model.meta.map = true;      // レイヤは地図の上に描く
+        commitModel(); toast(cur.has(ly.key) ? `⚠ ${ly.label} を表示` : `${ly.label} を消灯`);
+      } })),
+      { t: 'ハザード全レイヤ ON / OFF ⚠', k: 'hazard all bcp ぜんぶ はざーど', run: () => {
+        const on = !(model.meta.hazard && model.meta.hazard.length === GEO_LAYERS.length);
+        model.meta.hazard = on ? GEO_LAYERS.map((l) => l.key) : null;
+        if (on && !model.meta.map) model.meta.map = true;
+        commitModel(); toast(on ? '⚠ 全ハザードレイヤを表示' : 'ハザードを全消灯');
+      } },
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },
@@ -1169,6 +1186,25 @@ export function boot() {
       const rest = model.items.filter((x) => (x.type === 'bus' || x.type === 'fence') && hit(x.id, x.label, x.vlan, x.cidr));
       if (rest.length) out.push({ t: 'head', label: 'バス・フェンス' },
         ...rest.map((b) => ({ t: 'node', id: b.id, label: (b.type === 'bus' ? '━ ' : '⚑ ') + b.label, depth: 0 })));
+      // BCP：地理マップ時、拠点ごとのハザード露出と「同時被災」候補（同じ影響域に 2 拠点以上）。
+      if (L && L.map && L.map.exposure) {
+        const zoneNames = new Set(model.groups.map((g) => g.name));
+        const ex = L.map.exposure.filter((s) => s.hits.length);
+        if (ex.length) {
+          out.push({ t: 'head', label: '⚠ BCP 露出（概略・参考）' });
+          for (const s of ex) if (hit(s.name, ...s.hits.map((h) => h.name))) {
+            out.push({ t: 'bcp', name: s.name, isZone: zoneNames.has(s.name), count: s.hits.length });
+            for (const h of s.hits) out.push({ t: 'bcph', label: h.name });
+          }
+          const byHaz = new Map();
+          for (const s of ex) for (const h of s.hits) { if (!byHaz.has(h.name)) byHaz.set(h.name, []); byHaz.get(h.name).push(s.name); }
+          const multi = [...byHaz].filter(([, ss]) => ss.length >= 2);
+          if (multi.length) {
+            out.push({ t: 'head', label: '☢ 同時被災の候補（同じ影響域に複数拠点）' });
+            for (const [hz, ss] of multi) if (hit(hz, ...ss)) out.push({ t: 'bcph', label: `${hz} → ${ss.join('・')}` });
+          }
+        }
+      }
     } else {
       for (const it of model.items)
         if (hit(it.id, it.label)) out.push({ t: 'node', id: it.id, label: it.label || it.id, depth: 0 });
@@ -1180,6 +1216,11 @@ export function boot() {
     const rows = tocEntries();
     tocList.innerHTML = rows.map((r) => {
       if (r.t === 'head') return `<div class="th">${escHtml(r.label)}</div>`;
+      if (r.t === 'bcp')
+        return `<div class="tn" ${r.isZone ? `data-goto-zone="${escHtml(r.name)}"` : `data-goto="${escHtml(r.name)}"`}>`
+          + `<span>⚠ ${escHtml(r.name)}</span><span class="tc">${r.count}</span></div>`;
+      if (r.t === 'bcph')
+        return `<div class="tn" style="padding-left:26px;opacity:.72;pointer-events:none"><span>${escHtml(r.label)}</span></div>`;
       if (r.t === 'zone')
         return `<div class="tz" style="padding-left:${8 + r.depth * 14}px" data-goto-zone="${escHtml(r.name)}">`
           + `<button class="tf" data-tfold="${escHtml(r.name)}">${r.folded ? '▸' : '▾'}</button>`
