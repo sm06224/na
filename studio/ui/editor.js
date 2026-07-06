@@ -916,7 +916,7 @@ export function boot() {
   document.body.appendChild(ctx);
   const hideCtx = () => { ctx.hidden = true; };
   document.addEventListener('click', (e) => { if (!e.target.closest('#ctx')) hideCtx(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideCtx(); if (pendingConnect) { pendingConnect = null; toast('接続を中止しました'); } } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideCtx(); if (!$('guide').hidden) hideGuide(); if (pendingConnect) { pendingConnect = null; toast('接続を中止しました'); } } });
   function showCtx(items, x, y) {
     ctx.innerHTML = items.map((it, i) => `<button data-i="${i}">${it.t}</button>`).join('');
     ctx.hidden = false;
@@ -1146,6 +1146,42 @@ export function boot() {
   const sel = $('samples');
   sel.innerHTML = Object.keys(SAMPLES).map((k) => `<option>${k}</option>`).join('');
   sel.onchange = () => setText(SAMPLES[sel.value], true);
+
+  // ---- ❓ ガイド／ウェルカム（v18）：最初の 30 秒で迷わない ----
+  const guide = $('guide');
+  const showGuide = () => { guide.hidden = false; };
+  function hideGuide() {
+    guide.hidden = true;
+    try { localStorage.setItem('studio.welcomed', '1'); } catch (_) { /* プライベートモード等は諦める */ }
+  }
+  $('bGuide').onclick = showGuide;
+  $('gClose').onclick = hideGuide;
+  guide.addEventListener('click', (e) => {
+    if (e.target === guide) { hideGuide(); return; }
+    const b = e.target.closest('[data-g]'); if (!b) return;
+    const g = b.dataset.g; hideGuide();
+    const pick = (name) => { if (SAMPLES[name]) { sel.value = name; setText(SAMPLES[name], true); } };
+    if (g === 'sample-mega') pick('全国 — メガコーポ 1000 ノード（🗾 地理×BCP）');
+    else if (g === 'sample-ot') pick('インフラ — 工場 IT/OT 統合');
+    else if (g === 'paste') { dlg.hidden = false; $('csvIn').focus(); }
+    else if (g === 'blank') {
+      setText(`infra
+    title 新しい構成図
+    zone 拠点A {
+      sw1[SW-1] :switch
+      sv1[APサーバ] :server, RHEL9, 10.0.0.11
+    }
+    bus lan[基幹LAN] :vlan 10, 10.0.0.0/24
+    sw1 -- lan
+    sv1 -- lan
+`, true);
+      src.focus();
+      toast('たたき台を置きました。左を書くか、図をダブルクリック/右クリックで育ててください');
+    }
+  });
+  let welcomed = true;
+  try { welcomed = !!localStorage.getItem('studio.welcomed'); } catch (_) { /* 読めない環境では出さない */ }
+  if (!welcomed && !window.STUDIO_SOURCE) setTimeout(showGuide, 400);   // 単一 HTML（図が主役）では自動では出さない
 
   // ---- エクスポート ----
   const menu = $('exportMenu');
@@ -1495,6 +1531,7 @@ export function boot() {
         if (on && !model.meta.map) model.meta.map = true;
         commitModel(); toast(on ? '⚠ 実ハザードタイルを表示（出典: ハザードマップポータルサイト）' : '実ハザードタイルを消灯');
       } },
+      { t: '❓ ガイド（使い方の全体像）', k: 'help guide がいど へるぷ 使い方 tutorial', run: () => { $('bGuide').click(); } },
       { t: '🗺 地図パネルを開く（ベースマップ・ハザード）', k: 'map basemap hazard ちず べーすまっぷ はざーど', run: () => { if (model.kind !== 'infra') { toast('地図は infra 図種で使えます'); return; } if (mapPanel.hidden) $('zMap').click(); } },
       { t: 'レイヤパネル ◫（通常線・関係線・バス・自由レイヤ）', k: 'layers layer れいや panel', run: () => $('zLayers').click() },
       { t: '台帳 ▤（機器台帳・IP アドレス台帳）', k: 'ledger ipam daicho だいちょう 台帳 IP', run: () => $('zLedger').click() },

@@ -20,6 +20,7 @@
   <span class="sp"></span>
   <div class="ins" id="insbar"></div>
   <span id="status" class="status"></span>
+  <button id="bGuide" title="ガイド — 使い方の全体像（初回は自動で開きます）">❓</button>
   <button id="bPalette" title="コマンドパレット（Ctrl+K / ⌘K）— 全部ここからできる">⌘K</button>
   <button id="bImport">取り込み</button>
   <div class="menu">
@@ -135,6 +136,42 @@ API 実装,,10,基本設計,,実装"></textarea>
         ／ <input type="file" id="fsFiles" accept=".mmd" multiple hidden><a href="#" id="fsPick">ファイルセットを結合…</a>（.mmd 複数選択）（画面へのドロップでも可）</span>
       <button id="csvCancel" class="ghost2">閉じる</button>
       <button id="csvGo">図にする</button>
+    </div>
+  </div>
+</div>
+
+<div id="guide" class="dlg" hidden>
+  <div class="box gbox">
+    <h3 id="gTitle">studio へようこそ 👋</h3>
+    <div id="gStart" class="gstart">
+      <button data-g="sample-mega">🗾 全国メガコーポを見る<small>1,000 機器が日本地図に立つ</small></button>
+      <button data-g="sample-ot">🏭 工場 IT/OT を見る<small>現場の構成図サンプル</small></button>
+      <button data-g="paste">📋 貼り付けて作る<small>Excel の表・箇条書き・SQL・Mermaid</small></button>
+      <button data-g="blank">✏ 白紙から書く<small>構成図のたたき台を用意します</small></button>
+    </div>
+    <div class="gsheet">
+      <div class="gcol">
+        <b>✍ 書く・動かす</b>
+        <span>左のテキストが真実——<b>書けば図に、図を動かせば書き戻る</b></span>
+        <span><b>ドラッグ</b>で配置（8px スナップ）／<b>ダブルクリック</b>で名前変更・空きなら追加</span>
+        <span><b>右クリック</b>で複製・接続・削除／<b>Delete</b> で削除／<b>Ctrl+Z</b> で戻す</span>
+      </div>
+      <div class="gcol">
+        <b>🗺 地図と俯瞰（infra 図種）</b>
+        <span><b>ホイール</b>で要約⇄詳細（引くと拠点札、寄るとラックの中身）</span>
+        <span>右下 <b>🗺 地図</b>：実座標配置・地理院/OSM・ハザードマップ重畳</span>
+        <span>地図の空きを<b>右クリック</b>→「ここに拠点を置く」</span>
+      </div>
+      <div class="gcol">
+        <b>📦 調べる・出す</b>
+        <span><b>☰ 目次</b>（検索・BCP 露出）／<b>▤ 台帳</b>（機器・IPAM・CSV）／<b>◫ レイヤ</b></span>
+        <span><b>エクスポート</b>：SVG・PNG・draw.io・単一 HTML・ファイルセット ZIP</span>
+        <span>迷ったら <b>⌘K</b>——全部そこから。打った言葉がなければノードになる</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="hint" style="margin-right:auto">ヘッダの ❓ からいつでも開けます</span>
+      <button id="gClose">閉じる</button>
     </div>
   </div>
 </div>
