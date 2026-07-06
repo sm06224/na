@@ -23,6 +23,18 @@
 
 > この作品は **依存ゼロ規則の対象外**（リミッター解除済み）。描画エンジンは「決定的・DOM 非依存・往復可能」を守るため自前のまま、**地図の心臓には Leaflet を本採用**（`vendor/leaflet/` に同梱・単一 HTML にも焼き込む）。オンラインなら実地図タイル、オフラインでも自前ベースマップで動く。
 
+## 投資対効果 — B/C（ベネフィット/コスト比）（v20）
+
+v19 の障害シミュレーションを**金額**にして、BCP 投資の優先順位を出す。
+
+- **💹 投資対効果タブ（▤ 台帳の3つ目）** — 各機器を単一障害点として評価し、**B/C の高い順**にランク：
+  - **影響** ＝ その機器が落ちると本部（基準点）から到達不能になる機器の数と価値（万円/日）
+  - **年損失** ＝ 故障率 × 復旧時間 × 影響（万円/年の期待損失）
+  - **B/C** ＝ 年損失 ÷ 冗長化の対策費。**◎ は B/C≧1（かけた以上に返る＝投資すべき）**
+  - ヘッダに現状の**年間期待損失（EAL）**とポートフォリオ B/C、CSV 出力も
+- **数値は DSL で**（未指定は役割から推定、「推」バッジ表示）：`a[DB] :db, value 300, cost 60, failrate 0.2, mttr 8`（value=停止1日あたり損失 万円／cost=冗長化の年間費用 万円／failrate=回/年／mttr=時間）
+- 純エンジン `engine/costben.js`（決定的）。基準点はコア級の役割を優先。**すべて概算・参考**——前提（value・failrate）は現場が入れてこそ意味を持つ。サンプル「BCP — 投資対効果（💹 B/C）」同梱
+
 ## 経路と障害 — 落として、たどる（v19）
 
 構成図を BCP の道具に。DSL には残さない**分析の重ね描き**（右クリックから）。
@@ -250,7 +262,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 114 tests
+node --test tests/*.test.js            # 119 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）
