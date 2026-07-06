@@ -282,3 +282,12 @@ body.light .leaflet-container .leaflet-control-attribution { background: #fffc; 
 body.light #tileWarn { background: #fff6e6f6; color: #7a5410; }
 body.light .mappanel { background: #ffffffee; }
 body.light #mapList label:hover { background: #e9eef6; }
+
+/* ---- v17: 右クリックメニュー ---- */
+#ctx { position: fixed; z-index: 40; min-width: 200px; background: #101627f8; border: 1px solid #2a3550;
+  border-radius: 10px; padding: 5px; box-shadow: 0 12px 40px #000a; backdrop-filter: blur(6px); }
+#ctx button { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--fg);
+  font-size: 12.5px; padding: 7px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+#ctx button:hover { background: #1d2740; }
+body.light #ctx { background: #fffffff8; border-color: #d7dfeb; }
+body.light #ctx button:hover { background: #e9eef6; }

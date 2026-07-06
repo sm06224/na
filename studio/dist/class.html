@@ -292,6 +292,15 @@ body.light #tileWarn { background: #fff6e6f6; color: #7a5410; }
 body.light .mappanel { background: #ffffffee; }
 body.light #mapList label:hover { background: #e9eef6; }
 
+/* ---- v17: 右クリックメニュー ---- */
+#ctx { position: fixed; z-index: 40; min-width: 200px; background: #101627f8; border: 1px solid #2a3550;
+  border-radius: 10px; padding: 5px; box-shadow: 0 12px 40px #000a; backdrop-filter: blur(6px); }
+#ctx button { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--fg);
+  font-size: 12.5px; padding: 7px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+#ctx button:hover { background: #1d2740; }
+body.light #ctx { background: #fffffff8; border-color: #d7dfeb; }
+body.light #ctx button:hover { background: #e9eef6; }
+
 </style>
 <style>
 /* required styles */
@@ -4946,6 +4955,19 @@ function boot() {
     }
     if (drag) {
       if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
+      else if (drag.kind === 'node' && !drag.zone && pendingConnect && drag.id !== pendingConnect) {
+        // 右クリック「接続を張る」→ つなぎ先をクリック（クリック2回で線が張れる）
+        const from = pendingConnect; pendingConnect = null;
+        if (model.edges.some((x) => x.from === from && x.to === drag.id)) toast('もうつながっています');
+        else {
+          if (model.kind === 'class') model.edges.push({ from, to: drag.id, kind: 'assoc', dotted: false, label: '' });
+          else model.edges.push({ from, to: drag.id, label: '', dotted: false, thick: false, arrow: model.kind !== 'infra' });
+          selected.clear(); commitModel(); toast('つなぎました');
+        }
+        if (lmap) lmap.dragging.enable();
+        drag = null; pan = null; connect = null; stage.classList.remove('panning');
+        return;
+      }
       else if (drag.kind === 'node' && !drag.zone) {                          // クリック＝選択（Shift で追加/除外）
         if (drag.shift) { selected.has(drag.id) ? selected.delete(drag.id) : selected.add(drag.id); }
         else if (selected.size === 1 && selected.has(drag.id)) selected.clear();
@@ -4984,30 +5006,156 @@ function boot() {
     const g = e.target.closest('[data-drag]');
     if (g) { startRename(g.dataset.drag, g.dataset.id, g); return; }
     const [wx, wy] = toWorld(e.clientX, e.clientY);
-    if (model.kind === 'flowchart') {                        // 空きに、新しいノードをその場へ
-      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
-      const id = 'n' + k;
-      model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
-      model.order.push(id);
-      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
-      selected.clear(); selected.add(id); commitModel();
-    } else if (model.kind === 'class') {
-      let k = 1; while (model.items.some((n) => n.id === 'C' + k)) k++;
-      const id = 'C' + k;
-      model.items.push({ type: 'class', id, attrs: [], methods: [] });
-      model.order.push(id);
-      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
-      selected.clear(); selected.add(id); commitModel();
-    } else if (model.kind === 'infra') {
-      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
-      const id = 'n' + k;
-      model.items.push({ type: 'inode', id, label: '新しい機器', role: null, os: null, ip: null, vlan: null, zone: null });
-      model.order.push(id);
-      model.layout.pos[id] = [Math.round(wx / 8) * 8, Math.round(wy / 8) * 8];
-      selected.clear(); selected.add(id); commitModel();
-    } else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
+    if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') addNodeAt(wx, wy);
+    else if (model.kind === 'sequence') insert('\n    participant p{N} as 新しい人');
     else if (model.kind === 'gantt') insert('\n      新しいタスク :t{N}, after {last}, 3d');
   }
+  // 空きの座標に新しいノード/クラス/機器を置く（ダブルタップと右クリックの共通口）。
+  function addNodeAt(wx, wy) {
+    const snap = (v) => Math.round(v / 8) * 8;
+    let id;
+    if (model.kind === 'flowchart') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      id = 'n' + k;
+      model.items.push({ type: 'node', id, label: '新しいノード', shape: 'rect' });
+    } else if (model.kind === 'class') {
+      let k = 1; while (model.items.some((n) => n.id === 'C' + k)) k++;
+      id = 'C' + k;
+      model.items.push({ type: 'class', id, attrs: [], methods: [] });
+    } else if (model.kind === 'infra') {
+      let k = 1; while (model.items.some((n) => n.id === 'n' + k)) k++;
+      id = 'n' + k;
+      model.items.push({ type: 'inode', id, label: '新しい機器', role: null, os: null, ip: null, ips: [], vlan: null, layer: null, zone: null });
+    } else return;
+    model.order.push(id);
+    model.layout.pos[id] = [snap(wx), snap(wy)];
+    selected.clear(); selected.add(id); commitModel();
+  }
+
+  // ---- 編集の動線（v17）：右クリックメニュー・削除・複製・地図に拠点を置く ----
+  let pendingConnect = null;                                   // 「接続を張る」→ 次のクリックで結線
+  const EDITABLE = () => model.kind === 'infra' || model.kind === 'flowchart' || model.kind === 'class';
+  function deleteIds(ids) {
+    const kill = new Set(ids);
+    model.items = model.items.filter((x) => !kill.has(x.id));
+    model.order = model.order.filter((id) => !kill.has(id));
+    model.edges = model.edges.filter((e2) => !kill.has(e2.from) && !kill.has(e2.to));
+    for (const id of kill) {
+      delete model.layout.pos[id];
+      if (model.images) delete model.images[id];
+      if (model.layout.geo) delete model.layout.geo[id];
+    }
+    selected.clear(); hidePop(); commitModel();
+  }
+  function deleteZone(name) {                                  // ゾーンは中身（子ゾーン・機器・バス）ごと
+    const under = new Set([name]);
+    let grew = true;
+    while (grew) { grew = false; for (const g2 of model.groups) if (g2.parent && under.has(g2.parent) && !under.has(g2.name)) { under.add(g2.name); grew = true; } }
+    const ids = model.items.filter((x) => x.zone && under.has(x.zone)).map((x) => x.id);
+    model.groups = model.groups.filter((g2) => !under.has(g2.name));
+    if (model.layout.fold) model.layout.fold = model.layout.fold.filter((z) => !under.has(z));
+    for (const z of under) {
+      if (model.layout.zpos) delete model.layout.zpos[z];
+      if (model.layout.geo) delete model.layout.geo[z];
+    }
+    deleteIds(ids);
+    toast(`「${name}」を削除しました（Ctrl+Z で戻せます）`);
+  }
+  function duplicateNode(id) {
+    const it = model.items.find((x) => x.id === id); if (!it) return;
+    let k = 2; while (model.items.some((x) => x.id === `${id}_${k}`)) k++;
+    const nid = `${id}_${k}`;
+    model.items.push({ ...it, id: nid,
+      ips: it.ips ? [...it.ips] : it.ips, attrs: it.attrs ? [...it.attrs] : it.attrs, methods: it.methods ? [...it.methods] : it.methods });
+    model.order.push(nid);
+    const p = posOf(id);
+    if (p) model.layout.pos[nid] = [Math.round((p[0] + 24) / 8) * 8, Math.round((p[1] + 24) / 8) * 8];
+    selected.clear(); selected.add(nid); commitModel(); toast(`複製しました: ${nid}`);
+  }
+  function addSiteAt(lat, lng) {                               // 地図をクリックした場所に拠点が生える
+    let k = 1; while (model.groups.some((g2) => g2.name === `新拠点${k}`)) k++;
+    const zn = `新拠点${k}`;
+    let d = 1; while (model.items.some((x) => x.id === `site${k}n${d}`)) d++;
+    const did = `site${k}n${d}`;
+    model.groups.push({ name: zn, parent: null });
+    model.items.push({ type: 'inode', id: did, label: '機器', role: null, os: null, ip: null, ips: [], vlan: null, layer: null, zone: zn });
+    model.order.push(did);
+    model.layout.geo = model.layout.geo || {};
+    model.layout.geo[zn] = [+lat.toFixed(4), +lng.toFixed(4)];
+    selected.clear(); commitModel();
+    toast(`🗾 ${zn} を (${lat.toFixed(2)}, ${lng.toFixed(2)}) に置きました`);
+  }
+  // Delete / Backspace で選択を削除。図の上でも Ctrl+Z / Ctrl+Y が効く（テキスト入力中は素通し）。
+  document.addEventListener('keydown', (e) => {
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.isContentEditable)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); timeTravel(e.shiftKey ? 1 : -1); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); timeTravel(1); return; }
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!selected.size || !EDITABLE()) return;
+    e.preventDefault();
+    const n = selected.size;
+    deleteIds([...selected]);
+    toast(`${n} 個を削除しました（Ctrl+Z で戻せます）`);
+  });
+  // 右クリックメニュー：見えているものに、その場でできることを。
+  const ctx = document.createElement('div');
+  ctx.id = 'ctx'; ctx.hidden = true;
+  document.body.appendChild(ctx);
+  const hideCtx = () => { ctx.hidden = true; };
+  document.addEventListener('click', (e) => { if (!e.target.closest('#ctx')) hideCtx(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideCtx(); if (pendingConnect) { pendingConnect = null; toast('接続を中止しました'); } } });
+  function showCtx(items, x, y) {
+    ctx.innerHTML = items.map((it, i) => `<button data-i="${i}">${it.t}</button>`).join('');
+    ctx.hidden = false;
+    ctx.style.left = Math.min(x, innerWidth - ctx.offsetWidth - 8) + 'px';
+    ctx.style.top = Math.min(y, innerHeight - ctx.offsetHeight - 8) + 'px';
+    ctx._items = items;
+  }
+  ctx.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    const it = ctx._items[+b.dataset.i]; hideCtx();
+    if (it && it.run) it.run();
+  });
+  stage.addEventListener('contextmenu', (e) => {
+    if (!model.kind || !EDITABLE()) return;                    // ガント/シーケンスはブラウザ既定のまま
+    e.preventDefault();
+    const g = e.target.closest('[data-drag]');
+    if (g && g.dataset.drag === 'zone') {
+      const name = g.dataset.id;
+      const folded = (model.layout.fold || []).includes(name);
+      showCtx([
+        { t: '✎ 名前を変える', run: () => startRename('zone', name, g) },
+        { t: folded ? '▾ 開く' : '▸ 畳む', run: () => { const f = new Set(model.layout.fold || []); f.has(name) ? f.delete(name) : f.add(name); model.layout.fold = [...f]; commitModel(); } },
+        { t: '🗑 ゾーンを削除（中身ごと）', run: () => deleteZone(name) },
+      ], e.clientX, e.clientY);
+      return;
+    }
+    if (g && g.dataset.drag === 'node') {
+      const id = g.dataset.id;
+      const it = model.items.find((x) => x.id === id);
+      const isDev = it && (it.type === 'inode' || it.type === 'hub' || it.type === 'node' || it.type === 'class');
+      const items = [{ t: '✎ 名前を変える', run: () => startRename('node', id, g) }];
+      if (isDev) items.push(
+        { t: '⧉ 複製', run: () => duplicateNode(id) },
+        { t: '→ 接続を張る（つなぎ先をクリック）', run: () => { pendingConnect = id; selected.clear(); selected.add(id); redraw(); toast('つなぎ先の機器をクリック（Esc で中止）'); } });
+      if (it && (it.type === 'inode' || it.type === 'hub')) items.push({ t: 'ⓘ 詳細を見る', run: () => showPop(id) });
+      items.push({ t: '🗑 削除（つながる線ごと）', run: () => {
+        const ids = selected.has(id) && selected.size > 1 ? [...selected] : [id];
+        deleteIds(ids); toast(`${ids.length} 個を削除しました（Ctrl+Z で戻せます）`);
+      } });
+      showCtx(items, e.clientX, e.clientY);
+      return;
+    }
+    // 空きを右クリック：その場に置く。地図なら実座標の拠点も。
+    const [wx, wy] = toWorld(e.clientX, e.clientY);
+    const items = [{ t: '＋ ここに機器を置く', run: () => addNodeAt(wx, wy) }];
+    if (model.kind === 'infra' && model.meta.map && lmap) {
+      const [lat, lng] = geoUnproject(wx, wy);
+      items.push({ t: `🗾 ここに拠点を置く（${lat.toFixed(2)}, ${lng.toFixed(2)}）`, run: () => addSiteAt(lat, lng) });
+    }
+    showCtx(items, e.clientX, e.clientY);
+  });
 
   const inline = $('inline');
   let renameCtx = null;
