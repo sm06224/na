@@ -401,6 +401,8 @@ export function boot() {
     syncAlignBar();
     applyView();
     if (!$('toc').hidden) buildToc();
+    if (!$('mapPanel').hidden) buildMap();
+    syncToolbar();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
     const badLines = new Set();
@@ -433,6 +435,15 @@ export function boot() {
   osmCredit.textContent = '© OpenStreetMap contributors';
   osmCredit.style.cssText = 'position:absolute;left:8px;bottom:8px;font-size:10px;color:#8a93a6;background:#0008;padding:1px 6px;border-radius:6px;z-index:5;display:none';
   stage.appendChild(osmCredit);
+  // タイル取得失敗バナー：オフライン/プロキシで地図画像が来ないとき、黙って真っ暗にせず理由を出す。
+  const tileWarn = document.createElement('div');
+  tileWarn.id = 'tileWarn'; tileWarn.hidden = true;
+  tileWarn.innerHTML = '<span>🌐 地図タイルを取得できません（オフライン／ネットワーク制限）。構成図はそのまま表示中です。</span><button title="閉じる">✕</button>';
+  stage.appendChild(tileWarn);
+  let tileWarnDismissed = false;
+  tileWarn.querySelector('button').onclick = () => { tileWarn.hidden = true; tileWarnDismissed = true; };
+  const showTileWarn = () => { if (!tileWarnDismissed) tileWarn.hidden = false; };
+  const hideTileWarn = () => { tileWarn.hidden = true; };
   const tileCache = new Map();                                 // "z/x/y" → img
   function syncTiles() {
     const on = !!(model && model.meta && model.meta.tiles && model.meta.map && model.kind === 'infra' && L);
@@ -523,6 +534,10 @@ export function boot() {
     });
     lmap.on('click', () => { if (selected.size) { selected.clear(); redraw(); syncAlignBar(); } hidePop(); });
     enterLeaflet._fitted = false;
+    if (!enterLeaflet._coached) {                             // 初回だけ、地図操作の在り処を教える
+      enterLeaflet._coached = true;
+      setTimeout(() => toast('🗺 右下「地図」ボタンで、ベースマップ（地理院/OSM）とハザードを切り替えられます'), 500);
+    }
   }
   function exitLeaflet() {
     if (!lmap) return;
@@ -548,15 +563,22 @@ export function boot() {
     if (syncLeafletLayers._bm !== wantB) {
       if (lBase) { lBase.remove(); lBase = null; }
       const bm = BASEMAPS[basemapOf()];
-      if (bm) lBase = LF.tileLayer(bm.url, { attribution: bm.attr, maxZoom: bm.max,
-        className: model.meta.theme !== 'light' ? 'darktiles' : '' }).addTo(lmap);
+      hideTileWarn(); tileWarnDismissed = false;              // ベースマップを替えたら判定やり直し
+      if (bm) { lBase = LF.tileLayer(bm.url, { attribution: bm.attr, maxZoom: bm.max,
+        className: model.meta.theme !== 'light' ? 'darktiles' : '' }); watchTiles(lBase); lBase.addTo(lmap); }
       syncLeafletLayers._bm = wantB;
     }
     const hz = new Set(model.meta.hazardTiles || []);
     for (const [k, layer] of lHz) if (!hz.has(k)) { layer.remove(); lHz.delete(k); }
-    for (const k of hz) if (!lHz.has(k) && HAZARD_TILE_DEFS[k])
-      lHz.set(k, LF.tileLayer(HAZARD_TILE_DEFS[k].url, { opacity: 0.55, maxZoom: 17,
-        attribution: 'ハザードマップポータルサイト' }).addTo(lmap));
+    for (const k of hz) if (!lHz.has(k) && HAZARD_TILE_DEFS[k]) {
+      const layer = LF.tileLayer(HAZARD_TILE_DEFS[k].url, { opacity: 0.55, maxZoom: 17, attribution: 'ハザードマップポータルサイト' });
+      watchTiles(layer); layer.addTo(lmap); lHz.set(k, layer);
+    }
+  }
+  // タイルが 1 枚でも来れば成功（バナー消す）。全滅（error のみ）なら理由バナーを出す。
+  function watchTiles(layer) {
+    layer.on('tileload', hideTileWarn);
+    layer.on('tileerror', showTileWarn);
   }
   // 描き込み口はひとつ：地図モードなら Leaflet のオーバレイへ、それ以外は従来どおり。
   function paint(svgStr) {
@@ -1334,6 +1356,7 @@ export function boot() {
         if (on && !model.meta.map) model.meta.map = true;
         commitModel(); toast(on ? '⚠ 実ハザードタイルを表示（出典: ハザードマップポータルサイト）' : '実ハザードタイルを消灯');
       } },
+      { t: '🗺 地図パネルを開く（ベースマップ・ハザード）', k: 'map basemap hazard ちず べーすまっぷ はざーど', run: () => { if (model.kind !== 'infra') { toast('地図は infra 図種で使えます'); return; } if (mapPanel.hidden) $('zMap').click(); } },
       { t: 'レイヤパネル ◫（通常線・関係線・バス・自由レイヤ）', k: 'layers layer れいや panel', run: () => $('zLayers').click() },
       { t: '台帳 ▤（機器台帳・IP アドレス台帳）', k: 'ledger ipam daicho だいちょう 台帳 IP', run: () => $('zLedger').click() },
       { t: 'ファイルセット (.zip) — 拠点ごとに分割して保存', k: 'fileset split zip ぶんかつ ふぁいる', run: () => doExport('fileset') },
@@ -1543,41 +1566,75 @@ export function boot() {
       ...[...custom.keys()].sort().map((k) => ({ key: k, count: custom.get(k) })),
     ].filter((l) => l.count > 0);
   }
+  // ◫ レイヤは「図の要素」専用に純化（通常線・関係線・バス・フェンス・自由レイヤ）。
+  // 地図まわり（表示ON/OFF・ベースマップ・ハザード）は 🗺 地図パネルへ分けた（動線を分かりやすく）。
   function buildLayers() {
     const off = new Set(model.meta.layersOff || []);
-    let html = layerCatalog().map((l) =>
+    layersList.innerHTML = layerCatalog().map((l) =>
       `<label><input type="checkbox" data-layer="${escHtml(l.key)}" ${off.has(l.key) ? '' : 'checked'}> ${escHtml(BUILTIN_JA[l.key] || l.key)}<span class="lc">${l.count}</span></label>`).join('')
       || '<label style="color:var(--dim)">レイヤに載るものがありません（infra 図種で）</label>';
-    if (LF && model.kind === 'infra' && model.meta.map) {          // Leaflet の実地図・実ハザード
-      const cur = basemapOf();
-      html += `<div class="lsec">🗺 ベースマップ（オンライン）</div>`
-        + Object.keys(BASEMAP_JA).map((k) =>
-          `<label><input type="radio" name="bm" data-basemap="${k}" ${cur === k ? 'checked' : ''}> ${BASEMAP_JA[k]}</label>`).join('');
-      const hz = new Set(model.meta.hazardTiles || []);
-      html += `<div class="lsec">⚠ 実ハザード（ハザードマップポータル）</div>`
-        + Object.keys(HAZARD_TILE_DEFS).map((k) =>
-          `<label><input type="checkbox" data-hztile="${k}" ${hz.has(k) ? 'checked' : ''}> ${HAZARD_TILE_DEFS[k].label}</label>`).join('');
-    }
-    layersList.innerHTML = html;
   }
-  $('zLayers').onclick = () => { layersPanel.hidden = !layersPanel.hidden; if (!layersPanel.hidden) buildLayers(); };
+  $('zLayers').onclick = () => { layersPanel.hidden = !layersPanel.hidden; if (!layersPanel.hidden) { mapPanel.hidden = true; buildLayers(); } };
   $('layersClose').onclick = () => { layersPanel.hidden = true; };
   layersList.addEventListener('change', (e) => {
+    const k = e.target.dataset && e.target.dataset.layer; if (!k) return;
+    const off = new Set(model.meta.layersOff || []);
+    e.target.checked ? off.delete(k) : off.add(k);
+    model.meta.layersOff = off.size ? [...off] : null;
+    commitModel();
+  });
+
+  // ---- 🗺 地図パネル（v16）：地図の操作をひとつの分かりやすい場所に集約 ----
+  const mapPanel = $('mapPanel'), mapList = $('mapList');
+  function buildMap() {
+    const on = !!model.meta.map, cur = basemapOf();
+    const hz = new Set(model.meta.hazard || []);
+    const hzt = new Set(model.meta.hazardTiles || []);
+    let html = `<label class="mtop"><input type="checkbox" data-mapon ${on ? 'checked' : ''}> <b>地図に載せる</b>（拠点を実座標へ）</label>`;
+    html += `<div class="lsec">🗺 ベースマップ${LF ? '' : '（Leaflet 未読込）'}</div>`
+      + `<div class="mgrid"${on ? '' : ' style="opacity:.45;pointer-events:none"'}>`
+      + Object.keys(BASEMAP_JA).map((k) =>
+        `<label><input type="radio" name="bm" data-basemap="${k}" ${cur === k ? 'checked' : ''}> ${BASEMAP_JA[k]}</label>`).join('') + `</div>`;
+    html += `<div class="lsec">⚠ ハザード（内蔵・オフライン可）</div>`
+      + `<div class="mgrid">` + GEO_LAYERS.map((l) =>
+        `<label><input type="checkbox" data-hz="${l.key}" ${hz.has(l.key) ? 'checked' : ''}> <span style="color:${l.hue}">■</span> ${escHtml(l.label.split('（')[0])}</label>`).join('') + `</div>`;
+    html += `<div class="lsec">⚠ 実ハザードタイル（要ネット）</div>`
+      + `<div class="mgrid">` + Object.keys(HAZARD_TILE_DEFS).map((k) =>
+        `<label><input type="checkbox" data-hztile="${k}" ${hzt.has(k) ? 'checked' : ''}> ${escHtml(HAZARD_TILE_DEFS[k].label)}</label>`).join('') + `</div>`;
+    html += `<div class="mnote">※ ベースマップと実ハザードの<b>地図画像はインターネット接続</b>が必要です（国土地理院・OpenStreetMap・ハザードマップポータル）。オフラインでは自前の日本アウトラインで表示します。</div>`;
+    mapList.innerHTML = html;
+  }
+  $('zMap').onclick = () => { mapPanel.hidden = !mapPanel.hidden; if (!mapPanel.hidden) { layersPanel.hidden = true; buildMap(); } };
+  $('mapClose').onclick = () => { mapPanel.hidden = true; };
+  // infra 図種のときだけ 🗺 地図 / ◫ レイヤ / ▤ 台帳 を出す（他の図種では不要なので隠して動線を軽く）。
+  function syncToolbar() {
+    const isInfra = model.kind === 'infra';
+    $('zMap').hidden = !isInfra; $('zLayers').hidden = !isInfra; $('zLedger').hidden = !isInfra;
+    if (!isInfra) { mapPanel.hidden = true; layersPanel.hidden = true; if (!ledger.hidden) ledger.hidden = true; }
+  }
+  mapList.addEventListener('change', (e) => {
     const d = e.target.dataset || {};
-    if (d.layer) {
-      const off = new Set(model.meta.layersOff || []);
-      e.target.checked ? off.delete(d.layer) : off.add(d.layer);
-      model.meta.layersOff = off.size ? [...off] : null;
-      commitModel();
-    } else if (d.basemap) {                                    // ベースマップの切替（Leaflet）
+    if ('mapon' in d) {
+      model.meta.map = e.target.checked || null;
+      commitModel(); buildMap(); fit();
+      toast(model.meta.map ? '🗾 地図に載せました（拠点に %% geo が要ります）' : '地図表示をOFF');
+    } else if (d.basemap) {
       model.meta.basemap = d.basemap === 'none' ? null : d.basemap;
-      model.meta.tiles = null;                                 // 旧記法は basemap に一本化
-      commitModel();
-    } else if (d.hztile) {                                     // 実ハザードタイルの点灯/消灯
+      model.meta.tiles = null;
+      if (model.meta.basemap && !model.meta.map) model.meta.map = true;
+      commitModel(); buildMap();
+    } else if (d.hz) {
+      const hz = new Set(model.meta.hazard || []);
+      e.target.checked ? hz.add(d.hz) : hz.delete(d.hz);
+      model.meta.hazard = hz.size ? [...hz] : null;
+      if (hz.size && !model.meta.map) model.meta.map = true;
+      commitModel(); buildMap();
+    } else if (d.hztile) {
       const hz = new Set(model.meta.hazardTiles || []);
       e.target.checked ? hz.add(d.hztile) : hz.delete(d.hztile);
       model.meta.hazardTiles = hz.size ? [...hz] : null;
-      commitModel();
+      if (hz.size && !model.meta.map) model.meta.map = true;
+      commitModel(); buildMap();
     }
   });
 
