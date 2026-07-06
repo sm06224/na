@@ -343,6 +343,12 @@ body.light .analysisbar #anaClear { background: #e9eef6; color: #3a465a; }
 #ledBody .bcnote code { color: #8fb6ff; }
 #ledBody .bcnote b { color: #f0a03a; }
 
+/* ---- v21: B/C の CapEx/OpEx/NPV 表 ---- */
+#ledBody .bcsum input { width: 46px; background: #0d1119; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 5px; font-size: 12px; text-align: right; }
+#ledBody .bcbad { color: #f0645a; }
+#ledBody .bcplus { color: #7ad1b0; font-size: 10px; margin-left: 3px; }
+body.light #ledBody .bcsum input { background: #f4f6fa; }
+
 </style>
 <style>
 /* required styles */
@@ -1614,7 +1620,7 @@ function parse(text) {
     if (t === '%% @layout') { inLayout = true; continue; }
     if (t.startsWith('%%')) {
       const d = t.replace(/^%%\s*/, '').trim();
-      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod|geo|map|hazard|layers|tiles|basemap|hazardtiles)\b/.test(d) || d.startsWith('@today')) {
+      if (inLayout || /^(pos|order|at|today|img|style|theme|bg|fold|hops|dots|zpos|lod|geo|map|hazard|layers|tiles|basemap|hazardtiles|bc)\b/.test(d) || d.startsWith('@today')) {
         const a = d.replace(/^@/, '').split(/\s+/);
         if (a[0] === 'pos' && a.length >= 4) model.layout.pos[a[1]] = [parseFloat(a[2]), parseFloat(a[3])];
         else if (a[0] === 'order') model.layout.order = a.slice(1);
@@ -1642,6 +1648,11 @@ function parse(text) {
         else if (a[0] === 'tiles') model.meta.tiles = true;            // 旧記法：実地図タイル（= basemap osm）
         else if (a[0] === 'basemap' && a[1]) model.meta.basemap = a[1];   // ベースマップ（osm/gsi/photo/none）
         else if (a[0] === 'hazardtiles') model.meta.hazardTiles = d.replace(/^hazardtiles\s*/, '').split('|').filter(Boolean);  // 本物のハザードマップタイル
+        else if (a[0] === 'bc') {                                       // B/C の前提（想定年数・割引率）
+          const bl = /life\s+([\d.]+)/.exec(d); const br = /rate\s+([\d.]+)/.exec(d);
+          if (bl) model.meta.bcLife = parseFloat(bl[1]);
+          if (br) model.meta.bcRate = parseFloat(br[1]);
+        }
       }
       continue;                                            // ふつうのコメントは捨てる
     }
@@ -2185,6 +2196,7 @@ function trailer(model) {
   if (model.meta.tiles) out.push('%% tiles');                       // 旧記法（= basemap osm）
   if (model.meta.basemap) out.push(`%% basemap ${model.meta.basemap}`);   // ベースマップ選択
   if (model.meta.hazardTiles && model.meta.hazardTiles.length) out.push(`%% hazardtiles ${model.meta.hazardTiles.join('|')}`);
+  if (model.meta.bcLife != null || model.meta.bcRate != null) out.push(`%% bc${model.meta.bcLife != null ? ' life ' + model.meta.bcLife : ''}${model.meta.bcRate != null ? ' rate ' + model.meta.bcRate : ''}`);
   if (model.kind === 'flowchart' || model.kind === 'class' || model.kind === 'infra') {
     if (model.kind === 'infra' && L.fold && L.fold.length) out.push(`%% fold ${L.fold.join('|')}`);
     if (model.kind === 'infra') for (const zn of Object.keys(L.zpos || {})) out.push(`%% zpos ${zn}|${num(L.zpos[zn][0])}|${num(L.zpos[zn][1])}`);
@@ -2730,7 +2742,7 @@ const IP_RE = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
 // IP は複数書ける（機器の足は一本とは限らない）——ips に全部、ip には先頭を残す。
 function parseAttrs(spec) {
   const out = { role: null, os: null, ip: null, ips: [], vlan: null, orient: null, len: null, layer: null,
-    value: null, cost: null, failrate: null, mttr: null };
+    value: null, cost: null, capex: null, opex: null, benefit: null, failrate: null, mttr: null };
   for (const tokRaw of String(spec || '').split(',')) {
     const tok = tokRaw.trim(); if (!tok) continue;
     const low = tok.toLowerCase();
@@ -2740,7 +2752,7 @@ function parseAttrs(spec) {
     if (ml) { out.len = +ml[1]; continue; }
     const my = /^layer\s+(.+)$/i.exec(tok);
     if (my) { out.layer = my[1].trim(); continue; }
-    const mc = /^(value|cost|failrate|fr|mttr)\s*([\d.]+)$/i.exec(tok);   // B/C 用の数値属性
+    const mc = /^(value|cost|capex|opex|benefit|failrate|fr|mttr)\s*([\d.]+)$/i.exec(tok);   // B/C 用の数値属性
     if (mc) { out[mc[1].toLowerCase() === 'fr' ? 'failrate' : mc[1].toLowerCase()] = parseFloat(mc[2]); continue; }
     if (/^(h|horizontal|横)$/.test(low)) { out.orient = 'h'; continue; }
     if (/^(v|vertical|縦)$/.test(low)) { out.orient = 'v'; continue; }
@@ -2840,7 +2852,7 @@ function parseInfra(lines, model) {
       const a = parseAttrs(nm[3]);
       model.items.push({ type: 'inode', id: nm[1], label: nm[2] || nm[1],
         role: a.role, os: a.os, ip: a.ip, ips: a.ips, vlan: a.vlan, layer: a.layer,
-        value: a.value, cost: a.cost, failrate: a.failrate, mttr: a.mttr,
+        value: a.value, cost: a.cost, capex: a.capex, opex: a.opex, benefit: a.benefit, failrate: a.failrate, mttr: a.mttr,
         zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(nm[1]);
       continue;
@@ -3489,6 +3501,8 @@ function drawInfra(model, L, opts = {}) {
 const attrsOf = (n) => [n.role, n.os, ...(n.ips && n.ips.length ? n.ips : (n.ip ? [n.ip] : [])),
   n.vlan != null ? 'vlan ' + n.vlan : null, n.layer ? 'layer ' + n.layer : null,
   n.value != null ? 'value ' + n.value : null, n.cost != null ? 'cost ' + n.cost : null,
+  n.capex != null ? 'capex ' + n.capex : null, n.opex != null ? 'opex ' + n.opex : null,
+  n.benefit != null ? 'benefit ' + n.benefit : null,
   n.failrate != null ? 'failrate ' + n.failrate : null, n.mttr != null ? 'mttr ' + n.mttr : null].filter(Boolean).join(', ');
 const RED_WORD = { ha: '冗長', lacp: 'lacp', stack: 'stack', vrrp: 'vrrp' };
 const linkAttrsOf = (e) => [
@@ -4157,25 +4171,36 @@ const DEF_FR = {                                            // 年間故障率�
   pc: 0.05, printer: 0.05, _bus: 0.12, _hub: 0.15, _default: 0.1,
 };
 const DEF_MTTR = 4;                                         // 復旧時間（時間）
+const DEF_LIFE = 5;                                  // 想定耐用年数（年）
+const DEF_RATE = 2;                                  // 割引率（%）
 
 const valueOf = (it) => it.type === 'bus' ? DEF_VALUE._bus : it.type === 'hub' ? DEF_VALUE._hub
   : (DEF_VALUE[it.role] ?? DEF_VALUE._default);
 const frOf = (it) => it.type === 'bus' ? DEF_FR._bus : it.type === 'hub' ? DEF_FR._hub
   : (DEF_FR[it.role] ?? DEF_FR._default);
-// 冗長化の年間費用（既定）：価値に比例させ、最低 10 万円/年。現場が :cost で上書きする前提。
-const costOf = (it, value) => Math.max(10, Math.round(value * 0.4));
+// 冗長化コストの既定：CapEx（初期投資・一括）は価値の 1.5 倍、OpEx（年間運用費）は価値の 15%。
+const capexOf = (value) => Math.max(30, Math.round(value * 1.5));
+const opexOf = (value) => Math.max(5, Math.round(value * 0.15));
 
 // 1 機器ぶんのパラメータ（明示があればそれ、無ければ推定）。
+// 費用は CapEx（初期・一括）／OpEx（年間）に分離。旧 :cost は年間費用＝OpEx として後方互換。
 function params(it) {
   const v = it.value != null ? it.value : valueOf(it);
   const fr = it.failrate != null ? it.failrate : frOf(it);
   const mttr = it.mttr != null ? it.mttr : DEF_MTTR;
-  const cost = it.cost != null ? it.cost : costOf(it, v);
+  const legacy = it.cost != null && it.capex == null && it.opex == null;   // 旧 :cost N → OpEx N
+  const capex = it.capex != null ? it.capex : (legacy ? 0 : capexOf(v));
+  const opex = it.opex != null ? it.opex : (legacy ? it.cost : opexOf(v));
+  const benefit = it.benefit != null ? it.benefit : 0;      // その他の年間便益（可用性以外）
   return {
-    value: v, failrate: fr, mttr, cost,
-    defaulted: { value: it.value == null, failrate: it.failrate == null, mttr: it.mttr == null, cost: it.cost == null },
+    value: v, failrate: fr, mttr, capex, opex, benefit,
+    defaulted: { value: it.value == null, failrate: it.failrate == null, mttr: it.mttr == null,
+      capex: it.capex == null && !legacy, opex: it.opex == null && !legacy, benefit: it.benefit == null },
   };
 }
+
+// 年金現価係数：毎年 1 を L 年、割引率 r（小数）で現在価値に。
+const annuityFactor = (L, r) => r > 0 ? (1 - (1 + r) ** -L) / r : L;
 
 // 基準点（本部）：コア級の役割を優先し、次に次数の高い頂点。到達性はここから測る。
 const ROOT_PRIO = { core: 3, dist: 2, router: 2, firewall: 2, switch: 1, _hub: 1 };
@@ -4192,8 +4217,11 @@ function bcRoot(model, exclude = null) {
 function costBenefit(model, opts = {}) {
   const ids = netNodeIds(model);
   const root = opts.root || bcRoot(model);
-  // 本部そのものを落とす評価では、次点のコア級を代替基準点にする。
-  const altRoot = bcRoot(model, root);
+  const altRoot = bcRoot(model, root);                              // 本部自身を落とす評価用の代替基準点
+  const life = opts.life || model.meta?.bcLife || DEF_LIFE;         // 想定年数
+  const rate = (opts.rate != null ? opts.rate : (model.meta?.bcRate != null ? model.meta.bcRate : DEF_RATE)) / 100;
+  const af = annuityFactor(life, rate);                             // 年金現価係数
+  const r1 = (x) => Math.round(x * 10) / 10;
   const itemOf = new Map(model.items.map((x) => [x.id, x]));
   const par = new Map(ids.map((id) => [id, params(itemOf.get(id) || {})]));
   const valueTotal = ids.reduce((s, id) => s + par.get(id).value, 0);
@@ -4202,7 +4230,6 @@ function costBenefit(model, opts = {}) {
   for (const id of ids) {
     const it = itemOf.get(id); if (!it) continue;
     const p = par.get(id);
-    // id を落としたとき本部から到達不能になる機器（id 自身は除く）。
     const ref = id === root ? altRoot : root;
     const reach = ref ? reachableFrom(model, ref, [id]) : new Set();
     let impactVal = 0, impactCnt = 0;
@@ -4210,25 +4237,37 @@ function costBenefit(model, opts = {}) {
       if (other === id) continue;
       if (!reach.has(other)) { impactVal += par.get(other).value; impactCnt++; }
     }
-    // id 自身の停止も損失（機能が止まる）。冗長化で救えるのはこの分＋巻き添え。
-    impactVal += p.value;
-    const annualLoss = p.failrate * (p.mttr / 24) * impactVal;       // 万円/年
-    const bc = p.cost > 0 ? annualLoss / p.cost : Infinity;
-    eal += annualLoss;
+    impactVal += p.value;                                           // 自身の停止も損失
+    const avoided = p.failrate * (p.mttr / 24) * impactVal;         // 冗長化で回避できる年間損失（万円/年）
+    const annualBenefit = avoided + p.benefit;                      // ＋その他便益（可用性以外）
+    // 割引現在価値でのベネフィット/コスト。CapEx は初期一括、OpEx は毎年。
+    const pvBenefit = annualBenefit * af;
+    const pvCost = p.capex + p.opex * af;
+    const npv = pvBenefit - pvCost;                                 // 正味現在価値（万円）
+    const bc = pvCost > 0 ? pvBenefit / pvCost : (pvBenefit > 0 ? Infinity : 0);
+    const net = annualBenefit - p.opex;                             // 年間の手残り
+    const payback = net > 0 ? p.capex / net : Infinity;            // 回収年
+    eal += avoided;
     rows.push({ id, label: it.label || id, role: it.role || (it.type === 'bus' ? 'bus' : it.type === 'hub' ? 'hub' : ''),
-      impactCnt, impactVal: Math.round(impactVal), annualLoss: Math.round(annualLoss * 10) / 10,
-      cost: p.cost, bc: Math.round(bc * 100) / 100, defaulted: p.defaulted,
-      value: p.value, failrate: p.failrate, mttr: p.mttr });
+      impactCnt, impactVal: Math.round(impactVal),
+      avoided: r1(avoided), benefit: p.benefit, annualBenefit: r1(annualBenefit),
+      capex: p.capex, opex: p.opex, npv: Math.round(npv), bc: Math.round(bc * 100) / 100,
+      payback: payback === Infinity ? null : r1(payback),
+      defaulted: p.defaulted, value: p.value, failrate: p.failrate, mttr: p.mttr });
   }
-  rows.sort((a, b) => b.bc - a.bc || b.annualLoss - a.annualLoss || a.id.localeCompare(b.id));
-  const worth = rows.filter((r) => r.bc >= 1);                       // 投資する価値のある対策
-  const invest = worth.reduce((s, r) => s + r.cost, 0);
-  const recover = worth.reduce((s, r) => s + r.annualLoss, 0);
+  rows.sort((a, b) => b.npv - a.npv || b.bc - a.bc || a.id.localeCompare(b.id));   // NPV 順（正味の効き）
+  const worth = rows.filter((r) => r.npv > 0);                      // NPV 黒字＝やる価値のある対策
   return {
-    root, rows, valueTotal: Math.round(valueTotal),
-    eal: Math.round(eal * 10) / 10,                                   // 現状の年間期待損失（万円/年）
-    invest, recover: Math.round(recover * 10) / 10,
-    portfolioBC: invest > 0 ? Math.round(recover / invest * 100) / 100 : 0,
+    root, rows, life, rate: rate * 100, valueTotal: Math.round(valueTotal),
+    eal: r1(eal),                                                   // 現状の年間期待損失（万円/年）
+    capexTotal: worth.reduce((s, r) => s + r.capex, 0),             // 必要な初期投資合計
+    opexTotal: worth.reduce((s, r) => s + r.opex, 0),               // 年間運用費合計
+    npvTotal: worth.reduce((s, r) => s + r.npv, 0),                 // ポートフォリオ NPV
+    portfolioBC: (() => {
+      const pvB = worth.reduce((s, r) => s + r.annualBenefit * af, 0);
+      const pvC = worth.reduce((s, r) => s + r.capex + r.opex * af, 0);
+      return pvC > 0 ? Math.round(pvB / pvC * 100) / 100 : 0;
+    })(),
   };
 }
 
@@ -4651,19 +4690,19 @@ const SAMPLES = {
 %% @layout
 %% lod
 %% zpos 本社|157|374`,
-  'BCP — 投資対効果（💹 B/C）': `infra
-    title BCP 投資対効果 — どこに冗長化のカネをかけるか
+  'BCP — 投資対効果（💹 CapEx/OpEx/NPV）': `infra
+    title BCP 投資対効果 — CapEx / OpEx / その他便益 / NPV
     zone 本社 {
       core[基幹コア] :core, value 200
       db[基幹DB] :db, value 400
       bus lan[本社LAN] :vlan 10, 10.0.0.0/24
     }
     zone 大阪支社 {
-      osw[支社スイッチ] :access, value 150, failrate 1.0, cost 30, mttr 8
+      osw[支社スイッチ] :access, value 150, failrate 1.0, mttr 8, capex 120, opex 20, benefit 10
       op1[受注サーバ] :server, value 180
       op2[出荷端末群] :pc, value 90
     }
-    hub wan[広域WAN] :cost 50
+    hub wan[広域WAN] :capex 300, opex 40
     core -- lan
     db -- lan
     core -- wan :幹線
@@ -4671,7 +4710,8 @@ const SAMPLES = {
     op1 -- osw
     op2 -- osw
 
-%% @layout`,
+%% @layout
+%% bc life 6 rate 3`,
   '配線の意味 — 冗長種別・関係線・両端IP・レイヤ': `infra
     title 配線の意味 — 冗長・関係・インタフェース
     zone 東京 {
@@ -6421,17 +6461,25 @@ function boot() {
       const rootN = model.items.find((x) => x.id === bc.root);
       const D = (d, unit) => d ? `<span class="bcdef" title="推定値（DSL で :${unit} を書くと上書き）">推</span>` : '';
       const rows = bc.rows.filter((r) => hit(r.id, r.label, r.role) && r.impactVal > 0);
+      const life = model.meta.bcLife != null ? model.meta.bcLife : bc.life;
+      const rate = model.meta.bcRate != null ? model.meta.bcRate : bc.rate;
       ledBody.innerHTML = `<div class="bcsum">現状の年間期待損失（EAL）<b>${bc.eal.toLocaleString()}</b> 万円/年`
-        + ` ・ 総資産価値 ${bc.valueTotal.toLocaleString()} 万円/日 ・ 基準点 ${escHtml(rootN ? (rootN.label || bc.root) : (bc.root || '—'))}</div>`
-        + `<div class="bcsum2">B/C≧1 の対策を全部打つと：投資 <b>${bc.invest.toLocaleString()}</b> 万円/年 → 回収 <b class="ok">${bc.recover.toLocaleString()}</b> 万円/年（ポートフォリオ B/C <b>${bc.portfolioBC}</b>）</div>`
-        + `<table><tr><th>優先</th><th>機器</th><th>影響<br>台/万円日</th><th>年損失<br>万円/年</th><th>対策費<br>万円/年</th><th>B/C</th></tr>`
-        + rows.map((r, i) => `<tr data-goto="${escHtml(r.id)}"><td>${r.bc >= 1 ? '◎' : r.bc >= 0.5 ? '○' : '—'}</td>`
+        + ` ・ 想定 <input id="bcLife" type="number" min="1" max="30" step="1" value="${life}"> 年 ・ 割引率 <input id="bcRate" type="number" min="0" max="20" step="0.5" value="${rate}"> %`
+        + ` ・ 基準点 ${escHtml(rootN ? (rootN.label || bc.root) : (bc.root || '—'))}</div>`
+        + `<div class="bcsum2">NPV 黒字の対策を全部打つと：初期投資 CapEx <b>${bc.capexTotal.toLocaleString()}</b> 万円＋運用 OpEx <b>${bc.opexTotal.toLocaleString()}</b> 万円/年 → ${life}年 NPV <b class="ok">${bc.npvTotal >= 0 ? '+' : ''}${bc.npvTotal.toLocaleString()}</b> 万円（ポートフォリオ B/C <b>${bc.portfolioBC}</b>）</div>`
+        + `<table><tr><th>優先</th><th>機器</th><th>影響<br>台/万円日</th><th>回避+便益<br>万円/年</th><th>CapEx<br>万円</th><th>OpEx<br>万円/年</th><th>NPV<br>万円</th><th>B/C</th><th>回収<br>年</th></tr>`
+        + rows.map((r) => `<tr data-goto="${escHtml(r.id)}"><td>${r.npv > 0 ? '◎' : r.bc >= 0.8 ? '○' : '—'}</td>`
           + `<td>${escHtml(r.label)}<span class="bcrole">${escHtml(r.role)}</span></td>`
           + `<td>${r.impactCnt} / ${r.impactVal.toLocaleString()}${D(r.defaulted.value, 'value')}</td>`
-          + `<td>${r.annualLoss.toLocaleString()}</td>`
-          + `<td>${r.cost.toLocaleString()}${D(r.defaulted.cost, 'cost')}</td>`
-          + `<td class="${r.bc >= 1 ? 'bcgood' : ''}">${r.bc}</td></tr>`).join('')
-        + `</table><div class="bcnote">「影響」＝その機器が落ちると本部から到達不能になる機器の数と価値（万円/日）。年損失＝故障率×復旧時間×影響。<b>推</b>は役割からの推定値——<code>:value 300, :cost 60, :failrate 0.2, :mttr 8</code> で上書き。すべて概算・参考。</div>`;
+          + `<td>${r.avoided.toLocaleString()}${r.benefit ? `<span class="bcplus">+${r.benefit}</span>` : ''}</td>`
+          + `<td>${r.capex.toLocaleString()}${D(r.defaulted.capex, 'capex')}</td>`
+          + `<td>${r.opex.toLocaleString()}${D(r.defaulted.opex, 'opex')}</td>`
+          + `<td class="${r.npv > 0 ? 'bcgood' : 'bcbad'}">${r.npv >= 0 ? '+' : ''}${r.npv.toLocaleString()}</td>`
+          + `<td class="${r.bc >= 1 ? 'bcgood' : ''}">${r.bc}</td>`
+          + `<td>${r.payback == null ? '—' : r.payback}</td></tr>`).join('')
+        + `</table><div class="bcnote">「影響」＝落ちると本部から到達不能になる機器の数と価値（万円/日）。<b>回避</b>＝故障率×復旧時間×影響（＋その他便益）。<b>NPV</b>＝想定年数・割引率での正味現在価値（＝ベネフィット−コスト）。<b>推</b>は推定値——<code>:value 300, :capex 200, :opex 40, :benefit 20, :failrate 0.2, :mttr 8</code> で上書き。すべて概算・参考。</div>`;
+      $('bcLife').onchange = (ev) => { const v = Math.max(1, +ev.target.value || 5); model.meta.bcLife = v; commitModel(); ledTab = 'bc'; buildLedger(); };
+      $('bcRate').onchange = (ev) => { const v = Math.max(0, +ev.target.value || 0); model.meta.bcRate = v; commitModel(); ledTab = 'bc'; buildLedger(); };
     } else {
       const { nets, orphans } = ledgerIpam(model);
       ledBody.innerHTML = nets.map((net) => {
@@ -6468,8 +6516,8 @@ function boot() {
     } else if (ledTab === 'bc') {
       const bc = costBenefit(model);
       download('costbenefit.csv', ledgerCsv(
-        ['id', 'label', 'role', 'impact_devices', 'impact_value_manyen_day', 'annual_loss_manyen_year', 'cost_manyen_year', 'BC', 'value', 'failrate', 'mttr'],
-        bc.rows.map((r) => [r.id, r.label, r.role, r.impactCnt, r.impactVal, r.annualLoss, r.cost, r.bc, r.value, r.failrate, r.mttr])), 'text/csv');
+        ['id', 'label', 'role', 'impact_devices', 'impact_value_manyen_day', 'avoided_loss_manyen_year', 'other_benefit_manyen_year', 'capex_manyen', 'opex_manyen_year', `npv_manyen_${bc.life}yr`, 'BC', 'payback_year', 'value', 'failrate', 'mttr'],
+        bc.rows.map((r) => [r.id, r.label, r.role, r.impactCnt, r.impactVal, r.avoided, r.benefit, r.capex, r.opex, r.npv, r.bc, r.payback ?? '', r.value, r.failrate, r.mttr])), 'text/csv');
     } else {
       const { nets, orphans } = ledgerIpam(model);
       const rows = [];

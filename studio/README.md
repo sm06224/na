@@ -23,6 +23,17 @@
 
 > この作品は **依存ゼロ規則の対象外**（リミッター解除済み）。描画エンジンは「決定的・DOM 非依存・往復可能」を守るため自前のまま、**地図の心臓には Leaflet を本採用**（`vendor/leaflet/` に同梱・単一 HTML にも焼き込む）。オンラインなら実地図タイル、オフラインでも自前ベースマップで動く。
 
+## OpEx / CapEx / その他便益 — NPV で投資判断（v21）
+
+v20 の B/C を**財務モデルとして正しく**。費用を CapEx（初期投資・一括）と OpEx（年間運用費）に分け、想定年数・割引率で NPV（正味現在価値）まで出す。
+
+- **CapEx / OpEx を分離**：`:capex 200`（初期・万円一括）／`:opex 40`（年間・万円/年）。旧 `:cost N` は年間費用＝OpEx として後方互換
+- **その他便益** `:benefit N`（可用性以外の年間効果 万円/年——保守性・性能・コンプラなど）。年便益＝回避できる損失＋その他便益
+- **NPV・B/C・回収年**：想定年数 L・割引率 r で `PV(便益)=年便益×年金現価係数`、`PV(費用)=CapEx＋OpEx×係数`。**NPV＝PV便益−PV費用**、B/C＝その比、回収年＝CapEx÷(年便益−OpEx)。ランクは NPV 順（正味の効き）
+- **想定年数・割引率は表内で編集**（`%% bc life 6 rate 3` に往復）。割引率を上げれば NPV が下がる——感度分析がその場で
+- ヘッダに **NPV 黒字の対策を全部打つときの CapEx 合計・OpEx/年 合計・ポートフォリオ NPV**。CSV は CapEx/OpEx/NPV/回収年つき
+- すべて概算・参考。`engine/costben.js`（決定的）
+
 ## 投資対効果 — B/C（ベネフィット/コスト比）（v20）
 
 v19 の障害シミュレーションを**金額**にして、BCP 投資の優先順位を出す。
@@ -262,7 +273,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 119 tests
+node --test tests/*.test.js            # 121 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）

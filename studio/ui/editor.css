@@ -333,3 +333,9 @@ body.light .analysisbar #anaClear { background: #e9eef6; color: #3a465a; }
 #ledBody .bcnote { margin: 8px 4px; padding: 8px; border-radius: 8px; background: #6aa9ff12; color: var(--dim); font-size: 10.5px; line-height: 1.6; }
 #ledBody .bcnote code { color: #8fb6ff; }
 #ledBody .bcnote b { color: #f0a03a; }
+
+/* ---- v21: B/C の CapEx/OpEx/NPV 表 ---- */
+#ledBody .bcsum input { width: 46px; background: #0d1119; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 5px; font-size: 12px; text-align: right; }
+#ledBody .bcbad { color: #f0645a; }
+#ledBody .bcplus { color: #7ad1b0; font-size: 10px; margin-left: 3px; }
+body.light #ledBody .bcsum input { background: #f4f6fa; }

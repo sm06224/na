@@ -37,25 +37,36 @@ const DEF_FR = {                                            // 年間故障率�
   pc: 0.05, printer: 0.05, _bus: 0.12, _hub: 0.15, _default: 0.1,
 };
 const DEF_MTTR = 4;                                         // 復旧時間（時間）
+export const DEF_LIFE = 5;                                  // 想定耐用年数（年）
+export const DEF_RATE = 2;                                  // 割引率（%）
 
 const valueOf = (it) => it.type === 'bus' ? DEF_VALUE._bus : it.type === 'hub' ? DEF_VALUE._hub
   : (DEF_VALUE[it.role] ?? DEF_VALUE._default);
 const frOf = (it) => it.type === 'bus' ? DEF_FR._bus : it.type === 'hub' ? DEF_FR._hub
   : (DEF_FR[it.role] ?? DEF_FR._default);
-// 冗長化の年間費用（既定）：価値に比例させ、最低 10 万円/年。現場が :cost で上書きする前提。
-const costOf = (it, value) => Math.max(10, Math.round(value * 0.4));
+// 冗長化コストの既定：CapEx（初期投資・一括）は価値の 1.5 倍、OpEx（年間運用費）は価値の 15%。
+const capexOf = (value) => Math.max(30, Math.round(value * 1.5));
+const opexOf = (value) => Math.max(5, Math.round(value * 0.15));
 
 // 1 機器ぶんのパラメータ（明示があればそれ、無ければ推定）。
+// 費用は CapEx（初期・一括）／OpEx（年間）に分離。旧 :cost は年間費用＝OpEx として後方互換。
 export function params(it) {
   const v = it.value != null ? it.value : valueOf(it);
   const fr = it.failrate != null ? it.failrate : frOf(it);
   const mttr = it.mttr != null ? it.mttr : DEF_MTTR;
-  const cost = it.cost != null ? it.cost : costOf(it, v);
+  const legacy = it.cost != null && it.capex == null && it.opex == null;   // 旧 :cost N → OpEx N
+  const capex = it.capex != null ? it.capex : (legacy ? 0 : capexOf(v));
+  const opex = it.opex != null ? it.opex : (legacy ? it.cost : opexOf(v));
+  const benefit = it.benefit != null ? it.benefit : 0;      // その他の年間便益（可用性以外）
   return {
-    value: v, failrate: fr, mttr, cost,
-    defaulted: { value: it.value == null, failrate: it.failrate == null, mttr: it.mttr == null, cost: it.cost == null },
+    value: v, failrate: fr, mttr, capex, opex, benefit,
+    defaulted: { value: it.value == null, failrate: it.failrate == null, mttr: it.mttr == null,
+      capex: it.capex == null && !legacy, opex: it.opex == null && !legacy, benefit: it.benefit == null },
   };
 }
+
+// 年金現価係数：毎年 1 を L 年、割引率 r（小数）で現在価値に。
+const annuityFactor = (L, r) => r > 0 ? (1 - (1 + r) ** -L) / r : L;
 
 // 基準点（本部）：コア級の役割を優先し、次に次数の高い頂点。到達性はここから測る。
 const ROOT_PRIO = { core: 3, dist: 2, router: 2, firewall: 2, switch: 1, _hub: 1 };
@@ -72,8 +83,11 @@ export function bcRoot(model, exclude = null) {
 export function costBenefit(model, opts = {}) {
   const ids = netNodeIds(model);
   const root = opts.root || bcRoot(model);
-  // 本部そのものを落とす評価では、次点のコア級を代替基準点にする。
-  const altRoot = bcRoot(model, root);
+  const altRoot = bcRoot(model, root);                              // 本部自身を落とす評価用の代替基準点
+  const life = opts.life || model.meta?.bcLife || DEF_LIFE;         // 想定年数
+  const rate = (opts.rate != null ? opts.rate : (model.meta?.bcRate != null ? model.meta.bcRate : DEF_RATE)) / 100;
+  const af = annuityFactor(life, rate);                             // 年金現価係数
+  const r1 = (x) => Math.round(x * 10) / 10;
   const itemOf = new Map(model.items.map((x) => [x.id, x]));
   const par = new Map(ids.map((id) => [id, params(itemOf.get(id) || {})]));
   const valueTotal = ids.reduce((s, id) => s + par.get(id).value, 0);
@@ -82,7 +96,6 @@ export function costBenefit(model, opts = {}) {
   for (const id of ids) {
     const it = itemOf.get(id); if (!it) continue;
     const p = par.get(id);
-    // id を落としたとき本部から到達不能になる機器（id 自身は除く）。
     const ref = id === root ? altRoot : root;
     const reach = ref ? reachableFrom(model, ref, [id]) : new Set();
     let impactVal = 0, impactCnt = 0;
@@ -90,24 +103,36 @@ export function costBenefit(model, opts = {}) {
       if (other === id) continue;
       if (!reach.has(other)) { impactVal += par.get(other).value; impactCnt++; }
     }
-    // id 自身の停止も損失（機能が止まる）。冗長化で救えるのはこの分＋巻き添え。
-    impactVal += p.value;
-    const annualLoss = p.failrate * (p.mttr / 24) * impactVal;       // 万円/年
-    const bc = p.cost > 0 ? annualLoss / p.cost : Infinity;
-    eal += annualLoss;
+    impactVal += p.value;                                           // 自身の停止も損失
+    const avoided = p.failrate * (p.mttr / 24) * impactVal;         // 冗長化で回避できる年間損失（万円/年）
+    const annualBenefit = avoided + p.benefit;                      // ＋その他便益（可用性以外）
+    // 割引現在価値でのベネフィット/コスト。CapEx は初期一括、OpEx は毎年。
+    const pvBenefit = annualBenefit * af;
+    const pvCost = p.capex + p.opex * af;
+    const npv = pvBenefit - pvCost;                                 // 正味現在価値（万円）
+    const bc = pvCost > 0 ? pvBenefit / pvCost : (pvBenefit > 0 ? Infinity : 0);
+    const net = annualBenefit - p.opex;                             // 年間の手残り
+    const payback = net > 0 ? p.capex / net : Infinity;            // 回収年
+    eal += avoided;
     rows.push({ id, label: it.label || id, role: it.role || (it.type === 'bus' ? 'bus' : it.type === 'hub' ? 'hub' : ''),
-      impactCnt, impactVal: Math.round(impactVal), annualLoss: Math.round(annualLoss * 10) / 10,
-      cost: p.cost, bc: Math.round(bc * 100) / 100, defaulted: p.defaulted,
-      value: p.value, failrate: p.failrate, mttr: p.mttr });
+      impactCnt, impactVal: Math.round(impactVal),
+      avoided: r1(avoided), benefit: p.benefit, annualBenefit: r1(annualBenefit),
+      capex: p.capex, opex: p.opex, npv: Math.round(npv), bc: Math.round(bc * 100) / 100,
+      payback: payback === Infinity ? null : r1(payback),
+      defaulted: p.defaulted, value: p.value, failrate: p.failrate, mttr: p.mttr });
   }
-  rows.sort((a, b) => b.bc - a.bc || b.annualLoss - a.annualLoss || a.id.localeCompare(b.id));
-  const worth = rows.filter((r) => r.bc >= 1);                       // 投資する価値のある対策
-  const invest = worth.reduce((s, r) => s + r.cost, 0);
-  const recover = worth.reduce((s, r) => s + r.annualLoss, 0);
+  rows.sort((a, b) => b.npv - a.npv || b.bc - a.bc || a.id.localeCompare(b.id));   // NPV 順（正味の効き）
+  const worth = rows.filter((r) => r.npv > 0);                      // NPV 黒字＝やる価値のある対策
   return {
-    root, rows, valueTotal: Math.round(valueTotal),
-    eal: Math.round(eal * 10) / 10,                                   // 現状の年間期待損失（万円/年）
-    invest, recover: Math.round(recover * 10) / 10,
-    portfolioBC: invest > 0 ? Math.round(recover / invest * 100) / 100 : 0,
+    root, rows, life, rate: rate * 100, valueTotal: Math.round(valueTotal),
+    eal: r1(eal),                                                   // 現状の年間期待損失（万円/年）
+    capexTotal: worth.reduce((s, r) => s + r.capex, 0),             // 必要な初期投資合計
+    opexTotal: worth.reduce((s, r) => s + r.opex, 0),               // 年間運用費合計
+    npvTotal: worth.reduce((s, r) => s + r.npv, 0),                 // ポートフォリオ NPV
+    portfolioBC: (() => {
+      const pvB = worth.reduce((s, r) => s + r.annualBenefit * af, 0);
+      const pvC = worth.reduce((s, r) => s + r.capex + r.opex * af, 0);
+      return pvC > 0 ? Math.round(pvB / pvC * 100) / 100 : 0;
+    })(),
   };
 }

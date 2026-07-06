@@ -151,19 +151,19 @@ export const SAMPLES = {
 %% @layout
 %% lod
 %% zpos 本社|157|374`,
-  'BCP — 投資対効果（💹 B/C）': `infra
-    title BCP 投資対効果 — どこに冗長化のカネをかけるか
+  'BCP — 投資対効果（💹 CapEx/OpEx/NPV）': `infra
+    title BCP 投資対効果 — CapEx / OpEx / その他便益 / NPV
     zone 本社 {
       core[基幹コア] :core, value 200
       db[基幹DB] :db, value 400
       bus lan[本社LAN] :vlan 10, 10.0.0.0/24
     }
     zone 大阪支社 {
-      osw[支社スイッチ] :access, value 150, failrate 1.0, cost 30, mttr 8
+      osw[支社スイッチ] :access, value 150, failrate 1.0, mttr 8, capex 120, opex 20, benefit 10
       op1[受注サーバ] :server, value 180
       op2[出荷端末群] :pc, value 90
     }
-    hub wan[広域WAN] :cost 50
+    hub wan[広域WAN] :capex 300, opex 40
     core -- lan
     db -- lan
     core -- wan :幹線
@@ -171,7 +171,8 @@ export const SAMPLES = {
     op1 -- osw
     op2 -- osw
 
-%% @layout`,
+%% @layout
+%% bc life 6 rate 3`,
   '配線の意味 — 冗長種別・関係線・両端IP・レイヤ': `infra
     title 配線の意味 — 冗長・関係・インタフェース
     zone 東京 {
@@ -1921,17 +1922,25 @@ export function boot() {
       const rootN = model.items.find((x) => x.id === bc.root);
       const D = (d, unit) => d ? `<span class="bcdef" title="推定値（DSL で :${unit} を書くと上書き）">推</span>` : '';
       const rows = bc.rows.filter((r) => hit(r.id, r.label, r.role) && r.impactVal > 0);
+      const life = model.meta.bcLife != null ? model.meta.bcLife : bc.life;
+      const rate = model.meta.bcRate != null ? model.meta.bcRate : bc.rate;
       ledBody.innerHTML = `<div class="bcsum">現状の年間期待損失（EAL）<b>${bc.eal.toLocaleString()}</b> 万円/年`
-        + ` ・ 総資産価値 ${bc.valueTotal.toLocaleString()} 万円/日 ・ 基準点 ${escHtml(rootN ? (rootN.label || bc.root) : (bc.root || '—'))}</div>`
-        + `<div class="bcsum2">B/C≧1 の対策を全部打つと：投資 <b>${bc.invest.toLocaleString()}</b> 万円/年 → 回収 <b class="ok">${bc.recover.toLocaleString()}</b> 万円/年（ポートフォリオ B/C <b>${bc.portfolioBC}</b>）</div>`
-        + `<table><tr><th>優先</th><th>機器</th><th>影響<br>台/万円日</th><th>年損失<br>万円/年</th><th>対策費<br>万円/年</th><th>B/C</th></tr>`
-        + rows.map((r, i) => `<tr data-goto="${escHtml(r.id)}"><td>${r.bc >= 1 ? '◎' : r.bc >= 0.5 ? '○' : '—'}</td>`
+        + ` ・ 想定 <input id="bcLife" type="number" min="1" max="30" step="1" value="${life}"> 年 ・ 割引率 <input id="bcRate" type="number" min="0" max="20" step="0.5" value="${rate}"> %`
+        + ` ・ 基準点 ${escHtml(rootN ? (rootN.label || bc.root) : (bc.root || '—'))}</div>`
+        + `<div class="bcsum2">NPV 黒字の対策を全部打つと：初期投資 CapEx <b>${bc.capexTotal.toLocaleString()}</b> 万円＋運用 OpEx <b>${bc.opexTotal.toLocaleString()}</b> 万円/年 → ${life}年 NPV <b class="ok">${bc.npvTotal >= 0 ? '+' : ''}${bc.npvTotal.toLocaleString()}</b> 万円（ポートフォリオ B/C <b>${bc.portfolioBC}</b>）</div>`
+        + `<table><tr><th>優先</th><th>機器</th><th>影響<br>台/万円日</th><th>回避+便益<br>万円/年</th><th>CapEx<br>万円</th><th>OpEx<br>万円/年</th><th>NPV<br>万円</th><th>B/C</th><th>回収<br>年</th></tr>`
+        + rows.map((r) => `<tr data-goto="${escHtml(r.id)}"><td>${r.npv > 0 ? '◎' : r.bc >= 0.8 ? '○' : '—'}</td>`
           + `<td>${escHtml(r.label)}<span class="bcrole">${escHtml(r.role)}</span></td>`
           + `<td>${r.impactCnt} / ${r.impactVal.toLocaleString()}${D(r.defaulted.value, 'value')}</td>`
-          + `<td>${r.annualLoss.toLocaleString()}</td>`
-          + `<td>${r.cost.toLocaleString()}${D(r.defaulted.cost, 'cost')}</td>`
-          + `<td class="${r.bc >= 1 ? 'bcgood' : ''}">${r.bc}</td></tr>`).join('')
-        + `</table><div class="bcnote">「影響」＝その機器が落ちると本部から到達不能になる機器の数と価値（万円/日）。年損失＝故障率×復旧時間×影響。<b>推</b>は役割からの推定値——<code>:value 300, :cost 60, :failrate 0.2, :mttr 8</code> で上書き。すべて概算・参考。</div>`;
+          + `<td>${r.avoided.toLocaleString()}${r.benefit ? `<span class="bcplus">+${r.benefit}</span>` : ''}</td>`
+          + `<td>${r.capex.toLocaleString()}${D(r.defaulted.capex, 'capex')}</td>`
+          + `<td>${r.opex.toLocaleString()}${D(r.defaulted.opex, 'opex')}</td>`
+          + `<td class="${r.npv > 0 ? 'bcgood' : 'bcbad'}">${r.npv >= 0 ? '+' : ''}${r.npv.toLocaleString()}</td>`
+          + `<td class="${r.bc >= 1 ? 'bcgood' : ''}">${r.bc}</td>`
+          + `<td>${r.payback == null ? '—' : r.payback}</td></tr>`).join('')
+        + `</table><div class="bcnote">「影響」＝落ちると本部から到達不能になる機器の数と価値（万円/日）。<b>回避</b>＝故障率×復旧時間×影響（＋その他便益）。<b>NPV</b>＝想定年数・割引率での正味現在価値（＝ベネフィット−コスト）。<b>推</b>は推定値——<code>:value 300, :capex 200, :opex 40, :benefit 20, :failrate 0.2, :mttr 8</code> で上書き。すべて概算・参考。</div>`;
+      $('bcLife').onchange = (ev) => { const v = Math.max(1, +ev.target.value || 5); model.meta.bcLife = v; commitModel(); ledTab = 'bc'; buildLedger(); };
+      $('bcRate').onchange = (ev) => { const v = Math.max(0, +ev.target.value || 0); model.meta.bcRate = v; commitModel(); ledTab = 'bc'; buildLedger(); };
     } else {
       const { nets, orphans } = ledgerIpam(model);
       ledBody.innerHTML = nets.map((net) => {
@@ -1968,8 +1977,8 @@ export function boot() {
     } else if (ledTab === 'bc') {
       const bc = costBenefit(model);
       download('costbenefit.csv', ledgerCsv(
-        ['id', 'label', 'role', 'impact_devices', 'impact_value_manyen_day', 'annual_loss_manyen_year', 'cost_manyen_year', 'BC', 'value', 'failrate', 'mttr'],
-        bc.rows.map((r) => [r.id, r.label, r.role, r.impactCnt, r.impactVal, r.annualLoss, r.cost, r.bc, r.value, r.failrate, r.mttr])), 'text/csv');
+        ['id', 'label', 'role', 'impact_devices', 'impact_value_manyen_day', 'avoided_loss_manyen_year', 'other_benefit_manyen_year', 'capex_manyen', 'opex_manyen_year', `npv_manyen_${bc.life}yr`, 'BC', 'payback_year', 'value', 'failrate', 'mttr'],
+        bc.rows.map((r) => [r.id, r.label, r.role, r.impactCnt, r.impactVal, r.avoided, r.benefit, r.capex, r.opex, r.npv, r.bc, r.payback ?? '', r.value, r.failrate, r.mttr])), 'text/csv');
     } else {
       const { nets, orphans } = ledgerIpam(model);
       const rows = [];
