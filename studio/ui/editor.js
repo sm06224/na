@@ -14,6 +14,7 @@ import { toDrawio } from '../engine/drawio.js';
 import { diffModels } from '../engine/diff.js';
 import { GEO_LAYERS, geoProject, geoUnproject } from '../engine/geo.js';
 import { MEGA_DSL } from '../engine/mega.js';
+import { pathBetween, reachableFrom, netNodeIds } from '../engine/path.js';
 import { ledgerDevices, ledgerIpam, ledgerCsv } from '../engine/ledger.js';
 import { splitInfra, mergeInfra, zipStore } from '../engine/fileset.js';
 
@@ -333,7 +334,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/path.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -385,10 +386,34 @@ export function boot() {
     model.layout.fold = saved;
     return L2;
   }
+  // ---- 解析（v19）：経路ハイライト・障害シミュレーション。DSL には残さない分析状態 ----
+  const analysis = { down: new Set(), pathA: null, pathB: null };
+  function computeAnalysis() {
+    if (model.kind !== 'infra') return null;
+    const down = [...analysis.down].filter((id) => model.items.some((x) => x.id === id));
+    const out = { down: new Set(down), dead: new Set(), pathEdges: new Set(), pathEnds: new Set() };
+    if (down.length) {                                        // 障害：最も次数の高い生存機器を基準に到達性を測る
+      const deg = new Map();
+      for (const e of model.edges) if (!e.rel) { deg.set(e.from, (deg.get(e.from) || 0) + 1); deg.set(e.to, (deg.get(e.to) || 0) + 1); }
+      const dn = new Set(down);
+      const all = netNodeIds(model).filter((id) => !dn.has(id));
+      const root = all.filter((id) => !dn.has(id)).sort((a, b) => (deg.get(b) || 0) - (deg.get(a) || 0) || a.localeCompare(b))[0];
+      analysis.root = root || null;
+      if (root) { const reach = reachableFrom(model, root, down); for (const id of all) if (!reach.has(id)) out.dead.add(id); }
+    }
+    if (analysis.pathA && analysis.pathB && model.items.some((x) => x.id === analysis.pathA) && model.items.some((x) => x.id === analysis.pathB)) {
+      const p = pathBetween(model, analysis.pathA, analysis.pathB, down);
+      analysis.lastPath = p;
+      out.pathEnds.add(analysis.pathA); out.pathEnds.add(analysis.pathB);
+      if (p) for (const e of p.edges) out.pathEdges.add(e);
+    }
+    const active = out.down.size || out.dead.size || out.pathEnds.size;
+    return active ? out : null;
+  }
   const drawOpts = () => ({ selected, sketch: model.meta.style === 'sketch',
     theme: model.meta.theme || 'dark',
     hops: !!model.meta.hops, dots: !!model.meta.dots,
-    detail: bucketNow() === 2,
+    detail: bucketNow() === 2, analysis: computeAnalysis(),
     bg: model.meta.bg || (model.meta.theme === 'light' ? '#ffffff' : null) });
   function render() {
     model = parse(src.value);
@@ -403,6 +428,7 @@ export function boot() {
     if (!$('toc').hidden) buildToc();
     if (!$('mapPanel').hidden) buildMap();
     syncToolbar();
+    if (typeof refreshAnalysisBar === 'function') refreshAnalysisBar();
     kindBadge.textContent = model.kind || '—';
     const probs = [...model.errors.map((e) => ({ e, where: 'parse' })), ...(L.errors || []).map((e) => ({ e, where: 'layout' }))];
     const badLines = new Set();
@@ -767,6 +793,14 @@ export function boot() {
     }
     if (drag) {
       if (drag.moved) { src.value = serialize(model); highlight(); render(); pushHistory(); }
+      else if (drag.kind === 'node' && !drag.zone && pendingPath && drag.id !== pendingPath) {
+        // 「経路をたどる」→ 相手をクリック（クリック2回で経路が光る）
+        analysis.pathA = pendingPath; analysis.pathB = drag.id; pendingPath = null;
+        selected.clear(); redraw(); refreshAnalysisBar();
+        if (lmap) lmap.dragging.enable();
+        drag = null; pan = null; connect = null; stage.classList.remove('panning');
+        return;
+      }
       else if (drag.kind === 'node' && !drag.zone && pendingConnect && drag.id !== pendingConnect) {
         // 右クリック「接続を張る」→ つなぎ先をクリック（クリック2回で線が張れる）
         const from = pendingConnect; pendingConnect = null;
@@ -846,6 +880,7 @@ export function boot() {
 
   // ---- 編集の動線（v17）：右クリックメニュー・削除・複製・地図に拠点を置く ----
   let pendingConnect = null;                                   // 「接続を張る」→ 次のクリックで結線
+  let pendingPath = null;                                       // 「経路をたどる」→ 次のクリックで相手
   const EDITABLE = () => model.kind === 'infra' || model.kind === 'flowchart' || model.kind === 'class';
   function deleteIds(ids) {
     const kill = new Set(ids);
@@ -916,7 +951,35 @@ export function boot() {
   document.body.appendChild(ctx);
   const hideCtx = () => { ctx.hidden = true; };
   document.addEventListener('click', (e) => { if (!e.target.closest('#ctx')) hideCtx(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideCtx(); if (!$('guide').hidden) hideGuide(); if (pendingConnect) { pendingConnect = null; toast('接続を中止しました'); } } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideCtx(); if (!$('guide').hidden) hideGuide(); if (pendingConnect) { pendingConnect = null; toast('接続を中止しました'); } if (pendingPath) { pendingPath = null; toast('経路をたどるのを中止しました'); } } });
+  // ---- 解析バー（v19）：経路の結果・障害の影響を上部に、クリアもここから ----
+  const analysisbar = $('analysisbar');
+  function clearAnalysis() { analysis.down.clear(); analysis.pathA = analysis.pathB = null; pendingPath = null; redraw(); refreshAnalysisBar(); }
+  function refreshAnalysisBar() {
+    const parts = [];
+    if (analysis.pathA && analysis.pathB) {
+      const a = model.items.find((x) => x.id === analysis.pathA), b = model.items.find((x) => x.id === analysis.pathB);
+      const lbl = (n, id) => n ? (n.label || id) : id;
+      const p = analysis.lastPath;
+      parts.push(p
+        ? `<span>🛣 <b>${escHtml(lbl(a, analysis.pathA))}</b> → <b>${escHtml(lbl(b, analysis.pathB))}</b>：${p.hops} ホップ</span>`
+        : `<span class="bad">🛣 <b>${escHtml(lbl(a, analysis.pathA))}</b> → <b>${escHtml(lbl(b, analysis.pathB))}</b>：到達不能 ✕</span>`);
+    }
+    if (analysis.down.size) {
+      const live = [...analysis.down].filter((id) => model.items.some((x) => x.id === id));
+      const total = netNodeIds(model).length;
+      const dead = computeAnalysis()?.dead.size || 0;
+      const rootN = model.items.find((x) => x.id === analysis.root);
+      parts.push(`<span class="warn">⚡ 障害 ${live.length}</span>`);
+      parts.push(dead
+        ? `<span class="bad">到達不能 ${dead} / ${total}（${Math.round(dead / total * 100)}%）</span><span class="dim">基準: ${escHtml(rootN ? (rootN.label || analysis.root) : (analysis.root || '—'))}</span>`
+        : `<span class="ok">全機器が到達可能（冗長で救済）</span>`);
+    }
+    if (!parts.length) { analysisbar.hidden = true; analysisbar.innerHTML = ''; return; }
+    analysisbar.hidden = false;
+    analysisbar.innerHTML = parts.join('') + '<button id="anaClear">✕ 解析を消す</button>';
+    $('anaClear').onclick = clearAnalysis;
+  }
   function showCtx(items, x, y) {
     ctx.innerHTML = items.map((it, i) => `<button data-i="${i}">${it.t}</button>`).join('');
     ctx.hidden = false;
@@ -952,6 +1015,10 @@ export function boot() {
         { t: '⧉ 複製', run: () => duplicateNode(id) },
         { t: '→ 接続を張る（つなぎ先をクリック）', run: () => { pendingConnect = id; selected.clear(); selected.add(id); redraw(); toast('つなぎ先の機器をクリック（Esc で中止）'); } });
       if (it && (it.type === 'inode' || it.type === 'hub')) items.push({ t: 'ⓘ 詳細を見る', run: () => showPop(id) });
+      if (model.kind === 'infra') {                            // 経路・障害の分析（DSL には残さない）
+        items.push({ t: '🛣 ここから経路をたどる（相手をクリック）', run: () => { pendingPath = id; analysis.pathA = null; analysis.pathB = null; selected.clear(); selected.add(id); redraw(); toast('経路の相手をクリック（Esc で中止）'); } });
+        items.push({ t: analysis.down.has(id) ? '✅ 復旧する' : '⚡ 落とす（障害を注入）', run: () => { analysis.down.has(id) ? analysis.down.delete(id) : analysis.down.add(id); analysis.pathA = analysis.pathB = null; redraw(); refreshAnalysisBar(); } });
+      }
       items.push({ t: '🗑 削除（つながる線ごと）', run: () => {
         const ids = selected.has(id) && selected.size > 1 ? [...selected] : [id];
         deleteIds(ids); toast(`${ids.length} 個を削除しました（Ctrl+Z で戻せます）`);
@@ -1947,7 +2014,7 @@ export function boot() {
   window.addEventListener('resize', () => { if (L) applyView(); if (lmap) lmap.invalidateSize(); });
 
   // ---- 起動 ----
-  function setText(text, doFit) { src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); pushHistory(); }
+  function setText(text, doFit) { analysis.down.clear(); analysis.pathA = analysis.pathB = null; pendingPath = null; src.value = text; highlight(); render(); if (doFit) fit(); hideAc(); pushHistory(); }
   const initial = window.STUDIO_SOURCE || SAMPLES[Object.keys(SAMPLES)[0]];
   setText(initial, true);
 }

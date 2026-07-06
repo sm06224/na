@@ -771,6 +771,53 @@ export function drawInfra(model, L, opts = {}) {
         + `<circle cx="${n.x + n.w + 14}" cy="${n.y + n.h / 2}" r="8" fill="#6aa9ff"/>`
         + `<text x="${n.x + n.w + 14}" y="${n.y + n.h / 2 + 3.5}" fill="${T.paper}" font-size="10" text-anchor="middle" font-weight="700">→</text></g>`);
   });
+
+  // ---- 解析オーバレイ（v19）：経路ハイライトと障害シミュレーション ----
+  // DSL には残さない「分析の重ね描き」。経路は蛍光ペン、落とした機器は ⚡、到達不能は赤。
+  const an = opts.analysis;
+  if (an) {
+    const geomOf = (id) => {                                  // 機器・ハブ・バスの中心と外形
+      const nd = L.nodes.find((x) => x.id === id);
+      if (nd) return nd.hub
+        ? { cx: nd.x + nd.r, cy: nd.y + nd.r, r: nd.r + 5, round: true }
+        : { x: nd.x - 4, y: nd.y - 4, w: nd.w + 8, h: nd.h + 8, cx: nd.x + nd.w / 2, cy: nd.y + nd.h / 2 };
+      const b = L.buses.find((x) => x.id === id);
+      if (b) return b.orient === 'v'
+        ? { x: b.x - 6, y: b.y1, w: 12, h: b.y2 - b.y1, cx: b.x, cy: (b.y1 + b.y2) / 2 }
+        : { x: b.x1, y: b.y - 6, w: b.x2 - b.x1, h: 12, cx: (b.x1 + b.x2) / 2, cy: b.y };
+      return null;
+    };
+    // 経路：関わる線を蛍光ペンでなぞる（下に敷きたいので配列の先頭へ）。
+    const glow = [];
+    if (an.pathEdges && an.pathEdges.size) {
+      for (const l of L.links) {
+        if (!l.e || !an.pathEdges.has(l.e)) continue;
+        const pts = [[l.x1, l.y1]];
+        if (l.mx != null) pts.push([l.mx, l.my]);
+        pts.push([l.x2, l.y2]);
+        for (let i = 0; i + 1 < pts.length; i++)
+          glow.push(`<path d="M${pts[i][0]},${pts[i][1]} L${pts[i + 1][0]},${pts[i + 1][1]}" fill="none" stroke="#57e3ff" stroke-opacity="0.5" stroke-width="9" stroke-linecap="round"/>`);
+      }
+    }
+    parts.unshift(...glow);
+    // 到達不能（dead）：赤い覆い。落とした機器（down）：暗く＋⚡。
+    for (const id of (an.dead || [])) {
+      const g = geomOf(id); if (!g) continue;
+      if (g.round) parts.push(`<circle cx="${g.cx}" cy="${g.cy}" r="${g.r}" fill="#f05a5a" fill-opacity="0.18" stroke="#f05a5a" stroke-opacity="0.7"/>`);
+      else parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="8" fill="#f05a5a" fill-opacity="0.16" stroke="#f05a5a" stroke-opacity="0.6" stroke-dasharray="4 3"/>`);
+    }
+    for (const id of (an.down || [])) {
+      const g = geomOf(id); if (!g) continue;
+      if (g.round) parts.push(`<circle cx="${g.cx}" cy="${g.cy}" r="${g.r}" fill="${T.paper}" fill-opacity="0.55" stroke="#f0a03a" stroke-width="2"/>`);
+      else parts.push(`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="8" fill="${T.paper}" fill-opacity="0.5" stroke="#f0a03a" stroke-width="2"/>`);
+      parts.push(`<text x="${g.cx}" y="${g.cy + 6}" font-size="18" text-anchor="middle">⚡</text>`);
+    }
+    // 経路の端点にピン。
+    for (const id of (an.pathEnds || [])) {
+      const g = geomOf(id); if (!g) continue;
+      parts.push(`<circle cx="${g.cx}" cy="${(g.y != null ? g.y : g.cy)}" r="6" fill="#57e3ff" stroke="${T.paper}" stroke-width="2"/>`);
+    }
+  }
   return parts.join('\n');
 }
 
