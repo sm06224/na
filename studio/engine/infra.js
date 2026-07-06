@@ -71,7 +71,7 @@ const IP_RE = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
 // IP は複数書ける（機器の足は一本とは限らない）——ips に全部、ip には先頭を残す。
 function parseAttrs(spec) {
   const out = { role: null, os: null, ip: null, ips: [], vlan: null, orient: null, len: null, layer: null,
-    value: null, cost: null, failrate: null, mttr: null };
+    value: null, cost: null, capex: null, opex: null, benefit: null, failrate: null, mttr: null };
   for (const tokRaw of String(spec || '').split(',')) {
     const tok = tokRaw.trim(); if (!tok) continue;
     const low = tok.toLowerCase();
@@ -81,7 +81,7 @@ function parseAttrs(spec) {
     if (ml) { out.len = +ml[1]; continue; }
     const my = /^layer\s+(.+)$/i.exec(tok);
     if (my) { out.layer = my[1].trim(); continue; }
-    const mc = /^(value|cost|failrate|fr|mttr)\s*([\d.]+)$/i.exec(tok);   // B/C 用の数値属性
+    const mc = /^(value|cost|capex|opex|benefit|failrate|fr|mttr)\s*([\d.]+)$/i.exec(tok);   // B/C 用の数値属性
     if (mc) { out[mc[1].toLowerCase() === 'fr' ? 'failrate' : mc[1].toLowerCase()] = parseFloat(mc[2]); continue; }
     if (/^(h|horizontal|横)$/.test(low)) { out.orient = 'h'; continue; }
     if (/^(v|vertical|縦)$/.test(low)) { out.orient = 'v'; continue; }
@@ -181,7 +181,7 @@ export function parseInfra(lines, model) {
       const a = parseAttrs(nm[3]);
       model.items.push({ type: 'inode', id: nm[1], label: nm[2] || nm[1],
         role: a.role, os: a.os, ip: a.ip, ips: a.ips, vlan: a.vlan, layer: a.layer,
-        value: a.value, cost: a.cost, failrate: a.failrate, mttr: a.mttr,
+        value: a.value, cost: a.cost, capex: a.capex, opex: a.opex, benefit: a.benefit, failrate: a.failrate, mttr: a.mttr,
         zone: zstack.length ? zstack[zstack.length - 1] : null });
       model.order.push(nm[1]);
       continue;
@@ -830,6 +830,8 @@ export function drawInfra(model, L, opts = {}) {
 const attrsOf = (n) => [n.role, n.os, ...(n.ips && n.ips.length ? n.ips : (n.ip ? [n.ip] : [])),
   n.vlan != null ? 'vlan ' + n.vlan : null, n.layer ? 'layer ' + n.layer : null,
   n.value != null ? 'value ' + n.value : null, n.cost != null ? 'cost ' + n.cost : null,
+  n.capex != null ? 'capex ' + n.capex : null, n.opex != null ? 'opex ' + n.opex : null,
+  n.benefit != null ? 'benefit ' + n.benefit : null,
   n.failrate != null ? 'failrate ' + n.failrate : null, n.mttr != null ? 'mttr ' + n.mttr : null].filter(Boolean).join(', ');
 const RED_WORD = { ha: '冗長', lacp: 'lacp', stack: 'stack', vrrp: 'vrrp' };
 const linkAttrsOf = (e) => [
