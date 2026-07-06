@@ -321,3 +321,15 @@ body.light .gstart button:hover { background: #d8e6fb; }
 .analysisbar #anaClear { background: #1d2740; border: 0; color: #c7d0e0; border-radius: 7px; padding: 3px 10px; cursor: pointer; margin-left: 2px; }
 body.light .analysisbar { background: #fffffff2; border-color: #d7dfeb; }
 body.light .analysisbar #anaClear { background: #e9eef6; color: #3a465a; }
+
+/* ---- v20: 投資対効果（B/C）タブ ---- */
+#ledBody .bcsum { padding: 10px 4px 4px; font-size: 12.5px; color: var(--fg); }
+#ledBody .bcsum b { color: #f0a03a; font-size: 14px; }
+#ledBody .bcsum2 { padding: 2px 4px 8px; font-size: 12px; color: var(--dim); }
+#ledBody .bcsum2 b { color: var(--fg); } #ledBody .bcsum2 b.ok { color: #7ad1b0; }
+#ledBody .bcrole { color: var(--dim); font-size: 10px; margin-left: 6px; }
+#ledBody .bcgood { color: #7ad1b0; font-weight: 700; }
+#ledBody .bcdef { display: inline-block; margin-left: 4px; font-size: 9px; color: #f0a03a; background: #f0a03a22; border-radius: 4px; padding: 0 3px; cursor: help; }
+#ledBody .bcnote { margin: 8px 4px; padding: 8px; border-radius: 8px; background: #6aa9ff12; color: var(--dim); font-size: 10.5px; line-height: 1.6; }
+#ledBody .bcnote code { color: #8fb6ff; }
+#ledBody .bcnote b { color: #f0a03a; }

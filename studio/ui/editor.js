@@ -15,6 +15,7 @@ import { diffModels } from '../engine/diff.js';
 import { GEO_LAYERS, geoProject, geoUnproject } from '../engine/geo.js';
 import { MEGA_DSL } from '../engine/mega.js';
 import { pathBetween, reachableFrom, netNodeIds } from '../engine/path.js';
+import { costBenefit } from '../engine/costben.js';
 import { ledgerDevices, ledgerIpam, ledgerCsv } from '../engine/ledger.js';
 import { splitInfra, mergeInfra, zipStore } from '../engine/fileset.js';
 
@@ -150,6 +151,27 @@ export const SAMPLES = {
 %% @layout
 %% lod
 %% zpos 本社|157|374`,
+  'BCP — 投資対効果（💹 B/C）': `infra
+    title BCP 投資対効果 — どこに冗長化のカネをかけるか
+    zone 本社 {
+      core[基幹コア] :core, value 200
+      db[基幹DB] :db, value 400
+      bus lan[本社LAN] :vlan 10, 10.0.0.0/24
+    }
+    zone 大阪支社 {
+      osw[支社スイッチ] :access, value 150, failrate 1.0, cost 30, mttr 8
+      op1[受注サーバ] :server, value 180
+      op2[出荷端末群] :pc, value 90
+    }
+    hub wan[広域WAN] :cost 50
+    core -- lan
+    db -- lan
+    core -- wan :幹線
+    osw -- wan :専用線
+    op1 -- osw
+    op2 -- osw
+
+%% @layout`,
   '配線の意味 — 冗長種別・関係線・両端IP・レイヤ': `infra
     title 配線の意味 — 冗長・関係・インタフェース
     zone 東京 {
@@ -334,7 +356,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/path.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/path.js', 'engine/costben.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -1894,6 +1916,22 @@ export function boot() {
       ledBody.innerHTML = `<table><tr><th>ID</th><th>名前</th><th>役割</th><th>OS</th><th>IP</th><th>VLAN</th><th>ゾーン</th><th>接続</th><th>レイヤ</th></tr>`
         + rows.map((r) => `<tr data-goto="${escHtml(r.id)}"><td>${escHtml(r.id)}</td><td>${escHtml(r.label)}</td><td>${escHtml(r.role)}</td><td>${escHtml(r.os)}</td><td>${escHtml([...new Set(r.ips)].join(' / '))}</td><td>${r.vlan}</td><td>${escHtml(r.zone)}</td><td>${r.links}</td><td>${escHtml(r.layer)}</td></tr>`).join('')
         + `</table><div class="nethead" style="color:var(--dim);font-weight:400">${rows.length} 台</div>`;
+    } else if (ledTab === 'bc') {
+      const bc = costBenefit(model);
+      const rootN = model.items.find((x) => x.id === bc.root);
+      const D = (d, unit) => d ? `<span class="bcdef" title="推定値（DSL で :${unit} を書くと上書き）">推</span>` : '';
+      const rows = bc.rows.filter((r) => hit(r.id, r.label, r.role) && r.impactVal > 0);
+      ledBody.innerHTML = `<div class="bcsum">現状の年間期待損失（EAL）<b>${bc.eal.toLocaleString()}</b> 万円/年`
+        + ` ・ 総資産価値 ${bc.valueTotal.toLocaleString()} 万円/日 ・ 基準点 ${escHtml(rootN ? (rootN.label || bc.root) : (bc.root || '—'))}</div>`
+        + `<div class="bcsum2">B/C≧1 の対策を全部打つと：投資 <b>${bc.invest.toLocaleString()}</b> 万円/年 → 回収 <b class="ok">${bc.recover.toLocaleString()}</b> 万円/年（ポートフォリオ B/C <b>${bc.portfolioBC}</b>）</div>`
+        + `<table><tr><th>優先</th><th>機器</th><th>影響<br>台/万円日</th><th>年損失<br>万円/年</th><th>対策費<br>万円/年</th><th>B/C</th></tr>`
+        + rows.map((r, i) => `<tr data-goto="${escHtml(r.id)}"><td>${r.bc >= 1 ? '◎' : r.bc >= 0.5 ? '○' : '—'}</td>`
+          + `<td>${escHtml(r.label)}<span class="bcrole">${escHtml(r.role)}</span></td>`
+          + `<td>${r.impactCnt} / ${r.impactVal.toLocaleString()}${D(r.defaulted.value, 'value')}</td>`
+          + `<td>${r.annualLoss.toLocaleString()}</td>`
+          + `<td>${r.cost.toLocaleString()}${D(r.defaulted.cost, 'cost')}</td>`
+          + `<td class="${r.bc >= 1 ? 'bcgood' : ''}">${r.bc}</td></tr>`).join('')
+        + `</table><div class="bcnote">「影響」＝その機器が落ちると本部から到達不能になる機器の数と価値（万円/日）。年損失＝故障率×復旧時間×影響。<b>推</b>は役割からの推定値——<code>:value 300, :cost 60, :failrate 0.2, :mttr 8</code> で上書き。すべて概算・参考。</div>`;
     } else {
       const { nets, orphans } = ledgerIpam(model);
       ledBody.innerHTML = nets.map((net) => {
@@ -1927,6 +1965,11 @@ export function boot() {
       const rows = ledgerDevices(model);
       download('devices.csv', ledgerCsv(['id', 'label', 'role', 'os', 'ip', 'vlan', 'zone', 'links', 'layer'],
         rows.map((r) => [r.id, r.label, r.role, r.os, [...new Set(r.ips)].join(' / '), r.vlan, r.zone, r.links, r.layer])), 'text/csv');
+    } else if (ledTab === 'bc') {
+      const bc = costBenefit(model);
+      download('costbenefit.csv', ledgerCsv(
+        ['id', 'label', 'role', 'impact_devices', 'impact_value_manyen_day', 'annual_loss_manyen_year', 'cost_manyen_year', 'BC', 'value', 'failrate', 'mttr'],
+        bc.rows.map((r) => [r.id, r.label, r.role, r.impactCnt, r.impactVal, r.annualLoss, r.cost, r.bc, r.value, r.failrate, r.mttr])), 'text/csv');
     } else {
       const { nets, orphans } = ledgerIpam(model);
       const rows = [];
