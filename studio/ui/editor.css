@@ -262,3 +262,23 @@ body.light #layersList label:hover, body.light #ledBody tr[data-goto]:hover td {
 body.light .leaflet-container .leaflet-control-attribution { background: #fffc; color: #5d6b80; }
 .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.82) saturate(.5); }
 #layersList .lsec { padding: 10px 6px 3px; color: var(--dim); font-size: 10.5px; letter-spacing: .12em; }
+
+/* ---- v16: 🗺 地図パネル・タイル警告バナー・動線改善 ---- */
+.mappanel { width: 244px; bottom: auto; max-height: 72%; }
+.mappanel .lttl { padding: 2px 6px; font-size: 12px; color: var(--fg); }
+#mapList { overflow-y: auto; padding: 8px; font-size: 12px; }
+#mapList label { display: flex; align-items: center; gap: 7px; padding: 4px 6px; border-radius: 7px; cursor: pointer; }
+#mapList label:hover { background: #1d2740; }
+#mapList label.mtop { padding: 7px 6px; border-radius: 8px; background: #6aa9ff14; margin-bottom: 2px; }
+#mapList .lsec { padding: 10px 6px 3px; color: var(--dim); font-size: 10.5px; letter-spacing: .1em; }
+#mapList .mgrid { display: flex; flex-direction: column; }
+#mapList .mnote { margin-top: 10px; padding: 8px 8px; border-radius: 8px; background: #ffb84714; color: var(--dim); font-size: 10.5px; line-height: 1.6; }
+#mapList .mnote b { color: #f0c46a; font-weight: 700; }
+#tileWarn { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 20;
+  display: flex; align-items: center; gap: 10px; max-width: min(88%, 560px);
+  background: #2a1f10f2; color: #f0d29a; border: 1px solid #f0b84766; border-radius: 10px;
+  padding: 8px 10px 8px 14px; font-size: 12px; box-shadow: 0 8px 28px #0007; }
+#tileWarn button { background: none; border: 0; color: #f0d29a; cursor: pointer; font-size: 13px; padding: 0 2px; }
+body.light #tileWarn { background: #fff6e6f6; color: #7a5410; }
+body.light .mappanel { background: #ffffffee; }
+body.light #mapList label:hover { background: #e9eef6; }

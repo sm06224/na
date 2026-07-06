@@ -69,8 +69,9 @@
       <button id="zIn">＋</button>
       <button id="zFit">フィット</button>
       <button id="zToc" title="目次（TOC）— 巨大な図の道しるべ">☰ 目次</button>
-      <button id="zLayers" title="レイヤ — 通常線・関係線・バス・フェンス・自由レイヤの見え隠れ">◫ レイヤ</button>
-      <button id="zLedger" title="台帳 — 機器台帳と IP アドレス台帳（IPAM）">▤ 台帳</button>
+      <button id="zMap" title="地図 — 実座標に置く・ベースマップ・ハザード（infra 図種）" hidden>🗺 地図</button>
+      <button id="zLayers" title="レイヤ — 通常線・関係線・バス・フェンス・自由レイヤの見え隠れ" hidden>◫ レイヤ</button>
+      <button id="zLedger" title="台帳 — 機器台帳と IP アドレス台帳（IPAM）" hidden>▤ 台帳</button>
       <button id="zSketch" title="手描きモード（%% style sketch として保存されます）">✏ 手描き</button>
       <button id="edToggle" class="only-desktop" title="コードペインをたたむ / 開く">◧ コード</button>
       <button id="vToggle" class="only-mobile">コード ◧</button>
@@ -81,6 +82,13 @@
         <button id="tocClose">✕</button>
       </div>
       <div id="tocList"></div>
+    </div>
+    <div id="mapPanel" class="toc mappanel" hidden>
+      <div class="tochead">
+        <b class="lttl">🗺 地図</b>
+        <button id="mapClose">✕</button>
+      </div>
+      <div id="mapList"></div>
     </div>
     <div id="layers" class="toc layers" hidden>
       <div class="tochead">
