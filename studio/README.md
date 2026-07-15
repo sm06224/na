@@ -23,6 +23,15 @@
 
 > この作品は **依存ゼロ規則の対象外**（リミッター解除済み）。描画エンジンは「決定的・DOM 非依存・往復可能」を守るため自前のまま、**地図の心臓には Leaflet を本採用**（`vendor/leaflet/` に同梱・単一 HTML にも焼き込む）。オンラインなら実地図タイル、オフラインでも自前ベースマップで動く。
 
+## コード生成 8 割・レイアウト 2 割 — 人間の作業を機械に返す（v22）
+
+「描く」仕事を「貼る・生やす・整える」に置き換える 3 点セット。
+
+- **機器台帳 CSV → 構成図**（`engine/import.js`）— 資産管理の Excel をそのまま貼る（取り込みダイアログ・Ctrl+V・ドロップのどれでも）と infra 構成図が生える。列名は日英ゆらぎ吸収：機器名／役割（`サーバー`→server など日本語も）／IP（`a / b` で複数）／ゾーン（**`/` で入れ子**：`東京DC/コア`）／**接続先**（`;` 区切り複数・台帳に無い相手は **hub として自動生成**——WAN やインターネットの常）／VLAN／**緯度・経度（→ `%% map`＋`%% geo` が付いて地図に立つ）**／value・capex・opex 等の B/C 属性。**▤台帳の devices.csv を貼り戻しても図に戻る**（BOM も吸収・往復）
+- **⚙ 拠点の雛形**（`engine/scaffold.js`）— ⌘K「雛形を生やす」：**データセンター（コア冗長＋サーバ＋DMZ）／地域支社／工場（IT+OT・制御LAN・保守分界フェンス）／支店**。ユニークな接頭辞・重複しない IP 帯つきの DSL が既存の図に生える——**貼った瞬間からエラーゼロ、名前と IP を直すだけ**。地図モードでは地図中心（右クリックなら**その場所**）に `%% geo` つきで立つ
+- **接続親和オートレイアウト** — ゾーン内で**同じバス／ハブに刺さる機器が自動で隣に寄る**（宣言順が乱れていても線が交差しない）。同点は宣言順のまま（安定・決定的）なので既存の図は変わらない
+- **🪄 自動整頓** — ⌘K か右クリック（空き）から。手置きの `%% pos`／`%% zpos` を消して自動配置に任せ直す（**`%% geo` の実座標は意図なので保持**）。選択があれば選択だけ。Ctrl+Z で戻る
+
 ## OpEx / CapEx / その他便益 — NPV で投資判断（v21）
 
 v20 の B/C を**財務モデルとして正しく**。費用を CapEx（初期投資・一括）と OpEx（年間運用費）に分け、想定年数・割引率で NPV（正味現在価値）まで出す。
@@ -273,7 +282,7 @@ classDiagram
 cd studio
 node build.js examples/release.mmd     # → dist/release.html（フル機能エディタ同梱の単一 HTML）
 node build.js --all                    # examples/*.mmd をすべて
-node --test tests/*.test.js            # 121 tests
+node --test tests/*.test.js            # 129 tests
 ```
 
 同梱の例（ビルド済み）：[`dist/release.html`](./dist/release.html)（ガント）・[`dist/architecture.html`](./dist/architecture.html)（フロー）・[`dist/sequence.html`](./dist/sequence.html)（シーケンス）・[`dist/class.html`](./dist/class.html)（クラス）

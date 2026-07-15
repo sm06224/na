@@ -18,6 +18,7 @@ import { pathBetween, reachableFrom, netNodeIds } from '../engine/path.js';
 import { costBenefit } from '../engine/costben.js';
 import { ledgerDevices, ledgerIpam, ledgerCsv } from '../engine/ledger.js';
 import { splitInfra, mergeInfra, zipStore } from '../engine/fileset.js';
+import { SCAFFOLD_KINDS, scaffoldSite } from '../engine/scaffold.js';
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -357,7 +358,7 @@ export const SAMPLES = {
     Dog ..> Owner : なつく`,
 };
 
-const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/path.js', 'engine/costben.js', 'engine/mega.js', 'render/draw.js', 'ui/editor.js'];
+const MODULES = ['engine/date.js', 'engine/parse.js', 'engine/layout.js', 'engine/serialize.js', 'engine/import.js', 'engine/geo.js', 'engine/infra.js', 'engine/drawio.js', 'engine/diff.js', 'engine/ledger.js', 'engine/fileset.js', 'engine/path.js', 'engine/costben.js', 'engine/mega.js', 'engine/scaffold.js', 'render/draw.js', 'ui/editor.js'];
 
 // ---- 構文ハイライト --------------------------------------------------------
 const HL = /(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|\.\.>|<\.\.|<--|-->>|->>|-->|---|-\.->|-\.-|==>|===|--o|--x|-x|--\)|-\))|(\|[^|]*\|)|\b(gantt|flowchart|graph|sequenceDiagram|classDiagram|infra|zone|bus|hub|fence|class|participant|actor|autonumber|Note|note|over|title|dateFormat|axisFormat|section|subgraph|end|direction|after|loop|alt|opt|par|else)\b|\b(done|active|crit|milestone)\b|(\d{4}[-/]\d{1,2}[-/]\d{1,2})|\b(\d+(?:\.\d+)?[dwh])\b/g;
@@ -955,6 +956,46 @@ export function boot() {
     selected.clear(); commitModel();
     toast(`🗾 ${zn} を (${lat.toFixed(2)}, ${lng.toFixed(2)}) に置きました`);
   }
+  // ---- v22: 自動整頓と拠点の雛形——レイアウト作業を機械に返す ----
+  // 🪄 整頓：手置きの %% pos / %% zpos を消して自動配置に任せ直す。%% geo（実座標）は意図なので残す。
+  // 選択があれば選択だけ、なければ全体。Ctrl+Z で戻せる。
+  function tidyLayout() {
+    if (!EDITABLE()) { toast('この図種はもともと自動配置です'); return; }
+    if (selected.size) {
+      const n = [...selected].filter((id) => model.layout.pos[id]).length;
+      for (const id of selected) delete model.layout.pos[id];
+      commitModel();
+      toast(n ? `🪄 選択した ${n} 個を整頓しました（Ctrl+Z で戻せます）` : '選択に手置きの座標はありません');
+    } else {
+      model.layout.pos = {};
+      if (model.layout.zpos) model.layout.zpos = {};
+      commitModel(); fit();
+      toast('🪄 全体を自動整頓しました（%% geo の実座標は保持・Ctrl+Z で戻せます）');
+    }
+  }
+  // ⚙ 雛形：よくある拠点構成（DC/支社/工場/支店）を DSL ごと生やす。地図なら実座標つき。
+  function addScaffold(kind, gp) {
+    if (model.kind !== 'infra') { toast('雛形は infra 図種で使えます（サンプル「システム構成図」から始めてください）'); return; }
+    const sc = SCAFFOLD_KINDS.find((s) => s.key === kind) || SCAFFOLD_KINDS[3];
+    let k = 1;
+    while (model.groups.some((g2) => g2.name === `新${sc.ja}${k}`) || model.items.some((x) => x.id.startsWith(`${kind}${k}_`))) k++;
+    const name = `新${sc.ja}${k}`;
+    const frag = scaffoldSite(kind, `${kind}${k}`, name, Math.min(250, 100 + k));
+    let geoLine = null;
+    if (model.meta.map) {
+      let p2 = gp;
+      if (!p2 && lmap) { const c = lmap.getCenter(); p2 = [c.lat, c.lng]; }
+      if (!p2) { const r2 = stage.getBoundingClientRect(); const [wx, wy] = toWorld(r2.left + r2.width / 2, r2.top + r2.height / 2); p2 = geoUnproject(wx, wy); }
+      geoLine = `%% geo ${name}|${(+p2[0]).toFixed(2)}|${(+p2[1]).toFixed(2)}`;
+    }
+    let text = src.value;
+    const at = text.indexOf('%% @layout');
+    text = at >= 0 ? text.slice(0, at) + frag + '\n\n' + text.slice(at) : text.replace(/\s*$/, '\n') + frag + '\n';
+    if (geoLine) text = (text.includes('%% @layout') ? text.replace(/\s*$/, '\n') : text.replace(/\s*$/, '\n') + '\n%% @layout\n') + geoLine + '\n';
+    setText(text, true);
+    if (!model.meta.map) fit();
+    toast(`⚙ ${name} を生やしました——名前と IP を直すだけで使えます`);
+  }
   // Delete / Backspace で選択を削除。図の上でも Ctrl+Z / Ctrl+Y が効く（テキスト入力中は素通し）。
   document.addEventListener('keydown', (e) => {
     const ae = document.activeElement;
@@ -1055,7 +1096,9 @@ export function boot() {
     if (model.kind === 'infra' && model.meta.map && lmap) {
       const [lat, lng] = geoUnproject(wx, wy);
       items.push({ t: `🗾 ここに拠点を置く（${lat.toFixed(2)}, ${lng.toFixed(2)}）`, run: () => addSiteAt(lat, lng) });
+      items.push({ t: '⚙ ここに支店の雛形を生やす', run: () => addScaffold('branch', [lat, lng]) });
     }
+    items.push({ t: '🪄 自動整頓（手置き座標をリセット）', run: tidyLayout });
     showCtx(items, e.clientX, e.clientY);
   });
 
@@ -1391,7 +1434,8 @@ export function boot() {
     const r = universal(t);
     if (r.kind === 'unknown') { toast('⚠ ' + (r.error || '読める形がありません（表・箇条書き・A -> B・JSON・Mermaid）')); return; }
     setText(r.text, true); dlg.hidden = true;
-    toast(`${KIND_JA[r.kind]}${r.kind === 'mermaid' ? 'を読み込みました' : 'から図にしました'}${r.truncated ? '（大きいので一部だけ）' : ''}`);
+    const kindJa = r.sub === 'inventory' ? '機器台帳' : KIND_JA[r.kind];
+    toast(`${kindJa}${r.kind === 'mermaid' ? 'を読み込みました' : 'から図にしました'}${r.truncated ? '（大きいので一部だけ）' : ''}`);
   }
   $('bImport').onclick = () => { dlg.hidden = false; $('csvIn').focus(); };
   $('csvCancel').onclick = () => { dlg.hidden = true; };
@@ -1629,7 +1673,9 @@ export function boot() {
       { t: '差分を比べる…（旧版の Mermaid を貼る）', k: 'diff compare さぶん レビュー', run: () => { diffDlg.hidden = false; $('diffIn').focus(); } },
       { t: 'タイムトラベル（履歴スライダ）', k: 'history time undo りれき', run: toggleTT },
       { t: '目次（TOC）を開く / 閉じる', k: 'toc outline index もくじ ついり tree', run: toggleToc },
-      { t: '取り込み（表・箇条書き・A→B・JSON）', k: 'import paste csv とりこみ', run: () => { dlg.hidden = false; $('csvIn').focus(); } },
+      { t: '取り込み（表・機器台帳CSV・箇条書き・A→B・JSON）', k: 'import paste csv inventory とりこみ だいちょう', run: () => { dlg.hidden = false; $('csvIn').focus(); } },
+      { t: '🪄 自動整頓（手置き座標をリセットして再レイアウト）', k: 'tidy auto arrange layout せいとん じどうせいとん りせっと', run: tidyLayout },
+      ...SCAFFOLD_KINDS.map((sc) => ({ t: `⚙ 雛形を生やす: ${sc.label}`, k: `scaffold template ひながた てんぷれーと 拠点 ${sc.key}`, run: () => addScaffold(sc.key) })),
       { t: '全体をフィット', k: 'fit zoom ふぃっと', run: fit },
       { t: 'コード ⇄ 図 切替', k: 'view code toggle', run: () => document.body.classList.toggle('viewmax') },
       { t: 'アンドゥ', k: 'undo', run: () => timeTravel(-1) },
