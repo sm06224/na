@@ -235,6 +235,22 @@ export function layoutInfra(model) {
   const nodes = nodesAll.filter((n) => !hiddenIn.has(n.id));
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
+  // v22: 接続親和——同じバス／ハブ（共有媒体）に刺さる機器を隣に寄せてから並べる。
+  // キーは「つながるバス/ハブのうち最も早い宣言位置」。バスにつながらない機器は自分の宣言位置。
+  // 同点は宣言順のまま（安定）なので、ゾーン内が単一バスの普通の図は並びが変わらない。
+  const ordIdx = new Map(model.order.map((id, i) => [id, i]));
+  const busLike = new Set(model.items.filter((x) => x.type === 'bus' || x.type === 'hub').map((x) => x.id));
+  const affinity = new Map();
+  for (const e of model.edges) {
+    if (e.rel) continue;
+    for (const [a, b] of [[e.from, e.to], [e.to, e.from]]) {
+      if (!busLike.has(b) || busLike.has(a)) continue;
+      const bi = ordIdx.get(b);
+      if (bi != null && (affinity.get(a) == null || bi < affinity.get(a))) affinity.set(a, bi);
+    }
+  }
+  const affKey = (id) => affinity.get(id) ?? ordIdx.get(id) ?? 0;
+
   const PAD = 14, HEAD = 24, GAP = 12;
   const foldSize = (z) => {
     const inside = nodesAll.filter((n) => hiddenIn.get(n.id) === z.name).length;
@@ -249,7 +265,9 @@ export function layoutInfra(model) {
       else pack(z.name);
       blocks.push({ ref: z, w: z.w, h: z.h });
     }
-    for (const n of nodes.filter((nn) => nn.zone === zname)) blocks.push({ ref: n, w: n.w, h: n.h });
+    const members = nodes.filter((nn) => nn.zone === zname)
+      .sort((p, q) => affKey(p.id) - affKey(q.id) || ordIdx.get(p.id) - ordIdx.get(q.id));
+    for (const n of members) blocks.push({ ref: n, w: n.w, h: n.h });
     // 折返し幅：ゾーン内は 640、最上位は 1400——世界は縦にも横にも広がる。
     const limit = Math.max(zname ? 640 : 1400, ...blocks.map((b) => b.w + PAD * 2));
     let x = PAD, y = (zname ? HEAD : 0) + PAD, rowH = 0, w = 0;

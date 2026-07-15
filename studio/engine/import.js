@@ -8,8 +8,9 @@
    ============================================================ */
 
 // 引用符（"a,b" と "" のエスケープ）対応の CSV。タブ区切りなら TSV として読む。
+// 先頭の BOM は捨てる——Excel や自前の台帳エクスポートが付けてくる。
 export function parseCSV(text) {
-  const s = String(text).replace(/\r\n?/g, '\n');
+  const s = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const head = s.split('\n', 1)[0] || '';
   const delim = head.includes('\t') && !head.includes(',') ? '\t' : ',';
   const rows = []; let row = [], cell = '', q = false;
@@ -134,6 +135,131 @@ function rowsToFlow(rows, H) {
   const decls = [...ids.entries()].map(([label, id]) => `    ${id}[${label}]`);
   const seen = new Set(), uc = clicks.filter((c) => !seen.has(c) && seen.add(c));
   return ['flowchart TD', ...decls, ...edges, ...uc].join('\n') + '\n';
+}
+
+// ---- 機器台帳（インベントリ）→ infra 構成図 ---------------------------------
+// 資産管理の Excel をそのまま貼ると構成図が生える——「描く」仕事を「貼る」に変える v22 の入口。
+// 列は同義語表で吸収：役割・IP・ゾーン（`/` で入れ子）・接続先（複数可）・緯度経度（→ 地図に立つ）。
+// 接続先が台帳に無い名前（WAN・インターネットなど）は hub として自動で生やす。
+// 自前の台帳エクスポート（devices.csv）を貼り戻しても図に戻る（往復）。
+
+const INV_SYN = {
+  id: ['id', '機器id', 'ホスト名', 'hostname', 'host', '管理番号', '資産番号'],
+  label: ['label', 'name', '機器名', '名称', '名前', '装置名', 'device'],
+  role: ['role', '役割', '種別', 'タイプ', '機能'],
+  os: ['os', 'バージョン', 'firmware', 'ファームウェア', 'ファーム'],
+  ip: ['ip', 'ipアドレス', 'ip address', 'ipaddress', 'アドレス', '固定ip'],
+  vlan: ['vlan', 'vlan id', 'vlanid'],
+  zone: ['zone', 'ゾーン', '拠点', '場所', '設置場所', 'サイト', 'site', 'location', '建屋'],
+  conn: ['接続先', 'connect', 'connects', 'uplink', 'アップリンク', 'peer', '上位', 'リンク先'],
+  layer: ['layer', 'レイヤ', 'レイヤー'],
+  lat: ['lat', 'latitude', '緯度'],
+  lng: ['lng', 'lon', 'longitude', '経度'],
+  value: ['value', '価値', '事業価値'],
+  capex: ['capex', '初期費', '初期費用', '投資額'],
+  opex: ['opex', '運用費', '維持費', '保守費'],
+  failrate: ['failrate', 'fr', '故障率'],
+  mttr: ['mttr', '復旧時間'],
+};
+function mapInvHeader(cells) {
+  const idx = {};
+  cells.forEach((h, i) => {
+    const k = String(h).trim().toLowerCase();
+    for (const key of Object.keys(INV_SYN)) if (idx[key] == null && INV_SYN[key].includes(k)) { idx[key] = i; return; }
+  });
+  return idx;
+}
+// 役割の日本語ゆらぎ → infra の役割語（engine/infra.js の ROLE_ALIAS が読める形）。
+// 引けなければ素通し——英語役割（core / server …）はそのまま通る。
+const INV_ROLE = { 'ルータ': 'router', 'ルーター': 'router', 'スイッチ': 'switch', 'コアスイッチ': 'core',
+  'l2sw': 'switch', 'l3sw': 'switch', 'サーバ': 'server', 'サーバー': 'server',
+  'ファイアウォール': 'firewall', 'ストレージ': 'storage', 'パソコン': 'pc', '端末': 'pc',
+  'プリンタ': 'printer', 'プリンター': 'printer', '複合機': 'printer', '無線ap': 'ap', 'アクセスポイント': 'ap',
+  'クラウド': 'cloud', 'データベース': 'db', 'ロードバランサ': 'lb', 'シーケンサ': 'plc' };
+const INV_IP = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
+
+export function rowsToInfra(rows, H) {
+  const used = new Set(), recs = [];
+  rows.forEach((r, i) => {
+    const get = (k) => (H[k] != null ? String(r[H[k]] ?? '').trim() : '');
+    const label = get('label') || get('id') || `機器${i + 1}`;
+    let id = safeId(get('id') || label) || `d${i + 1}`;
+    while (used.has(id)) id += 'x';
+    used.add(id);
+    // IP は複数書ける：`10.0.0.1 / 10.1.0.1`（台帳エクスポートの形）や ; 区切り。
+    const ips = get('ip').split(/\s*[;、，]\s*|\s+\/\s+|\s+/).filter((s) => INV_IP.test(s));
+    const roleRaw = get('role');
+    recs.push({ id, label,
+      role: roleRaw ? (INV_ROLE[roleRaw.toLowerCase()] || INV_ROLE[roleRaw] || roleRaw) : '',
+      os: get('os'), ips, vlan: get('vlan').replace(/[^\d]/g, ''),
+      zone: get('zone'), conn: get('conn').split(/\s*[;、，,/]\s*/).map((s) => s.trim()).filter(Boolean),
+      layer: get('layer'), lat: parseFloat(get('lat')), lng: parseFloat(get('lng')),
+      value: get('value'), capex: get('capex'), opex: get('opex'), failrate: get('failrate'), mttr: get('mttr') });
+  });
+  if (!recs.length) return null;
+  // ゾーンは `/` 区切りで入れ子（例: 関東/東京DC/3F）。出てきた順に木を組む。
+  const root = { children: new Map(), recs: [] };
+  const zoneNode = (path) => {
+    let cur = root;
+    for (const seg of path.split(/\s*[/＞>]\s*/).map((s) => s.trim()).filter(Boolean)) {
+      if (!cur.children.has(seg)) cur.children.set(seg, { children: new Map(), recs: [] });
+      cur = cur.children.get(seg);
+    }
+    return cur;
+  };
+  const geo = [];                                            // [ゾーン名 or 機器 id, lat, lng]
+  for (const x of recs) {
+    const home = x.zone ? zoneNode(x.zone) : root;
+    home.recs.push(x);
+    if (Number.isFinite(x.lat) && Number.isFinite(x.lng)) {
+      const anchor = x.zone ? x.zone.split(/\s*[/＞>]\s*/).filter(Boolean)[0] : x.id;
+      if (!geo.some((g) => g[0] === anchor)) geo.push([anchor, x.lat, x.lng]);
+    }
+  }
+  const cleanLabel = (s) => String(s).replace(/[[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+  const devLine = (x, indent) => {
+    const attrs = [x.role, x.os, ...x.ips,
+      x.vlan ? `vlan ${x.vlan}` : null, x.layer ? `layer ${x.layer}` : null,
+      x.value ? `value ${x.value}` : null, x.capex ? `capex ${x.capex}` : null,
+      x.opex ? `opex ${x.opex}` : null, x.failrate ? `failrate ${x.failrate}` : null,
+      x.mttr ? `mttr ${x.mttr}` : null].filter(Boolean).map(cleanLabel).filter(Boolean);
+    return `${indent}${x.id}[${cleanLabel(x.label)}]${attrs.length ? ' :' + attrs.join(', ') : ''}`;
+  };
+  const out = ['infra'];
+  const emit = (node, indent) => {
+    for (const x of node.recs) out.push(devLine(x, indent));
+    for (const [name, kid] of node.children) {
+      out.push(`${indent}zone ${cleanLabel(name)} {`);
+      emit(kid, indent + '  ');
+      out.push(`${indent}}`);
+    }
+  };
+  emit(root, '    ');
+  // 接続：id でもラベルでも書ける。台帳に無い相手は hub として生やす（共有網の常）。
+  const byId = new Set(recs.map((x) => x.id));
+  const byLabel = new Map(recs.map((x) => [x.label, x.id]));
+  const hubs = new Map();                                    // ラベル → hub id
+  let hn = 0;
+  const resolve = (tok) => {
+    if (byId.has(tok)) return tok;
+    if (byLabel.has(tok)) return byLabel.get(tok);
+    if (!hubs.has(tok)) {
+      let hid = safeId(tok) || `h${++hn}`;
+      while (byId.has(hid) || [...hubs.values()].includes(hid)) hid += 'x';
+      hubs.set(tok, hid);
+    }
+    return hubs.get(tok);
+  };
+  const edges = [], seenE = new Set();
+  for (const x of recs) for (const tok of x.conn) {
+    const to = resolve(tok);
+    const key = x.id < to ? `${x.id}|${to}` : `${to}|${x.id}`;
+    if (x.id !== to && !seenE.has(key)) { seenE.add(key); edges.push(`    ${x.id} -- ${to}`); }
+  }
+  for (const [label, hid] of hubs) out.push(`    hub ${hid}[${cleanLabel(label)}]`);
+  out.push(...edges);
+  if (geo.length) out.push('', '%% @layout', '%% map', ...geo.map((g) => `%% geo ${g[0]}|${g[1]}|${g[2]}`));
+  return out.join('\n') + '\n';
 }
 
 // ---- 万能ペースト：何を貼られたか当てて、図にする ----------------------------
@@ -311,7 +437,14 @@ export function csvToMermaid(text) {
   if (rows.length < 2) return { error: 'ヘッダ行とデータ行が要ります（2 行以上）' };
   const H = mapHeader(rows[0]);
   if (H.from != null && H.to != null) return { kind: 'flowchart', text: rowsToFlow(rows.slice(1), H) };
+  // 機器台帳：infra 特有の列（役割・IP・ゾーン・接続先・VLAN・OS）が 2 つ以上あれば構成図。
+  const HI = mapInvHeader(rows[0]);
+  const invHits = ['role', 'ip', 'zone', 'conn', 'vlan', 'os'].filter((k) => HI[k] != null).length;
+  if (invHits >= 2 && (HI.id != null || HI.label != null)) {
+    const t = rowsToInfra(rows.slice(1), HI);
+    if (t) return { kind: 'inventory', text: t };
+  }
   if (H.label != null || H.start != null || H.dur != null)
     return { kind: 'gantt', text: rowsToGantt(rows.slice(1), H) };
-  return { error: '列が読めません（from/to か、名前(label)・開始(start)・期間(duration) を含めてください）' };
+  return { error: '列が読めません（from/to・機器台帳（役割/IP/ゾーン）・名前(label)+開始(start) のどれかを含めてください）' };
 }
