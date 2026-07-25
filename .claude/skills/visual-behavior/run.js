@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// 動的視覚動作テスト — runner
+// 動的視覚動作テスト — runner(.claude スキル同梱・依存パッケージゼロ)
 //
-//   node tests/visual/run.js            全スペック
-//   node tests/visual/run.js han nami   名前で絞る
+//   node .claude/skills/visual-behavior/run.js            全スペック
+//   node .claude/skills/visual-behavior/run.js han nami   名前で絞る
 //
-// マウス・キーボード・ホイールを人間のように動かして作品に触り、
+// リポジトリのルート(= カレントディレクトリ)を静的サーバで配り、
+// マウス・キーボード・ホイールを人間のように動かしてページに触り、
 // 「よくない動き」(dead click / dead scroll / 例外 / 画面の嘘)を
-// before/after の画像比較と画面観測点で取り立てる。依存パッケージゼロ。
+// before/after の画像比較と画面観測点で取り立てる。
+// スキルディレクトリごと他リポジトリへコピーすれば、そのまま動く。
 
 import { readdir, mkdir, writeFile, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
@@ -20,7 +22,7 @@ import { buildReport } from './lib/report.js';
 import { mulberry32, hashSeed, slugify } from './lib/util.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..');
+const ROOT = process.cwd(); // 配るのは「いまいるリポジトリ」— スキルはどこに置かれても動く
 const OUT = join(ROOT, 'test-results', 'visual');
 const SPEC_TIMEOUT_MS = 120000;
 
