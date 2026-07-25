@@ -110,10 +110,20 @@ export class VisualPage {
   }
 
   async goto(url, { timeout = 20000 } = {}) {
-    const loaded = this.cdp.waitFor('Page.loadEventFired', this.sessionId, { timeout });
+    // loadEventFired は稀に取りこぼす(巨大な単一 HTML で実測 1/4 程度)。
+    // イベント待ちと readyState 監視をレースさせ、どちらか先で進む。
+    // イベント側の timeout は「負け」扱いにして readyState 監視に裁定を委ねる
+    const loaded = this.cdp.waitFor('Page.loadEventFired', this.sessionId, { timeout }).catch(() => new Promise(() => {}));
     const nav = await this.cdp.send('Page.navigate', { url }, this.sessionId);
     if (nav.errorText) throw new Error(`遷移できない: ${url} (${nav.errorText})`);
-    await loaded;
+    await Promise.race([
+      loaded,
+      // 旧 document の readyState を拾わないよう、URL の一致まで見る
+      this.waitFor(
+        `document.readyState === 'complete' && location.href === ${JSON.stringify(url)}`,
+        { timeout, every: 200, label: `load 完了 (${url})` },
+      ),
+    ]);
     await this.settle(150);
   }
 
