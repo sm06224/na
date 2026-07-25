@@ -1,18 +1,18 @@
 ---
-name: sensory-behavior
+name: shinsatsu
 description: >
   視聴覚 + 官能の動的動作テスト — マウス・クリック・スクロール・キーボードを
   人間のように動かしてページに触り、目(スクショ画素差分・elementFromPoint)と
   耳(AudioContext タップで録音 → dBFS・クリッピング・音階解析)で「よくない動き」
   (dead click / dead scroll / dead input / dead mute / 覆われた要素 / 音の破綻 /
   裏の例外 / 画面の嘘)を見つけて潰し、仕上げに官能検品(Claude の目 + user の耳)
-  まで回すワークフロー。「視覚テストして」「音のテスト」「官能テスト」「実機で触って
+  まで回すワークフロー。「診察して」「視覚テストして」「音のテスト」「官能テスト」「実機で触って
   確かめて」「このUIちゃんと動く?」「音鳴ってる?」という文脈で必ず使う。
   ハーネスは Claude の実行環境(プリインストール Chromium + Node 22)でそのまま動き、
   スキルディレクトリごとコピーすれば他リポジトリでも使える。
 ---
 
-# 視聴覚動作テスト — 人間のように触り、画面と音で確かめる
+# 診察(shinsatsu)— 視診・聴診・触診。人間のように触り、画面と音で確かめる
 
 マウスは曲線を描いて動き、クリックには間があり、キーには緩急がある。
 そうやって**人間のようにページに触り**、結果を**目と耳の両方**で確かめる:
@@ -39,8 +39,8 @@ description: >
 ## 実行
 
 ```bash
-node .claude/skills/sensory-behavior/run.js            # 全スペック
-node .claude/skills/sensory-behavior/run.js han nami   # 名前で絞る
+node .claude/skills/shinsatsu/run.js            # 全スペック
+node .claude/skills/shinsatsu/run.js han nami   # 名前で絞る
 ```
 
 - **リポジトリのルートから実行**する(カレントディレクトリを静的サーバで配る)
@@ -159,13 +159,13 @@ dBFS が目安、0 dBFS 近接は破綻)/ 調性は作品意図(例: 五音音�
 
 ## 他リポジトリへの展開
 
-1. `.claude/skills/sensory-behavior/` を**ディレクトリごとコピー**(自己完結)
+1. `.claude/skills/shinsatsu/` を**ディレクトリごとコピー**(自己完結)
 2. `specs/` を対象アプリ向けに書き直す(na の 5 本は消してよい)
 3. ビルドが要るアプリは先にビルドし、配信ルート(cwd)に生成物がある状態で回す。
    アプリ独自の dev サーバがあるなら `run.js` の `serveStatic(ROOT)` を
    その origin に差し替える
 4. CI に載せるなら「Node 22 + Chrome のある ubuntu ランナー」で
-   `node .claude/skills/sensory-behavior/run.js` を叩き、`test-results/visual/`
+   `node .claude/skills/shinsatsu/run.js` を叩き、`test-results/visual/`
    を artifact 保存するだけ(このリポジトリでは CI 非搭載 — スキルは Claude が
    手で回す道具、が現状の運用)
 
