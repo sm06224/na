@@ -488,3 +488,23 @@ jobs:
       # 蛍にテストの檻は似合わない。光るかどうかだけ、そっと確かめる。
       - name: Three frames of June night
         run: HOTARU_ITSUDEMO=1 HOTARU_FRAMES=3 ./蛍 > /dev/null
+
+  visual:
+    name: visual — 人間のように触り、画面で確かめる
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # 依存ゼロの CDP ハーネスが、ランナー常備の Chrome を人間の手つきで動かす。
+      # dead click / dead scroll / dead input / 裏の例外を画像比較で取り立てる。
+      - name: Drive the works like a human and hunt for bad behavior
+        run: node tests/visual/run.js
+      - name: Keep the evidence (screenshots + self-contained report)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
+          path: test-results/visual/
+          retention-days: 14
