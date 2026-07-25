@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // 動的視覚動作テスト — runner(.claude スキル同梱・依存パッケージゼロ)
 //
-//   node .claude/skills/visual-behavior/run.js            全スペック
-//   node .claude/skills/visual-behavior/run.js han nami   名前で絞る
+//   node .claude/skills/sensory-behavior/run.js            全スペック
+//   node .claude/skills/sensory-behavior/run.js han nami   名前で絞る
 //
 // リポジトリのルート(= カレントディレクトリ)を静的サーバで配り、
 // マウス・キーボード・ホイールを人間のように動かしてページに触り、
@@ -19,7 +19,8 @@ import { VisualPage } from './lib/page.js';
 import { Human } from './lib/human.js';
 import { diffPng } from './lib/png.js';
 import { buildReport } from './lib/report.js';
-import { mulberry32, hashSeed, slugify } from './lib/util.js';
+import { mulberry32, hashSeed, slugify, sleep } from './lib/util.js';
+import { decodePcm16, wavEncode, analyzePcm, waveformPng, spectrogramPng } from './lib/audio.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.cwd(); // 配るのは「いまいるリポジトリ」— スキルはどこに置かれても動く
@@ -34,11 +35,12 @@ function makeCtx({ page, human, origin, outDir, slug }) {
   const findings = [];
   let shotN = 0;
 
-  async function saveImage(label, buf) {
-    const file = `${slug}-${String(++shotN).padStart(2, '0')}-${slugify(label)}.png`;
+  async function saveArtifact(label, ext, buf) {
+    const file = `${slug}-${String(++shotN).padStart(2, '0')}-${slugify(label)}.${ext}`;
     await writeFile(join(outDir, file), buf);
     return file;
   }
+  const saveImage = (label, buf) => saveArtifact(label, 'png', buf);
 
   async function snap(sel) {
     let clip;
@@ -146,6 +148,40 @@ function makeCtx({ page, human, origin, outDir, slug }) {
       if (d.png) await saveImage(`${label}-act-diff`, d.png);
       steps.push(step);
       return d;
+    },
+
+    /**
+     * 耳 — action の間に鳴った音を録って解析する。
+     * ページが AudioContext を作っていなければ null(音の機構が無い/未起動)。
+     * 返り値: { rmsDb, peakDb, clipRatio, peaks, pentaRoot, … } + 証跡として
+     * .wav(user が耳で官能評価する原音)/ 波形 PNG / スペクトログラム PNG。
+     */
+    listen: {
+      state: () => page.eval('window.__earState ? __earState() : []').catch(() => []),
+      async record(label, action, { ctx = 0, settle = 250 } = {}) {
+        const st0 = await t.listen.state();
+        const from = st0[ctx] ? st0[ctx].samples : 0;
+        if (typeof action === 'function') await action();
+        else await sleep(action);
+        await page.settle(settle);
+        const pulled = await page.eval(`window.__earPull ? __earPull(${ctx}, ${from}) : null`).catch(() => null);
+        if (!pulled || !pulled.samples) {
+          steps.push({ type: 'note', text: `🔇 ${label} — 録れる音が無い(AudioContext 不在 or 無音長ゼロ)` });
+          return null;
+        }
+        const pcm = decodePcm16(pulled.b64);
+        const a = analyzePcm(pcm, pulled.sampleRate);
+        const wave = waveformPng(pcm);
+        const spec = spectrogramPng(pcm, pulled.sampleRate);
+        const wavFile = await saveArtifact(label, 'wav', wavEncode(pulled.b64, pulled.sampleRate));
+        await saveArtifact(`${label}-波形`, 'png', wave);
+        await saveArtifact(`${label}-スペクトログラム`, 'png', spec);
+        steps.push({
+          type: 'audio', label, summary: a.summary, wavFile,
+          wave: wave.toString('base64'), spec: spec.toString('base64'),
+        });
+        return a;
+      },
     },
   };
   return t;

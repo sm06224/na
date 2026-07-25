@@ -21,6 +21,13 @@ function stepHtml(step) {
           <figure>${img(step.b, '比較先')}<figcaption>比較先</figcaption></figure>
           <figure>${img(step.d, '差分')}<figcaption>差分(赤 = 変化)</figcaption></figure>
         </div></div>`;
+    case 'audio':
+      return `<div class="step act"><div class="label">👂 ${esc(step.label)} — ${esc(step.summary)}<br>
+        <span class="fine">原音: <code>${esc(step.wavFile)}</code>(耳での官能評価はこの .wav で)</span></div>
+        <div class="imgs three">
+          <figure>${img(step.wave, '波形')}<figcaption>波形</figcaption></figure>
+          <figure>${img(step.spec, 'スペクトログラム')}<figcaption>スペクトログラム(下=低音)</figcaption></figure>
+        </div></div>`;
     case 'act': {
       const verdict = step.verdict === 'pass' ? '<span class="ok">期待どおり</span>'
         : step.verdict === 'fail' ? '<span class="ng">よくない動き</span>' : '記録のみ';
@@ -50,7 +57,7 @@ export function buildReport({ results, meta = {} }) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>動的視覚動作テスト — 報告</title>
+<title>視聴覚動作テスト — 報告</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -80,13 +87,14 @@ export function buildReport({ results, meta = {} }) {
   .imgs.three figure { margin: 0; flex: 1 1 240px; max-width: 380px; }
   .imgs.three img { width: 100%; max-height: 280px; object-fit: contain; }
   figcaption { font-size: .75rem; color: #8a8272; text-align: center; margin-top: .2rem; }
+  .fine { font-size: .78rem; color: #8a8272; }
   .ok { color: #2c7a4b; } .ng { color: #b3372f; font-weight: 600; }
   .none { color: #bbb; }
   footer { margin-top: 2.5rem; font-size: .8rem; color: #a49a83; }
 </style>
 </head>
 <body>
-<h1>動的視覚動作テスト<span class="sub">人間のように触り、画面で確かめる</span></h1>
+<h1>視聴覚動作テスト<span class="sub">人間のように触り、画面と音で確かめる</span></h1>
 <p class="summary">${results.length} 本のうち <b class="ok">${results.length - fails} PASS</b> / <b class="ng">${fails} FAIL</b>
 ${meta.browser ? ` · ${esc(meta.browser)}` : ''}${meta.startedAt ? ` · ${esc(meta.startedAt)}` : ''}</p>
 ${sections}

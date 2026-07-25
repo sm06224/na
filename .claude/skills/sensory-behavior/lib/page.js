@@ -5,6 +5,71 @@
 
 import { sleep } from './util.js';
 
+// 耳 — ページが AudioContext を作った瞬間にタップ(盗聴口)を差し込む。
+// アプリから見える destination をタップにすり替え、本物の出力へ素通し
+// しつつ、ScriptProcessor で PCM を録りためる。アプリ側が自前の gain で
+// 消音すればタップにも無音が届く = 「消音が本当に効くか」まで検証できる。
+const AUDIO_HOOK = `(() => {
+  const state = { ctxs: [] };
+  const CAP_SECONDS = 90;
+  const wrap = (Real) => class extends Real {
+    constructor(...args) {
+      super(...args);
+      try {
+        const realDest = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, 'destination').get.call(this);
+        const tap = this.createGain();
+        tap.connect(realDest);
+        const proc = this.createScriptProcessor(4096, 1, 1);
+        const silent = this.createGain(); silent.gain.value = 0;
+        tap.connect(proc); proc.connect(silent); silent.connect(realDest);
+        const rec = { chunks: [], samples: 0, sampleRate: this.sampleRate, last: 0 };
+        const MAX = this.sampleRate * CAP_SECONDS;
+        proc.onaudioprocess = (e) => {
+          if (rec.samples >= MAX) return;
+          const d = e.inputBuffer.getChannelData(0);
+          rec.chunks.push(Float32Array.from(d));
+          rec.samples += d.length;
+          let s = 0;
+          for (let i = 0; i < d.length; i += 16) s += d[i] * d[i];
+          rec.last = Math.sqrt(s / Math.ceil(d.length / 16));
+        };
+        Object.defineProperty(this, 'destination', { get: () => tap, configurable: true });
+        state.ctxs.push(rec);
+      } catch (e) { /* 盗聴に失敗しても作品は鳴らす */ }
+    }
+  };
+  if (window.AudioContext) {
+    window.AudioContext = wrap(window.AudioContext);
+    window.webkitAudioContext = window.AudioContext;
+  }
+  window.__earState = () => state.ctxs.map((r) => ({
+    sampleRate: r.sampleRate, samples: r.samples,
+    seconds: r.samples / r.sampleRate, rmsNow: r.last,
+  }));
+  window.__earPull = (i, from) => {
+    const r = state.ctxs[i];
+    if (!r) return null;
+    const total = r.samples - from;
+    if (total <= 0) return { sampleRate: r.sampleRate, samples: 0, b64: '' };
+    const out = new Int16Array(total);
+    let pos = 0, skip = from;
+    for (const c of r.chunks) {
+      if (skip >= c.length) { skip -= c.length; continue; }
+      for (let j = skip; j < c.length; j++) {
+        const v = Math.max(-1, Math.min(1, c[j]));
+        out[pos++] = v < 0 ? v * 0x8000 : v * 0x7fff;
+      }
+      skip = 0;
+    }
+    const u8 = new Uint8Array(out.buffer);
+    let s = '';
+    for (let k = 0; k < u8.length; k += 0x8000) {
+      s += String.fromCharCode.apply(null, u8.subarray(k, k + 0x8000));
+    }
+    return { sampleRate: r.sampleRate, samples: total, b64: btoa(s) };
+  };
+})();`;
+
 export class VisualPage {
   /** @param {import('./cdp.js').Cdp} cdp */
   constructor(cdp, sessionId, targetId, size) {
@@ -22,6 +87,7 @@ export class VisualPage {
     await cdp.send('Page.enable', {}, sessionId);
     await cdp.send('Runtime.enable', {}, sessionId);
     await cdp.send('Log.enable', {}, sessionId);
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: AUDIO_HOOK }, sessionId);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, sessionId);
     await cdp.send('Target.activateTarget', { targetId }).catch(() => {});
 

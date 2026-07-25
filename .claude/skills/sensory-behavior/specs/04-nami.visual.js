@@ -55,7 +55,39 @@ export default {
     await t.page.settle(200);
     await t.shot('なぞった航跡');
 
-    // 「凪にする」— ラベルどおり水面がしずまるか(画面が嘘をつかない)
+    // 聴覚: 触れると水音がするか(音の dead interaction 検出)
+    const heard = await t.listen.record('触れた水音', async () => {
+      await t.human.clickAt(w * 0.35, h * 0.5);
+      await t.page.settle(1200);
+    });
+    if (t.expect(heard !== null, '音の機構が動いている(AudioContext を捕捉)') && heard) {
+      t.expect(heard.rmsDb > -55, `触れると水音が鳴る(RMS ${heard.rmsDb.toFixed(1)} dBFS)`);
+      t.expect(heard.clipRatio < 0.001, `音が割れていない(クリッピング ${(heard.clipRatio * 100).toFixed(2)}%)`);
+    }
+
+    // 「音を消す」は本当に消すのか(dead mute 検出)。残響の尾を待ってから測る
+    await t.human.click('#bMute');
+    await t.page.settle(1200);
+    const mutedSound = await t.listen.record('消音後に触れた音', async () => {
+      await t.human.clickAt(w * 0.62, h * 0.5);
+      await t.page.settle(1200);
+    });
+    if (mutedSound) {
+      t.expect(
+        !Number.isFinite(mutedSound.rmsDb) || mutedSound.rmsDb < -60,
+        `「音を消す」で本当に消える(RMS ${Number.isFinite(mutedSound.rmsDb) ? mutedSound.rmsDb.toFixed(1) : '-∞'} dBFS)`,
+      );
+    }
+
+    // 「凪にする」— ラベルどおり水面がしずまるか(画面が嘘をつかない)。
+    // 聴覚検分の間に波は自然減衰しきっている(平らな水面を reset しても
+    // 画面は変わらない)し、小波は 1 秒で閾値未満に薄れる。
+    // 長押しの大波を立て直してからボタンを試す
+    await t.human.moveTo(w * 0.5, h * 0.45);
+    await t.human.buttonDown();
+    await t.page.settle(1100);
+    await t.human.buttonUp();
+    await t.page.settle(300);
     await t.act('「凪にする」で水面が変わる', { expect: 'change' }, async () => {
       await t.human.click('#bStill');
     });

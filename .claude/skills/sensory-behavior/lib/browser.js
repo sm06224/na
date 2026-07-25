@@ -45,7 +45,10 @@ export async function launchChrome({ width = 1280, height = 900 } = {}) {
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--disable-gpu',
+    // 音は「デバイスに出さない」だけ。WebAudio のグラフは動き続けるので、
+    // ページ内に仕込んだタップ(page.js の AUDIO_HOOK)からは全部聴こえる
     '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
     '--hide-scrollbars',
     '--force-device-scale-factor=1',
     // 裏に回った気になって描画をサボられると rAF 系の作品が止まる
